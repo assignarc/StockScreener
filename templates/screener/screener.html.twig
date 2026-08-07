@@ -1,0 +1,349 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Stock Screener & Options Flywheel — Moonshot Screener v3{% endblock %}
+
+{% block body %}
+<!-- APP DASHBOARD -->
+<div id="app">
+    <!-- HEADER -->
+    <div class="header">
+        <h1>⚡ Capital Flywheel <span>Stock Screener</span></h1>
+        <span class="hbadge">v3 Options Engine</span>
+        <div class="hright">
+            <button class="hbtn hbtn-fw" onclick="openFlywheelPlanner()">🌅 Daily Morning Planner</button>
+            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
+            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
+            <button class="hbtn hbtn-load" onclick="loadLivePrices()">▶ Load Live Quotes</button>
+        </div>
+    </div>
+
+    <!-- MAIN PAGE NAVIGATION LINKS -->
+    <div class="nav-tabs">
+        <a href="/" class="nav-link">📊 Executive Dashboard</a>
+        <a href="/screener" class="nav-link active">⚡ Stock Screener & Options Flywheel</a>
+        <a href="/portfolio" class="nav-link">💼 Portfolio Details (Schwab Accounts)</a>
+        <a href="/discover" class="nav-link">🔍 Discover & Manage Tracked Stocks</a>
+    </div>
+
+    <!-- FLYWHEEL CONFIGURABLE RISK BANNER -->
+    <div class="fw-banner">
+        <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">⚙️</span>
+            <div>
+                <div style="font-weight:700;font-size:13px;color:var(--text)">Flywheel Monthly Risk Guardrail: <span id="fwRiskCapText" style="color:var(--blue);cursor:pointer;font-weight:800;" onclick="changeRiskConfig()" title="Click to adjust monthly risk cap">$10,000</span> <span style="font-size:10px;color:var(--muted);">(Click to change)</span></div>
+                <div style="font-size:11px;color:var(--muted)">Enforces 100% Covered & Cash-Collateralized Option Trades (Zero Margin Traps)</div>
+            </div>
+        </div>
+        <div class="fw-risk-box">
+            <div class="fw-risk-lbl">
+                <span>Existing Open Risk: <strong id="fwUsedRiskText" style="color:var(--yellow)">$2,500</strong></span>
+                <span>Staged Today: <strong id="fwStagedRiskText" style="color:var(--blue)">$3,800</strong></span>
+                <span>Available Remaining: <strong id="fwFreeRiskText" style="color:var(--green)">$3,700</strong></span>
+            </div>
+            <div class="fw-progress-bg">
+                <div id="fwBarUsed" class="fw-bar-used" style="width:25%" title="Existing Open Risk"></div>
+                <div id="fwBarStaged" class="fw-bar-staged" style="width:38%" title="Staged Today Risk"></div>
+                <div id="fwBarFree" class="fw-bar-free" style="width:37%" title="Available Risk Remaining"></div>
+            </div>
+        </div>
+        <button class="hbtn hbtn-fw" style="padding:6px 14px;font-size:12px;" onclick="openFlywheelPlanner()">⚡ View Morning Trade Package</button>
+    </div>
+
+
+    <!-- DEDICATED STOCK SCREENER PAGE -->
+    <div id="screenerView">
+        <!-- FLYWHEEL CAPITAL ALLOCATOR WIDGET -->
+        <div class="fw-panel">
+            <div class="fw-title">
+                <span class="fw-icon">⚙ CAPITAL FLYWHEEL</span>
+                <span>Portfolio Allocation Engine</span>
+            </div>
+            <div class="fw-inputs">
+                <div class="fw-input-wrap">
+                    <span>$</span>
+                    <input id="totalCap" type="number" value="10000" step="1000" oninput="updateFlywheelAllocation()">
+                </div>
+            </div>
+            <div class="fw-stats">
+                <div class="fw-pill fw-pill-call">
+                    <span>🟢 CALLs (60%):</span>
+                    <span id="allocCallVal">$6,000</span>
+                </div>
+                <div class="fw-pill fw-pill-wheel">
+                    <span>🟡 WHEEL (25%):</span>
+                    <span id="allocWheelVal">$2,500</span>
+                </div>
+                <div class="fw-pill fw-pill-put">
+                    <span>🔴 PUTs (15%):</span>
+                    <span id="allocPutVal">$1,500</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPTIONS LEVEL 1 BASIC STRATEGY BANNER -->
+        <div style="padding: 12px 24px; background: rgba(88,166,255,0.06); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="rb rLOW" style="background: rgba(88,166,255,0.2); color: var(--blue);">🔒 OPTION LEVEL 1 BASIC (100% COVERED / RISK DEFINED)</span>
+                <span style="font-size: 12px; color: var(--text);">
+                    Allocating your <strong style="color:var(--green);" id="playbookCashText">$25,143 available cash</strong> into 100% Covered & Capped-Risk strategies:
+                </span>
+            </div>
+            <div style="display: flex; gap: 12px; font-size: 11px; font-weight: 600;">
+                <span style="color:var(--green);">🟢 Defined-Risk Long CALLS</span>
+                <span style="color:var(--yellow);">🟡 Cash-Secured PUTS</span>
+                <span style="color:var(--purple);">💼 Covered CALLS</span>
+            </div>
+        </div>
+
+        <!-- CONTROLS & SIGNAL FILTERS -->
+        <div class="controls">
+            <!-- Signal Filter Group -->
+            <button class="sig-btn active-all" onclick="filterSignal('ALL', this)">All Signals</button>
+            <button class="sig-btn" onclick="filterSignal('CALL', this)">🟢 CALLs (Growth)</button>
+            <button class="sig-btn" onclick="filterSignal('PUT', this)">🔴 PUTs (Hedge)</button>
+            <button class="sig-btn" onclick="filterSignal('WHEEL', this)">🟡 WHEEL (Income)</button>
+
+            <span style="border-left: 1px solid var(--border); height: 20px; margin: 0 6px;"></span>
+
+            <button class="fbtn active" onclick="filterSector('ALL', this)">All Sectors</button>
+            {% for sector in sectors %}
+                <button class="fbtn" onclick="filterSector('{{ sector }}', this)">{{ sector }}</button>
+            {% endfor %}
+            <span class="sp"></span>
+            <select class="fsel" onchange="filterRisk(this.value)">
+                <option value="ALL">All Risk Levels</option>
+                <option value="LOW">Low Risk</option>
+                <option value="MED">Med Risk</option>
+                <option value="HIGH">High Risk</option>
+            </select>
+            <input id="srch" placeholder="Search Ticker, Name..." oninput="onSearchInput()">
+        </div>
+
+        <!-- STATUS BAR -->
+        <div id="statusBar">Loaded {{ totalStocks }} curated candidates from Doctrine database.</div>
+
+        <!-- STATS OVERVIEW -->
+        <div class="sbar">
+            <div class="sc"><div class="v" id="statCount">{{ totalStocks }}</div><div class="l">Tracked Stocks</div></div>
+            <div class="sc"><div class="v" id="statCallsCount">—</div><div class="l">🟢 CALL Signals</div></div>
+            <div class="sc"><div class="v" id="statPutsCount">—</div><div class="l">🔴 PUT Signals</div></div>
+            <div class="sc"><div class="v" id="statWheelCount">—</div><div class="l">🟡 WHEEL Signals</div></div>
+        </div>
+
+        <!-- TABLE WRAPPER -->
+        <div id="tw">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('symbol')">
+                            <span>Ticker</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">📌 Stock Ticker Symbol</div>
+                                    Queried from local SQLite/Doctrine database (<code>Stock::$symbol</code>), cross-referenced against Finnhub API and connected Schwab account holdings.
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('name')">
+                            <span>Company</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">🏢 Company Name</div>
+                                    Fetched live from Finnhub API company profile endpoint (<code>/api/v1/stock/profile2</code>).
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('signal')">
+                            <span>Flywheel Signal</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">⚙ Option Signal</div>
+                                    Evaluated real-time by <code>FlywheelService</code>. Evaluates fundamental score (&ge;70, &lt;45), upside %, and risk to classify Level 1 Basic option strategies (🟢 CALL, 🟡 WHEEL, 🔴 PUT).
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('sector')">
+                            <span>Sector</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">🌐 Industry Sector</div>
+                                    Retrieved from Finnhub API industry classification field (<code>finnhubIndustry</code>).
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('price')">
+                            <span>Price</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">💲 Current Market Price</div>
+                                    Live current market quote (<code>c</code>) streamed from Finnhub API (<code>/api/v1/quote</code>) or Schwab Developer API market data.
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('targetPrice')">
+                            <span>Target</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">🎯 12M Analyst Target</div>
+                                    Aggregated 12-month Wall Street consensus analyst price target from Finnhub consensus endpoint & database baseline.
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('upside')">
+                            <span>Upside</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">📈 Implied Upside %</div>
+                                    Calculated dynamically in frontend JS: <code>((TargetPrice - Price) / Price) * 100</code>.
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('revGrowth')">
+                            <span>Rev Growth</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">📊 Revenue Growth Rate</div>
+                                    Pulled from quarterly SEC earnings filings & Finnhub fundamentals data (<code>revGrowth</code> field).
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('risk')">
+                            <span>Risk</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">⚡ Volatility Risk Level</div>
+                                    Assigned based on 30-day historical beta, market capitalization tier, and price volatility range (<code>LOW</code>, <code>MED</code>, <code>HIGH</code>).
+                                </span>
+                            </span>
+                        </th>
+                        <th onclick="sortTable('score')">
+                            <span>Score</span>
+                            <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover">
+                                    <div class="col-popover-title">⭐ Fundamental Score (0-100)</div>
+                                    Proprietary 0-100 score calculated by evaluating revenue growth rate, gross margin %, cash runway months, and analyst ratings.
+                                </span>
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="stockTableBody">
+                    <!-- Javascript populated rows -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- RESEARCH PANEL DRAWER -->
+<div id="rp">
+    <div class="rph">
+        <h3 id="rpTitle">Stock Research & Analysis</h3>
+        <button class="rpx" onclick="closeResearchPanel()">✕</button>
+    </div>
+    <div class="rpb">
+        <!-- FLYWHEEL OPTIONS MATRIX CARD -->
+        <div class="tb" style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border-color: rgba(88,166,255,0.4); margin-bottom: 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <h4 style="color:var(--blue); font-size: 12px;">⚙ Capital Flywheel Options Recommendation</h4>
+                <span id="rpSignalBadge" class="badge-sig badge-CALL">🟢 CALL</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 12px;">
+                <div><span class="m">Strategy: </span><strong id="rpStrategy" style="color:#e6edf3;">-</strong></div>
+                <div><span class="m">Target Strike: </span><strong id="rpStrike" class="g">-</strong></div>
+                <div><span class="m">Horizon (DTE): </span><strong id="rpHorizon" style="color:var(--purple);">-</strong></div>
+                <div><span class="m">Risk / Reward Ratio: </span><strong id="rpRiskReward" class="y">-</strong></div>
+                <div style="grid-column: 1 / -1;"><span class="m">Flywheel Role: </span><strong id="rpFlywheelRole" style="color:var(--blue);">-</strong></div>
+            </div>
+        </div>
+
+        <!-- SCHWAB LIVE OPTION CHAIN MATRIX -->
+        <div class="tb" style="background: var(--bg3); border-color: var(--border); margin-bottom: 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <h4 style="color:var(--purple); font-size: 11px;">🏦 Schwab Developer API — Live Option Chain & Gemini AI Target Selection</h4>
+                <span id="schwabSourceBadge" class="rb rLOW">Schwab API Connected</span>
+            </div>
+
+            <!-- GEMINI AI STRIKE DETERMINATION BANNER -->
+            <div id="geminiOptionAnalysisBox" style="background: linear-gradient(135deg, rgba(188,140,255,0.12), rgba(31,38,55,0.95)); border: 1px solid rgba(188,140,255,0.4); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                    <strong style="font-size:12px; color:var(--purple); display:flex; align-items:center; gap:6px;">
+                        <span>🤖 Gemini AI Options Target Determination</span>
+                    </strong>
+                    <span class="rb" style="background:rgba(188,140,255,0.2); color:var(--purple);">Option Level 1 Basic</span>
+                </div>
+                <div id="geminiOptionTargetsGrid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:11px; margin-bottom:8px;">
+                    <!-- Filled dynamically via JS -->
+                </div>
+                <div id="geminiOptionVerdict" style="font-size:11px; color:var(--muted); line-height:1.45; background:var(--bg2); padding:8px; border-radius:6px; border:1px solid var(--border);">
+                    <!-- Filled dynamically via JS -->
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table style="width:100%; font-size: 11px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <th style="font-size:10px;">Type</th>
+                            <th style="font-size:10px;">Strike ($)</th>
+                            <th style="font-size:10px;">Bid ($)</th>
+                            <th style="font-size:10px;">Ask ($)</th>
+                            <th style="font-size:10px;">IV (%)</th>
+                            <th style="font-size:10px;">Delta (Δ)</th>
+                            <th style="font-size:10px;">Theta (Θ)</th>
+                            <th style="font-size:10px;">Gemini Target</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schwabChainBody">
+                        <tr><td colspan="8" style="text-align:center;" class="m">Loading Schwab Option Chain...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="rpg">
+            <div class="card">
+                <h4>Valuation & Target</h4>
+                <div class="row"><span>Current Price</span><span class="v" id="rpPrice">-</span></div>
+                <div class="row"><span>Target Price</span><span class="v" id="rpTarget">-</span></div>
+                <div class="row"><span>Implied Upside</span><span class="v" id="rpUpside">-</span></div>
+                <div class="row"><span>Market Cap</span><span class="v" id="rpMarketCap">-</span></div>
+                <div class="row"><span>Analyst Rating</span><span class="v" id="rpRating">-</span></div>
+            </div>
+            <div class="card">
+                <h4>Financial Health</h4>
+                <div class="row"><span>Revenue Growth</span><span class="v" id="rpRevGrowth">-</span></div>
+                <div class="row"><span>Gross Margin</span><span class="v" id="rpGrossMargin">-</span></div>
+                <div class="row"><span>Cash Runway</span><span class="v" id="rpCashRunway">-</span></div>
+                <div class="row"><span>Short Interest</span><span class="v" id="rpShortInt">-</span></div>
+                <div class="row"><span>Score</span><span class="v" id="rpScore">-</span></div>
+            </div>
+            <div class="card">
+                <h4>Price vs Target Visualization</h4>
+                <div style="position:relative;height:160px;">
+                    <canvas id="rpChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:16px;">
+            <div class="tb">
+                <h4>Investment Thesis</h4>
+                <p id="rpThesis">-</p>
+            </div>
+            <div class="tb">
+                <h4>Key Catalysts</h4>
+                <p id="rpCatalysts">-</p>
+            </div>
+            <div class="tb">
+                <h4>Risk Factors</h4>
+                <p id="rpRisks">-</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script src="{{ asset('js/screener.js') }}"></script>
+{% endblock %}

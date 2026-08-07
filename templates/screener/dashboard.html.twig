@@ -1,0 +1,344 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Executive Financial Dashboard — Moonshot Screener v3{% endblock %}
+
+{% block body %}
+<div id="app">
+    <!-- HEADER -->
+    <div class="header">
+        <h1>📊 Executive <span>Dashboard</span></h1>
+        <span class="hbadge">Capital Flywheel Command Center</span>
+        <div class="hright">
+            <button class="hbtn hbtn-fw" onclick="openFlywheelPlanner()">🌅 Daily Morning Planner</button>
+            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
+            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
+        </div>
+    </div>
+
+    <!-- MAIN PAGE NAVIGATION LINKS -->
+    <div class="nav-tabs">
+        <a href="/" class="nav-link active">📊 Executive Dashboard</a>
+        <a href="/screener" class="nav-link">⚡ Stock Screener & Options Flywheel</a>
+        <a href="/portfolio" class="nav-link">💼 Portfolio Details (Schwab Accounts)</a>
+        <a href="/discover" class="nav-link">🔍 Discover & Manage Tracked Stocks</a>
+    </div>
+
+    <!-- FLYWHEEL CONFIGURABLE RISK BANNER -->
+    <div class="fw-banner">
+        <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">⚙️</span>
+            <div>
+                <div style="font-weight:700;font-size:13px;color:var(--text)">Flywheel Monthly Risk Guardrail: <span id="fwRiskCapText" style="color:var(--blue);cursor:pointer;font-weight:800;" onclick="changeRiskConfig()" title="Click to adjust monthly risk cap">$10,000</span> <span style="font-size:10px;color:var(--muted);">(Click to change)</span></div>
+                <div style="font-size:11px;color:var(--muted)">Enforces 100% Covered & Cash-Collateralized Option Trades (Zero Margin Traps)</div>
+            </div>
+        </div>
+        <div class="fw-risk-box">
+            <div class="fw-risk-lbl">
+                <span>Existing Open Risk: <strong id="fwUsedRiskText" style="color:var(--yellow)">$2,500</strong></span>
+                <span>Staged Today: <strong id="fwStagedRiskText" style="color:var(--blue)">$3,800</strong></span>
+                <span>Available Remaining: <strong id="fwFreeRiskText" style="color:var(--green)">$3,700</strong></span>
+            </div>
+            <div class="fw-progress-bg">
+                <div id="fwBarUsed" class="fw-bar-used" style="width:25%" title="Existing Open Risk"></div>
+                <div id="fwBarStaged" class="fw-bar-staged" style="width:38%" title="Staged Today Risk"></div>
+                <div id="fwBarFree" class="fw-bar-free" style="width:37%" title="Available Risk Remaining"></div>
+            </div>
+        </div>
+        <button class="hbtn hbtn-fw" style="padding:6px 14px;font-size:12px;" onclick="openFlywheelPlanner()">⚡ View Morning Trade Package</button>
+    </div>
+
+
+    <!-- DASHBOARD CONTENT -->
+    <div class="dash-container">
+        <!-- COMMAND CENTER STAT CARDS -->
+        <div class="dash-grid">
+            <div class="dash-card">
+                <div class="lbl">Net Liquidation Value</div>
+                <div class="val g">${% if portfolio.netLiquidationValue is defined %}{{ portfolio.netLiquidationValue|number_format(2) }}{% else %}0.00{% endif %}</div>
+            </div>
+            <div class="dash-card">
+                <div class="lbl">Available Cash Reserves</div>
+                <div class="val y">${% if portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %}</div>
+            </div>
+            <div class="dash-card">
+                <div class="lbl">Connected Accounts / Holdings</div>
+                <div class="val" style="color:var(--blue);">
+                    {% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / 
+                    {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities
+                </div>
+            </div>
+            <div class="dash-card">
+                <div class="lbl">Tracked Screener Candidates</div>
+                <div class="val" style="color:var(--purple);">{{ totalStocks }} Candidates</div>
+            </div>
+        </div>
+
+        <!-- CAPITAL FLYWHEEL ENGINE ALLOCATOR WIDGET -->
+        {% set cashVal = portfolio.cashBalance is defined ? portfolio.cashBalance : 25143.09 %}
+        <div class="fw-panel">
+            <div>
+                <div class="fw-title">
+                    <span class="fw-icon">⚙ CAPITAL FLYWHEEL ALLOCATOR</span>
+                    <span>Live Cash Allocation (${{ cashVal|number_format(0) }})</span>
+                </div>
+                <div style="font-size:12px; color:var(--muted); margin-top:4px;">
+                    Allocating your available Schwab cash into Option Level 1 Basic Covered strategies.
+                </div>
+            </div>
+            <div class="fw-stats">
+                <div class="fw-pill fw-pill-call">
+                    <span>🟢 CALLs (60%):</span>
+                    <span>${{ (cashVal * 0.60)|number_format(0) }}</span>
+                </div>
+                <div class="fw-pill fw-pill-wheel">
+                    <span>🟡 WHEEL (25%):</span>
+                    <span>${{ (cashVal * 0.25)|number_format(0) }}</span>
+                </div>
+                <div class="fw-pill fw-pill-put">
+                    <span>🔴 PUTs (15%):</span>
+                    <span>${{ (cashVal * 0.15)|number_format(0) }}</span>
+                </div>
+            </div>
+        <!-- PORTFOLIO COVERED CALL TRADE ASSISTANT PLAYBOOK -->
+        <div style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border: 1px solid rgba(63,185,80,0.4); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+                <div>
+                    <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--green); display:flex; align-items:center; gap:8px;">
+                        <span>🔥 Capital Flywheel — Actionable Covered Call Trades</span>
+                        <span class="hbadge" style="background:rgba(63,185,80,0.2); color:var(--green); border-color:rgba(63,185,80,0.4);">Schwab Portfolio Live</span>
+                    </h3>
+                    <div style="font-size:12px; color:var(--muted);">
+                        Scanned your unencumbered 100-share blocks. Executing these suggested Covered Calls generates <strong class="g" id="playbookTotalIncome">+$2,482.00 Instant Cash Premium Income</strong>!
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <a href="/portfolio" class="hbtn" style="background:var(--green); color:#0b0e14; font-weight:700;">💼 View Portfolio & Accounts</a>
+                </div>
+            </div>
+
+            <div id="coveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+                <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">⚡ Loading Schwab unencumbered stock positions...</div>
+            </div>
+        </div>
+
+        <!-- GEMINI AI PORTFOLIO ASSISTANT WIDGET -->
+        <div style="background: linear-gradient(135deg, rgba(188,140,255,0.12), rgba(31,38,55,0.95)); border: 1px solid rgba(188,140,255,0.4); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+                <div>
+                    <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--purple); display:flex; align-items:center; gap:8px;">
+                        <span>🤖 Gemini AI Capital Flywheel Assistant</span>
+                        <span class="hbadge" id="geminiSourceBadge">Google Gemini 1.5 Flash</span>
+                    </h3>
+                    <div style="font-size:12px; color:var(--muted);">
+                        AI-driven options trade analysis evaluating your $25,143 cash reserves, unencumbered stocks, and market volatility.
+                    </div>
+                </div>
+                <div>
+                    <button class="hbtn" style="background:var(--purple); color:#0b0e14; font-weight:700;" onclick="loadGeminiAiIdeas(true)">
+                        ✨ Refresh Gemini AI Analysis
+                    </button>
+                </div>
+            </div>
+
+            <div id="geminiAiCardsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+                <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">🤖 Querying Gemini AI for portfolio trade ideas...</div>
+            </div>
+        </div>
+
+        <!-- QUICK LAUNCH MODULES -->
+        <h4 style="font-size:13px; color:var(--blue); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px;">Command Center Quick Navigation</h4>
+        <div class="action-grid">
+            <a href="/screener" class="action-box">
+                <h3>⚡ Stock Screener & Options Signals</h3>
+                <p>Filter candidates by 🟢 CALL, 🟡 WHEEL, and 🔴 PUT signals. Inspect Schwab live option chains and target strikes.</p>
+            </a>
+            <a href="/portfolio" class="action-box">
+                <h3>💼 Schwab Portfolio & Accounts</h3>
+                <p>View Account Aggregated cash available ($25,143) and Equity Aggregated holdings across all 4 Schwab accounts.</p>
+            </a>
+            <a href="/discover" class="action-box">
+                <h3>🔍 Discover & Manage Tracked Candidates</h3>
+                <p>Explore Wall Street suggestions with deep investment reasoning, 1-click import, and candidate management.</p>
+            </a>
+        </div>
+
+        <!-- TOP PORTFOLIO HOLDINGS OVERVIEW TABLE -->
+        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:0;">
+                    📈 Top Portfolio Holdings (Live Schwab Brokerage)
+                </h4>
+                <a href="/portfolio" class="hbtn" style="background:var(--bg3); border:1px solid var(--border); color:var(--blue);">View All Accounts →</a>
+            </div>
+            <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticker</th>
+                            <th>Asset Class</th>
+                            <th style="text-align:right;">Quantity / Shares</th>
+                            <th style="text-align:right;">Avg Cost</th>
+                            <th style="text-align:right;">Market Value</th>
+                            <th style="text-align:right;">Unrealized P/L</th>
+                            <th style="text-align:right;">Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if portfolio.aggregatedEquities is defined and portfolio.aggregatedEquities|length > 0 %}
+                            {% for e in portfolio.aggregatedEquities|slice(0, 5) %}
+                                <tr>
+                                    <td><strong>{{ e.symbol }}</strong></td>
+                                    <td><span class="m">{{ e.assetType }}</span></td>
+                                    <td style="text-align:right;">{{ e.quantity }}</td>
+                                    <td style="text-align:right;">${{ e.averagePrice|number_format(2) }}</td>
+                                    <td style="text-align:right;"><strong>${{ e.marketValue|number_format(2) }}</strong></td>
+                                    <td style="text-align:right;" class="{% if e.unrealizedPL >= 0 %}g{% else %}r{% endif %}">
+                                        <strong>{% if e.unrealizedPL >= 0 %}+{% endif %}${{ e.unrealizedPL|number_format(2) }} ({{ e.unrealizedPLPct }}%)</strong>
+                                    </td>
+                                    <td style="text-align:right;"><strong style="color:var(--purple);">{{ e.allocationPct }}%</strong></td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="7" style="text-align:center; padding:20px;" class="m">No active positions.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadCoveredCallSuggestions();
+    loadGeminiAiIdeas();
+});
+
+async function loadGeminiAiIdeas(isRefresh = false) {
+    const grid = document.getElementById('geminiAiCardsGrid');
+    if (isRefresh) {
+        grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">✨ Asking Gemini AI to analyze market data & generate trade ideas...</div>';
+    }
+
+    try {
+        const res = await fetch('/api/ai/flywheel-ideas');
+        const json = await res.json();
+
+        if (json.status === 'success' && json.data) {
+            const d = json.data;
+            const ideas = d.ideas || [];
+            if (d.source) {
+                document.getElementById('geminiSourceBadge').textContent = d.source;
+            }
+
+            grid.innerHTML = '';
+            ideas.forEach(item => {
+                const card = document.createElement('div');
+                card.style.background = 'var(--bg2)';
+                card.style.border = '1px solid rgba(188,140,255,0.3)';
+                card.style.borderRadius = '10px';
+                card.style.padding = '14px';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.justifyContent = 'space-between';
+
+                card.innerHTML = `
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <strong style="font-size:14px; color:var(--purple);">${item.title}</strong>
+                            <span class="rb" style="background:rgba(188,140,255,0.18); color:var(--purple); border:1px solid rgba(188,140,255,0.4); font-size:10px;">${item.actionBadge || '🤖 GEMINI AI'}</span>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--bg3); padding:8px; border-radius:6px; border:1px solid var(--border);">
+                            <div>Strategy: <strong style="color:var(--text);">${item.strategyType}</strong></div>
+                            <div>Target Strike: <strong class="g">${item.targetStrike}</strong></div>
+                            <div>Est. Premium: <strong class="g">${item.estimatedPremium}</strong></div>
+                            <div>Return APY: <strong class="g">${item.annualizedYield}</strong></div>
+                        </div>
+
+                        <div style="font-size:11px; line-height:1.45; color:var(--text); margin-bottom:10px;">
+                            <strong>💡 AI Reasoning:</strong> ${item.reasoning}
+                        </div>
+                        <div style="font-size:11px; line-height:1.45; color:var(--muted); margin-bottom:12px; background:rgba(248,81,73,0.05); padding:6px 8px; border-radius:6px; border:1px solid rgba(248,81,73,0.2);">
+                            <strong>🔒 Level 1 Safety:</strong> ${item.riskGuardrail}
+                        </div>
+                    </div>
+
+                    <a href="/screener" class="btn btn-pri" style="width:100%; text-align:center; font-weight:700; text-decoration:none; display:block; padding:8px 0; background:var(--purple); color:#0b0e14;">
+                        ⚡ Inspect ${item.ticker} Option Chain
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+        }
+    } catch(e) {
+        console.error('Failed to load Gemini AI ideas:', e);
+    }
+}
+
+async function loadCoveredCallSuggestions() {
+    const grid = document.getElementById('coveredCallTradeCards');
+    try {
+        const res = await fetch('/api/flywheel/covered-call-suggestions');
+        const json = await res.json();
+
+        if (json.status === 'success' && json.data) {
+            const d = json.data;
+            const suggestions = d.suggestions || [];
+            document.getElementById('playbookTotalIncome').textContent = `+$${d.totalPotentialIncome.toLocaleString()} Instant Cash Premium Income`;
+
+            if (suggestions.length === 0) {
+                grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">All portfolio shares are either pledged or under 100 shares. No Covered Call trades available right now.</div>';
+                return;
+            }
+
+            grid.innerHTML = '';
+            suggestions.forEach(s => {
+                const card = document.createElement('div');
+                card.style.background = 'var(--bg3)';
+                card.style.border = '1px solid var(--border)';
+                card.style.borderRadius = '10px';
+                card.style.padding = '14px';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.justifyContent = 'space-between';
+
+                card.innerHTML = `
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div>
+                                <strong style="font-size:16px; color:var(--text);">${s.symbol}</strong>
+                                <span class="hbadge" style="margin-left:6px; background:rgba(63,185,80,0.15); color:var(--green);">${s.eligibleContracts} Contract(s) Eligible</span>
+                            </div>
+                            <span class="g" style="font-size:15px; font-weight:800;">+$${s.estTotalIncome} Income</span>
+                        </div>
+
+                        <div style="background:rgba(63,185,80,0.06); border:1px solid rgba(63,185,80,0.2); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700;">
+                            ⚡ ${s.tradeActionText}
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--bg2); padding:8px; border-radius:6px; border:1px solid var(--border);">
+                            <div>Current Price: <strong style="color:var(--text);">$${s.currentPrice}</strong></div>
+                            <div>Target Strike: <strong class="g">$${s.suggestedStrike} (+${s.otmPercentage}% OTM)</strong></div>
+                            <div>Horizon DTE: <strong style="color:var(--purple);">${s.dteHorizon}</strong></div>
+                            <div>Annualized Yield: <strong class="g">${s.annualizedYieldPct}% APY</strong></div>
+                        </div>
+
+                        <p style="font-size:11px; color:var(--muted); margin:0 0 10px 0; line-height:1.4;">
+                            ${s.reasoning}
+                        </p>
+                    </div>
+
+                    <a href="/screener?symbol=${s.symbol}" class="hbtn" style="width:100%; justify-content:center; text-align:center; font-weight:700; text-decoration:none; display:flex; padding:8px 0; background:var(--blue); color:#0b0e14;">
+                        🔍 Inspect ${s.symbol} Option Chain & Gemini AI Signals
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+        }
+    } catch(e) {
+        console.error('Failed to load trade suggestions:', e);
+    }
+}
+</script>
+{% endblock %}

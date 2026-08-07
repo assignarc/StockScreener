@@ -1,0 +1,411 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Schwab Portfolio & Positions — Moonshot Screener{% endblock %}
+
+{% block body %}
+<div id="app">
+    <!-- HEADER -->
+    <div class="header">
+        <h1>💼 Charles Schwab <span>Portfolio</span></h1>
+        <span class="hbadge">Live Brokerage API</span>
+        <div class="hright">
+            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
+            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
+        </div>
+    </div>
+
+    <!-- MAIN PAGE NAVIGATION LINKS -->
+    <div class="nav-tabs">
+        <a href="/" class="nav-link">📊 Executive Dashboard</a>
+        <a href="/screener" class="nav-link">⚡ Stock Screener & Options Flywheel</a>
+        <a href="/portfolio" class="nav-link active">💼 Portfolio Details (Schwab Accounts)</a>
+        <a href="/discover" class="nav-link">🔍 Discover & Manage Tracked Stocks</a>
+    </div>
+
+    <!-- PAGE 2 CONTENT: PORTFOLIO DETAILS -->
+    <div class="port-container">
+        <!-- PORTFOLIO COVERED CALL TRADE ASSISTANT PLAYBOOK -->
+        <div style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border: 1px solid rgba(63,185,80,0.4); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+                <div>
+                    <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--green); display:flex; align-items:center; gap:8px;">
+                        <span>🔥 Capital Flywheel — Suggested Covered Call Trades</span>
+                        <span class="hbadge" style="background:rgba(63,185,80,0.2); color:var(--green); border-color:rgba(63,185,80,0.4);">Option Level 1 Basic</span>
+                    </h3>
+                    <div style="font-size:12px; color:var(--muted);">
+                        Scanned your unencumbered 100-share blocks. Selling these suggested Covered Calls generates <strong class="g" id="portPlaybookTotalIncome">+$2,482.00 Instant Premium Income</strong>!
+                    </div>
+                </div>
+            </div>
+
+            <div id="portCoveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+                <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">⚡ Scanning Schwab unencumbered stock positions...</div>
+            </div>
+        </div>
+        <!-- PORTFOLIO SUMMARY CARDS -->
+        <div class="port-summary">
+            <div class="port-card">
+                <div class="lbl">Net Liquidation Value</div>
+                <div class="val g">${% if portfolio.netLiquidationValue is defined %}{{ portfolio.netLiquidationValue|number_format(2) }}{% else %}0.00{% endif %}</div>
+            </div>
+            <div class="port-card">
+                <div class="lbl">Total Cash Available for Trading</div>
+                <div class="val y">${% if portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %}</div>
+            </div>
+            <div class="port-card">
+                <div class="lbl">Connected Accounts / Positions</div>
+                <div class="val" style="color:var(--blue);">
+                    {% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / 
+                    {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW MODE SELECTOR SUBTABS -->
+        <div class="view-subtabs">
+            <button class="vtab-btn active" id="vtabAccounts" onclick="switchPortSubView('accounts')">🏦 Account Aggregated View</button>
+            <button class="vtab-btn" id="vtabEquities" onclick="switchPortSubView('equities')">📈 Equity Aggregated View</button>
+            <a href="/" class="hbtn" style="margin-left:auto; background:rgba(63,185,80,0.15); color:var(--green); border:1px solid rgba(63,185,80,0.3);">⚡ Load Cash into Options Allocator</a>
+        </div>
+
+        <!-- SUBVIEW 1: ACCOUNT AGGREGATED VIEW -->
+        <div id="subViewAccounts">
+            <div class="acc-grid">
+                {% if portfolio.accounts is defined and portfolio.accounts|length > 0 %}
+                    {% for acc in portfolio.accounts %}
+                        <div class="acc-box">
+                            <div>
+                                <h4>
+                                    <span>🏦 Account {{ acc.accountNumber }}</span>
+                                    <span class="hbadge">{{ acc.type }}</span>
+                                </h4>
+                                <div style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">
+                                    <div>Liquidation Value: <strong style="color:var(--text);">${{ acc.liquidationValue|number_format(2) }}</strong></div>
+                                    <div>Cash Available for Trading: <strong style="color:var(--green);">${{ acc.cashAvailable|number_format(2) }}</strong></div>
+                                </div>
+                                <div style="background: var(--bg3); border-radius: 8px; padding: 10px; border: 1px solid var(--border); margin-bottom: 14px;">
+                                    <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Positions ({{ acc.positionsCount }})</div>
+                                    {% for p in acc.positions %}
+                                        <div class="row" style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(46,53,69,0.3); font-size:12px;">
+                                            <span><strong>{{ p.symbol }}</strong> ({{ p.quantity }})</span>
+                                            <span>${{ p.marketValue|number_format(2) }} <small class="{% if p.unrealizedPL >= 0 %}g{% else %}r{% endif %}">({% if p.unrealizedPL >= 0 %}+{% endif %}${{ p.unrealizedPL|number_format(0) }})</small></span>
+                                        </div>
+                                    {% else %}
+                                        <div class="m" style="font-size:12px;">No active positions</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <a href="/" class="btn btn-pri" style="width: 100%; text-align: center; text-decoration:none;">
+                                ⚡ Load ${{ acc.cashAvailable|number_format(0) }} Cash into Options Engine
+                            </a>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="m" style="grid-column: 1/-1; text-align:center; padding:30px; background:var(--bg2); border-radius:12px; border:1px solid var(--border);">
+                        No Schwab account details available. Please click <strong>Connect Schwab</strong> above.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- SUBVIEW 2: EQUITY AGGREGATED VIEW -->
+        <div id="subViewEquities" style="display:none;">
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>
+                                <span>Ticker</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">📌 Stock Ticker Symbol</div>
+                                        Queried directly from connected Charles Schwab Brokerage API (<code>/trader/v1/accounts?fields=positions</code>).
+                                    </span>
+                                </span>
+                            </th>
+                            <th>
+                                <span>Asset Type</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">🏷 Asset Class</div>
+                                        Schwab instrument type classification (<code>EQUITY</code>, <code>OPTION</code>, <code>FIXED_INCOME</code>).
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:right;">
+                                <span>Total Quantity</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">📊 Total Shares / Contracts</div>
+                                        Aggregated quantity of shares or option contracts held across all 4 connected Schwab accounts.
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:right;">
+                                <span>Avg Cost Basis</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">💵 Average Purchase Price</div>
+                                        Weighted average cost basis per share from trade executions in your Schwab accounts.
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:right;">
+                                <span>Total Market Value</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">💲 Live Market Valuation</div>
+                                        Real-time market valuation calculated by Schwab API based on current bid/ask price stream.
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:right;">
+                                <span>Total Unrealized P/L</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">📈 Unrealized Profit / Loss</div>
+                                        Live gain/loss calculated as: <code>MarketValue - (Quantity * AveragePrice)</code> ($ and %).
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:right;">
+                                <span>Portfolio Weight</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">⚖ Account Allocation Weight</div>
+                                        Percentage weight of total liquidation value: <code>(MarketValue / NetLiquidationValue) * 100</code>.
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:center;">
+                                <span>Accounts</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">🏦 Account Count</div>
+                                        Number of distinct connected Schwab accounts currently holding this ticker.
+                                    </span>
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if portfolio.aggregatedEquities is defined and portfolio.aggregatedEquities|length > 0 %}
+                            {% for e in portfolio.aggregatedEquities %}
+                                {% set subId = 'opt-sub-' ~ loop.index %}
+                                <!-- MAIN LEVEL 1: AGGREGATED STOCK TICKER ROW -->
+                                <tr onclick="toggleOptionSubItem('{{ subId }}', this)" style="cursor:pointer; background: rgba(88,166,255,0.03);">
+                                    <td>
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <span class="sub-toggle-icon" style="color:var(--blue); font-size:12px; font-weight:700; transition:transform 0.2s;">▼</span>
+                                            <strong style="font-size:15px; color:var(--text);">{{ e.symbol }}</strong>
+                                            {% if e.linkedOptions|length > 0 %}
+                                                <span class="rb" style="background:rgba(210,153,34,0.18); color:var(--yellow); border:1px solid rgba(210,153,34,0.4); font-size:10px;">
+                                                    🔒 {{ e.linkedOptions|length }} Covered Call Order Active
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <div style="font-size:11px; margin-top:2px;">
+                                            <span style="color:{% if e.availableShares >= 100 %}var(--green){% elseif e.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; font-weight:600;">
+                                                {{ e.statusBadge }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td><span class="m">{{ e.assetType }}</span></td>
+                                    <td style="text-align:right;">
+                                        {% if e.pledgedShares > 0 %}
+                                            <div style="font-size:14px; color:{% if e.availableShares >= 100 %}var(--green){% elseif e.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; font-weight:700;">
+                                                {{ e.availableShares }} <small style="font-weight:400;">Avail</small>
+                                            </div>
+                                            <div style="font-size:11px; color:var(--muted);">
+                                                {{ e.quantity }} Total ({{ e.pledgedShares }} Pledged)
+                                            </div>
+                                        {% else %}
+                                            <strong style="font-size:14px;">{{ e.quantity }}</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td style="text-align:right;">${{ e.averagePrice|number_format(2) }}</td>
+                                    <td style="text-align:right;"><strong style="font-size:14px;">${{ e.marketValue|number_format(2) }}</strong></td>
+                                    <td style="text-align:right;" class="{% if e.unrealizedPL >= 0 %}g{% else %}r{% endif %}">
+                                        <strong>{% if e.unrealizedPL >= 0 %}+{% endif %}${{ e.unrealizedPL|number_format(2) }} ({{ e.unrealizedPLPct }}%)</strong>
+                                    </td>
+                                    <td style="text-align:right;"><strong style="color:var(--purple);">{{ e.allocationPct }}%</strong></td>
+                                    <td style="text-align:center;"><span class="rb rLOW">{{ e.accountCount }} Acc</span></td>
+                                </tr>
+
+                                <!-- LEVEL 2: SECOND-LEVEL ACCOUNT BREAKDOWN SUB-ROWS -->
+                                {% if e.accountBreakdown is defined %}
+                                    {% for acc in e.accountBreakdown %}
+                                        <tr class="{{ subId }}" style="background: rgba(31,38,55,0.7); border-bottom: 1px solid rgba(46,53,69,0.4);">
+                                            <td colspan="3" style="padding-left: 28px;">
+                                                <div style="display:flex; align-items:center; gap:8px;">
+                                                    <span style="color:var(--blue); font-size:12px; font-weight:700;">🏦</span>
+                                                    <strong style="font-size:12px; color:var(--text);">Account {{ acc.accountNumber }}</strong>
+                                                    <span class="hbadge" style="font-size:9px;">{{ acc.type }}</span>
+                                                    <span class="rb" style="background:{% if acc.canUseForCalls %}rgba(63,185,80,0.15){% elseif acc.availableShares > 0 %}rgba(210,153,34,0.15){% else %}rgba(248,81,73,0.15){% endif %}; color:{% if acc.canUseForCalls %}var(--green){% elseif acc.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; border:1px solid rgba(255,255,255,0.1); font-size:10px;">
+                                                        {{ acc.statusBadge }}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td style="text-align:right; font-size:12px;">
+                                                <strong>{{ acc.availableShares }} Avail</strong> / {{ acc.quantity }} Total
+                                            </td>
+                                            <td style="text-align:right; font-size:12px;"><strong>${{ acc.marketValue|number_format(2) }}</strong></td>
+                                            <td colspan="3" style="font-size:11px; color:var(--muted); text-align:center;">
+                                                {% if acc.canUseForCalls %}
+                                                    <span class="g">✓ {{ acc.eligibleContracts }} Call Option Contract(s) Available</span>
+                                                {% elseif acc.availableShares > 0 %}
+                                                    <span class="y">⚠️ Less than 100 shares — CANNOT be used for Call options</span>
+                                                {% else %}
+                                                    <span class="r">🔒 100% Pledged to Option Orders</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% endif %}
+
+                                <!-- LEVEL 3: LINKED OPTION ORDER SUB-ITEMS -->
+                                {% for opt in e.linkedOptions %}
+                                    <tr class="{{ subId }}" style="background: rgba(22,27,38,0.95); border-bottom: 1px solid var(--border);">
+                                        <td colspan="4" style="padding-left: 44px;">
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <span style="color:var(--yellow); font-size:14px; font-weight:700;">↳</span>
+                                                <strong style="color:var(--yellow); font-size:12px;">{{ opt.symbol }}</strong>
+                                                <span class="rb" style="background:rgba(210,153,34,0.2); color:var(--yellow); font-size:10px;">
+                                                    {{ opt.status }}
+                                                </span>
+                                            </div>
+                                            <div style="font-size:11px; color:var(--muted); margin-left:22px; margin-top:2px;">
+                                                Pledged Collateral: <strong style="color:var(--yellow);">{{ opt.pledgedShares }} Shares of {{ e.symbol }}</strong> ({{ opt.contracts }} Contracts) | Strike: <strong>${{ opt.strike|number_format(2) }}</strong> | Expiration: <strong>{{ opt.expiration }}</strong>
+                                            </div>
+                                        </td>
+                                        <td style="text-align:right; color:var(--yellow); font-weight:700;">
+                                            ${{ opt.marketValue|number_format(2) }}
+                                        </td>
+                                        <td style="text-align:right;" class="{% if opt.unrealizedPL >= 0 %}g{% else %}r{% endif %}">
+                                            <strong>{% if opt.unrealizedPL >= 0 %}+{% endif %}${{ opt.unrealizedPL|number_format(2) }}</strong>
+                                        </td>
+                                        <td colspan="2" style="text-align:center;">
+                                            <span style="font-size:11px; color:var(--red); font-weight:700;">🔒 {{ opt.pledgedShares }} Shares Tied Up</span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="8" style="text-align:center; padding:20px;" class="m">No aggregated positions found.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleOptionSubItem(subId, rowEl) {
+    const rows = document.getElementsByClassName(subId);
+    const icon = rowEl ? rowEl.querySelector('.sub-toggle-icon') : null;
+    let isHidden = false;
+
+    for (let r of rows) {
+        if (r.style.display === 'none') {
+            r.style.display = 'table-row';
+            isHidden = false;
+        } else {
+            r.style.display = 'none';
+            isHidden = true;
+        }
+    }
+
+    if (icon) {
+        icon.textContent = isHidden ? '▶' : '▼';
+    }
+}
+
+function switchPortSubView(mode) {
+    const subAcc = document.getElementById('subViewAccounts');
+    const subEq = document.getElementById('subViewEquities');
+    const btnAcc = document.getElementById('vtabAccounts');
+    const btnEq = document.getElementById('vtabEquities');
+
+    if (mode === 'accounts') {
+        subAcc.style.display = 'block';
+        subEq.style.display = 'none';
+        btnAcc.classList.add('active');
+        btnEq.classList.remove('active');
+    } else {
+        subAcc.style.display = 'none';
+        subEq.style.display = 'block';
+        btnAcc.classList.remove('active');
+        btnEq.classList.add('active');
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    loadPortCoveredCallSuggestions();
+});
+
+async function loadPortCoveredCallSuggestions() {
+    const grid = document.getElementById('portCoveredCallTradeCards');
+    try {
+        const res = await fetch('/api/flywheel/covered-call-suggestions');
+        const json = await res.json();
+
+        if (json.status === 'success' && json.data) {
+            const d = json.data;
+            const suggestions = d.suggestions || [];
+            document.getElementById('portPlaybookTotalIncome').textContent = `+$${d.totalPotentialIncome.toLocaleString()} Instant Premium Income`;
+
+            if (suggestions.length === 0) {
+                grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">All portfolio shares are either pledged or under 100 shares. No Covered Call trades available right now.</div>';
+                return;
+            }
+
+            grid.innerHTML = '';
+            suggestions.forEach(s => {
+                const card = document.createElement('div');
+                card.style.background = 'var(--bg3)';
+                card.style.border = '1px solid var(--border)';
+                card.style.borderRadius = '10px';
+                card.style.padding = '14px';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.justifyContent = 'space-between';
+
+                card.innerHTML = `
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div>
+                                <strong style="font-size:16px; color:var(--text);">${s.symbol}</strong>
+                                <span class="hbadge" style="margin-left:6px; background:rgba(63,185,80,0.15); color:var(--green);">${s.eligibleContracts} Contract(s) Eligible</span>
+                            </div>
+                            <span class="g" style="font-size:15px; font-weight:800;">+$${s.estTotalIncome} Income</span>
+                        </div>
+
+                        <div style="background:rgba(63,185,80,0.06); border:1px solid rgba(63,185,80,0.2); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700;">
+                            ⚡ ${s.tradeActionText}
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--bg2); padding:8px; border-radius:6px; border:1px solid var(--border);">
+                            <div>Current Price: <strong style="color:var(--text);">$${s.currentPrice}</strong></div>
+                            <div>Target Strike: <strong class="g">$${s.suggestedStrike} (+${s.otmPercentage}% OTM)</strong></div>
+                            <div>Horizon DTE: <strong style="color:var(--purple);">${s.dteHorizon}</strong></div>
+                            <div>Annualized Yield: <strong class="g">${s.annualizedYieldPct}% APY</strong></div>
+                        </div>
+
+                        <p style="font-size:11px; color:var(--muted); margin:0 0 10px 0; line-height:1.4;">
+                            ${s.reasoning}
+                        </p>
+                    </div>
+
+                    <a href="/screener?symbol=${s.symbol}" class="hbtn" style="width:100%; justify-content:center; text-align:center; font-weight:700; text-decoration:none; display:flex; padding:8px 0; background:var(--blue); color:#0b0e14;">
+                        🔍 Inspect ${s.symbol} Option Chain & Gemini AI Signals
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+        }
+    } catch(e) {
+        console.error('Failed to load trade suggestions:', e);
+    }
+}
+</script>
+{% endblock %}

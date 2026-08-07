@@ -1,0 +1,320 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Discover & Manage Tracked Stocks — Moonshot Screener{% endblock %}
+
+{% block body %}
+<div id="app">
+    <!-- HEADER -->
+    <div class="header">
+        <h1>🔍 Discover & Manage <span>Tracked Stocks</span></h1>
+        <span class="hbadge">Finnhub & Schwab Intelligence</span>
+        <div class="hright">
+            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
+            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
+        </div>
+    </div>
+
+    <!-- MAIN PAGE NAVIGATION LINKS -->
+    <div class="nav-tabs">
+        <a href="/" class="nav-link">📊 Executive Dashboard</a>
+        <a href="/screener" class="nav-link">⚡ Stock Screener & Options Flywheel</a>
+        <a href="/portfolio" class="nav-link">💼 Portfolio Details (Schwab Accounts)</a>
+        <a href="/discover" class="nav-link active">🔍 Discover & Manage Tracked Stocks</a>
+    </div>
+
+    <!-- PAGE 3 CONTENT: DISCOVER & MANAGE TRACKED STOCKS -->
+    <div class="port-container">
+        <!-- SCANNER & DISCOVERY HEADER -->
+        <div style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;">
+            <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 8px 0; color:var(--purple); display:flex; align-items:center; gap:8px;">
+                <span>🔥 AI Market Intelligence & Wall Street Ideas (Live Internet Suggestions)</span>
+            </h3>
+            <p style="font-size:12px; color:var(--muted); margin:0 0 16px 0; line-height:1.5;">
+                Explore top-rated Wall Street stock suggestions with detailed investment reasoning, sector catalysts, and Level 1 options strategies. Click <strong>"➕ Add to Tracked Screener"</strong> to import any candidate into your live options engine!
+            </p>
+
+            <div style="display:flex; gap:10px;">
+                <input id="tab3SymbolInput" placeholder="Enter any custom Stock Ticker (e.g. AMD, AMZN, MSFT, GOOGL, META...)" style="flex:1; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:8px; font-size:13px; outline:none; text-transform:uppercase;">
+                <button class="hbtn" style="background:var(--purple); color:#0b0e14; font-weight:700;" onclick="scanStockTab3()">⚡ Scan Ticker</button>
+            </div>
+            <div id="tab3ScanResult" style="margin-top:14px; display:none; padding:14px; background:var(--bg3); border:1px solid rgba(188,140,255,0.4); border-radius:8px;">
+                <!-- JS Populated Scan Result -->
+            </div>
+        </div>
+
+        <!-- WALL STREET SUGGESTIONS GRID WITH REASONING -->
+        <h4 style="font-size:13px; color:var(--blue); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px;">Curated Market Candidates & Investment Reasoning</h4>
+        <div id="suggestionsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:16px; margin-bottom:32px;">
+            <div class="m" style="grid-column:1/-1; text-align:center; padding:20px;">⚡ Gathering live internet market intelligence & suggestions...</div>
+        </div>
+
+        <!-- CURRENTLY TRACKED STOCKS MANAGEMENT SECTION -->
+        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px;">
+            <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px;">🛠 Tracked Screener Candidates Management ({{ totalStocks }} Tracked)</h4>
+            <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>
+                                <span>Ticker</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">📌 Stock Ticker Symbol</div>
+                                        Stored in local SQLite/Doctrine database (<code>Stock::$symbol</code>).
+                                    </span>
+                                </span>
+                            </th>
+                            <th>
+                                <span>Company</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">🏢 Company Name</div>
+                                        Fetched live from Finnhub Profile API (<code>/stock/profile2</code>).
+                                    </span>
+                                </span>
+                            </th>
+                            <th>
+                                <span>Sector</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">🌐 Industry Sector</div>
+                                        Finnhub Industry classification (<code>finnhubIndustry</code>).
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:right;">
+                                <span>Price</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">💲 Current Market Price</div>
+                                        Live market quote (<code>c</code>) from Finnhub API (<code>/quote</code>) or Schwab Developer API.
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:right;">
+                                <span>12M Target</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">🎯 12M Analyst Target</div>
+                                        Aggregated 12-month Wall Street consensus analyst price target.
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:center;">
+                                <span>Score</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">⭐ Fundamental Score (0-100)</div>
+                                        Proprietary 0-100 fundamental score calculated by evaluating revenue growth rate, gross margin %, cash runway months, and analyst ratings.
+                                    </span>
+                                </span>
+                            </th>
+                            <th style="text-align:center;">
+                                <span>Action</span>
+                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                    <span class="col-popover">
+                                        <div class="col-popover-title">🛠 Candidate Management</div>
+                                        Delete candidate from database or re-index metrics.
+                                    </span>
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="tab3TrackedTableBody">
+                        <!-- JS Populated Tracked Candidates -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    fetchDiscoverSuggestions();
+    loadTrackedStocks();
+});
+
+let allTrackedStocks = [];
+
+async function loadTrackedStocks() {
+    try {
+        const res = await fetch('/api/stocks');
+        const data = await res.json();
+        if (data.status === 'success') {
+            allTrackedStocks = data.data;
+            renderTrackedTable();
+        }
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+function renderTrackedTable() {
+    const tbody = document.getElementById('tab3TrackedTableBody');
+    tbody.innerHTML = '';
+    allTrackedStocks.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid rgba(46,53,69,0.5)';
+        tr.innerHTML = `
+            <td style="padding:10px 12px;"><strong>${s.symbol}</strong></td>
+            <td style="padding:10px 12px;">${s.name}</td>
+            <td style="padding:10px 12px;"><span class="m">${s.sector}</span></td>
+            <td style="padding:10px 12px; text-align:right;"><strong>$${s.price ? s.price.toFixed(2) : '—'}</strong></td>
+            <td style="padding:10px 12px; text-align:right;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '—'}</td>
+            <td style="padding:10px 12px; text-align:center;"><strong class="g">${s.score}</strong></td>
+            <td style="padding:10px 12px; text-align:center;">
+                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4);" onclick="deleteTrackedStock(${s.id})">🗑 Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+async function fetchDiscoverSuggestions() {
+    const grid = document.getElementById('suggestionsGrid');
+    try {
+        const res = await fetch('/api/stocks/discover-suggestions');
+        const result = await res.json();
+
+        if (result.status === 'success' && result.data) {
+            const list = result.data;
+            grid.innerHTML = '';
+            const trackedSymbols = allTrackedStocks.map(s => s.symbol);
+
+            list.forEach(s => {
+                const isTracked = trackedSymbols.includes(s.symbol);
+                const upsidePct = Math.round(((s.targetPrice - s.price) / s.price) * 100);
+
+                const card = document.createElement('div');
+                card.className = 'acc-box';
+                card.style.background = 'var(--bg2)';
+
+                card.innerHTML = `
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <h4 style="margin:0;">
+                                <span>${s.symbol} — ${s.name}</span>
+                            </h4>
+                            <span class="hbadge">${s.sector}</span>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; font-size:12px; margin-bottom:12px; background:var(--bg3); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                            <div>Price: <strong>$${s.price.toFixed(2)}</strong></div>
+                            <div>12M Target: <strong class="g">$${s.targetPrice.toFixed(2)} (+${upsidePct}%)</strong></div>
+                            <div>Score: <strong class="g">${s.score} / 100</strong></div>
+                        </div>
+
+                        <div class="tb" style="background:rgba(88,166,255,0.05); border-color:rgba(88,166,255,0.3); margin-bottom:10px; padding:10px;">
+                            <h4 style="color:var(--blue); font-size:10px; margin-bottom:4px;">💡 WHY TRACK THIS STOCK (REASONING):</h4>
+                            <p style="font-size:12px; margin:0; line-height:1.4;">${s.reasoning}</p>
+                        </div>
+
+                        <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">
+                            <div><strong>⚡ Sector Catalysts:</strong> ${s.catalysts}</div>
+                            <div><strong>🔒 Recommended Strategy:</strong> <span style="color:var(--purple); font-weight:600;">${s.suggestedStrategy}</span></div>
+                        </div>
+                    </div>
+
+                    ${isTracked ? `
+                        <button class="fbtn" style="width:100%; border-color:var(--green); color:var(--green); cursor:default;" disabled>
+                            ✓ Already in Tracked Screener
+                        </button>
+                    ` : `
+                        <button class="btn btn-pri" style="width:100%; text-align:center;" onclick="addSuggestionToTracked(${JSON.stringify(s).replace(/"/g, '&quot;')})">
+                            ➕ Add ${s.symbol} to Tracked Screener
+                        </button>
+                    `}
+                `;
+                grid.appendChild(card);
+            });
+        }
+    } catch (e) {
+        console.error('Failed to load suggestions:', e);
+    }
+}
+
+async function addSuggestionToTracked(obj) {
+    try {
+        const res = await fetch('/api/stocks/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(obj)
+        });
+        const result = await res.json();
+
+        if (result.status === 'success') {
+            alert(`✅ ${obj.symbol} added to your tracked screener!`);
+            await loadTrackedStocks();
+            fetchDiscoverSuggestions();
+        }
+    } catch (e) {
+        console.error('Failed to add suggestion:', e);
+    }
+}
+
+async function scanStockTab3() {
+    const symbol = document.getElementById('tab3SymbolInput').value.trim().toUpperCase();
+    const resBox = document.getElementById('tab3ScanResult');
+
+    if (!symbol) {
+        alert('Please enter a valid stock ticker (e.g. AMD, AMZN, MSFT)');
+        return;
+    }
+
+    resBox.style.display = 'block';
+    resBox.innerHTML = '<span class="m">⚡ Scanning Finnhub & Schwab market data for ' + symbol + '...</span>';
+
+    try {
+        const res = await fetch(`/api/stocks/suggest/${symbol}`);
+        const result = await res.json();
+
+        if (result.status === 'success' && result.data) {
+            const d = result.data;
+            const fw = d.flywheel || {};
+
+            resBox.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div>
+                        <strong style="font-size:15px; color:var(--purple);">${d.symbol}</strong> — ${d.name}
+                        <span class="hbadge" style="margin-left:8px;">${d.sector}</span>
+                    </div>
+                    <span class="badge-sig badge-${fw.signal}">${fw.signalBadge || '🟢 CALL'}</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; font-size:12px; margin-bottom:12px;">
+                    <div>Price: <strong>$${d.price.toFixed(2)}</strong></div>
+                    <div>Target: <strong class="g">$${d.targetPrice.toFixed(2)}</strong></div>
+                    <div>Score: <strong class="g">${d.score} / 100</strong></div>
+                    <div>Risk: <strong>${d.risk}</strong></div>
+                </div>
+                <div class="tb" style="background:rgba(188,140,255,0.05); border-color:rgba(188,140,255,0.3); margin-bottom:10px; padding:10px;">
+                    <h4 style="color:var(--purple); font-size:10px; margin-bottom:4px;">💡 WHY TRACK THIS STOCK:</h4>
+                    <p style="font-size:12px; margin:0; line-height:1.4;">${d.thesis}</p>
+                </div>
+                <button class="btn btn-pri" style="width:100%; text-align:center;" onclick="addSuggestionToTracked(${JSON.stringify(d).replace(/"/g, '&quot;')})">
+                    ➕ Add ${d.symbol} to Screener & Tracked List
+                </button>
+            `;
+        }
+    } catch (e) {
+        console.error('Scan failed:', e);
+        resBox.innerHTML = '<span class="r">Failed to fetch market data for ' + symbol + '. Please check the symbol and try again.</span>';
+    }
+}
+
+async function deleteTrackedStock(id) {
+    if (!confirm('Are you sure you want to remove this stock from your tracked list?')) return;
+
+    try {
+        const res = await fetch(`/api/stocks/${id}`, { method: 'DELETE' });
+        const result = await res.json();
+
+        if (result.status === 'success') {
+            await loadTrackedStocks();
+        }
+    } catch (e) {
+        console.error('Delete failed:', e);
+    }
+}
+</script>
+{% endblock %}
