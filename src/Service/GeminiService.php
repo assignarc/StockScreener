@@ -7,19 +7,22 @@ use Psr\Log\LoggerInterface;
 
 class GeminiService
 {
-    private string $model;
     private string $apiUrl;
 
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
-        private ?string $apiKey = null
+        private AppConfigService $appConfig,
+        private ?string $geminiApiKey = null,
+        private string $geminiModel = 'gemini-1.5-flash',
+        private string $geminiApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models',
     ) {
-        $this->apiKey = $_ENV['GEMINI_API_KEY'] ?? $_SERVER['GEMINI_API_KEY'] ?? null;
-        $this->model = $_ENV['GEMINI_MODEL'] ?? $_SERVER['GEMINI_MODEL'] ?? 'gemini-1.5-flash';
-        
-        $baseUrl = $_ENV['GEMINI_API_URL'] ?? $_SERVER['GEMINI_API_URL'] ?? 'https://generativelanguage.googleapis.com/v1beta/models';
-        $this->apiUrl = rtrim($baseUrl, '/') . '/' . $this->model . ':generateContent';
+        $this->apiUrl = rtrim($this->geminiApiUrl, '/') . '/' . $this->geminiModel . ':generateContent';
+    }
+
+    public function getEffectiveApiKey(): ?string
+    {
+        return $this->appConfig->getGeminiApiKey() ?: ($this->geminiApiKey ?: ($_ENV['GEMINI_API_KEY'] ?? null));
     }
 
     /**
@@ -58,21 +61,20 @@ Please generate 3 high-conviction AI Capital Flywheel Strategy Ideas following s
 
 Output clear JSON formatting with keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail.";
 
-        if (!empty($this->apiKey)) {
+        $apiKey = $this->getEffectiveApiKey();
+        if (!empty($apiKey)) {
             try {
-                $response = $this->httpClient->request('POST', $this->apiUrl . '?key=' . $this->apiKey, [
-                    'headers' => [
-                        'Content-Type' => 'application/json',
-                    ],
+                $response = $this->httpClient->request('POST', $this->apiUrl . '?key=' . $apiKey, [
+                    'headers' => ['Content-Type' => 'application/json'],
                     'json' => [
                         'contents' => [
-                            [
-                                'parts' => [
-                                    ['text' => $prompt]
-                                ]
-                            ]
-                        ]
-                    ]
+                            ['parts' => [['text' => $prompt]]],
+                        ],
+                        'generationConfig' => [
+                            'response_mime_type' => 'application/json',
+                            'temperature' => 0.2,
+                        ],
+                    ],
                 ]);
 
                 if ($response->getStatusCode() === 200) {
@@ -80,7 +82,7 @@ Output clear JSON formatting with keys: title, ticker, strategyType, strike, exp
                     $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
                     
                     return [
-                        'source' => "Google Gemini {$this->model} (Live API)",
+                        'source' => "Google Gemini {$this->geminiModel} (Live API)",
                         'rawText' => $aiText,
                         'ideas' => $this->parseGeminiIdeas($aiText, $cashAvailable, $equities),
                     ];
@@ -250,9 +252,9 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
 
         $aiCommentary = "Gemini AI evaluated {$symbol} option chain: Selling the \${$bestCall['strike']} Call (+{$bestCall['otmPct']}% OTM) provides optimal theta decay (+\${$bestCall['estIncomePerContract']} credit per contract) while allowing stock upside. Selling the \${$bestPut['strike']} Put offers a {$bestPut['discountPct']}% discount entry point.";
 
-        if (!empty($this->apiKey)) {
+        if (!empty($this->geminiApiKey)) {
             try {
-                $response = $this->httpClient->request('POST', $this->apiUrl . '?key=' . $this->apiKey, [
+                $response = $this->httpClient->request('POST', $this->apiUrl . '?key=' . $this->geminiApiKey, [
                     'json' => ['contents' => [['parts' => [['text' => $prompt]]]]]
                 ]);
                 if ($response->getStatusCode() === 200) {
@@ -311,9 +313,9 @@ Perform a 3-point real-time pre-execution sanity check:
 
 Return structured response.";
 
-        if (!empty($this->apiKey)) {
+        if (!empty($this->geminiApiKey)) {
             try {
-                $response = $this->httpClient->request('POST', $this->apiUrl . '?key=' . $this->apiKey, [
+                $response = $this->httpClient->request('POST', $this->apiUrl . '?key=' . $this->geminiApiKey, [
                     'json' => ['contents' => [['parts' => [['text' => $prompt]]]]]
                 ]);
                 if ($response->getStatusCode() === 200) {
@@ -324,7 +326,7 @@ Return structured response.";
                         'verdict' => str_contains($aiText, 'REJECT') ? '🔴 WARN/REJECT' : '🟢 VERIFIED PASS',
                         'timestamp' => date('Y-m-d H:i:s T'),
                         'analysisText' => $aiText,
-                        'source' => "Gemini AI {$this->model} Live Pre-Trade Check",
+                        'source' => "Gemini AI {$this->geminiModel} Live Pre-Trade Check",
                     ];
                 }
             } catch (\Throwable $e) {

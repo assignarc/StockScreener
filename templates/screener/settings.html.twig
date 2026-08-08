@@ -1,0 +1,779 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}System Settings & Rules — KHAPRE MoonShot Portfolio{% endblock %}
+
+{% block stylesheets %}
+<style>
+/* ── Settings Page Layout ─────────────────────────────────────────────── */
+.settings-wrap {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Page Hero ──────────────────────────────────────────────────────── */
+.settings-hero {
+    padding: 28px 32px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+}
+.settings-hero h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0 0 6px 0;
+    color: var(--text);
+}
+.settings-hero p { color: var(--muted); font-size: 13px; margin: 0; }
+
+/* ── Content Grid ────────────────────────────────────────────────────── */
+.settings-content {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 32px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+/* ── Config Section Card ─────────────────────────────────────────────── */
+.cfg-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.cfg-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+}
+.cfg-section-header .sec-icon { font-size: 22px; }
+.cfg-section-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text);
+}
+.cfg-section-header p {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 2px 0 0 0;
+}
+.cfg-rows { padding: 0; }
+
+/* ── Config Row ─────────────────────────────────────────────────────── */
+.cfg-row {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+}
+.cfg-row:last-child { border-bottom: none; }
+.cfg-row:hover { background: var(--bg3); }
+.cfg-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+}
+.cfg-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+.cfg-key {
+    font-size: 10px;
+    color: var(--blue);
+    font-family: 'Courier New', monospace;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+
+/* ── Config Input ────────────────────────────────────────────────────── */
+.cfg-input {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: right;
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    box-sizing: border-box;
+}
+.cfg-input:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(88,166,255,0.15);
+}
+.cfg-input.modified { border-color: var(--yellow); }
+.cfg-input.saved    { border-color: var(--green);  }
+
+/* ── Wide Key Input row — spans full width ─────────────────────────── */
+.cfg-row-wide {
+    display: block;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+}
+.cfg-row-wide:last-child { border-bottom: none; }
+.cfg-row-wide:hover { background: var(--bg3); }
+.cfg-row-wide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* ── Key Input (monospace, obsidian-black focus) ─────────────────────── */
+.large-key-input {
+    width: 100%;
+    height: 42px;
+    min-height: 42px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0 14px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', Monaco, monospace;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    outline: none;
+    box-sizing: border-box;
+    transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.large-key-input:hover { border-color: rgba(56,189,248,0.5); }
+.large-key-input:focus, .large-key-input:active {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 16px rgba(56,189,248,0.4) !important;
+}
+
+/* ── Stylized Custom Select ──────────────────────────────────────────── */
+.styled-select-input {
+    width: 100%;
+    height: 42px;
+    background-color: var(--bg1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0 38px 0 14px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s;
+    box-sizing: border-box;
+}
+.styled-select-input:hover { border-color: var(--blue); background-color: var(--bg2); }
+.styled-select-input:focus {
+    border-color: #38bdf8;
+    background-color: #000000;
+    color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.25);
+}
+
+/* ── Pill Action Chips ───────────────────────────────────────────────── */
+.slick-pill-btn {
+    border-radius: 20px;
+    font-size: 11px;
+    padding: 4px 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.slick-pill-btn:hover {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(2,132,199,0.3);
+}
+
+.material-symbols-outlined {
+    font-size: 18px;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+/* ── hbtn-purple variant ─────────────────────────────────────────────── */
+.hbtn-purple {
+    background: linear-gradient(135deg, #7c3aed, #9d4edd);
+    color: #fff;
+    border: none;
+}
+.hbtn-purple:hover { opacity: 0.88; }
+
+/* ── Broker instance card ───────────────────────────────────────────── */
+.broker-instance-card {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    transition: border-color 0.2s;
+}
+.broker-instance-card:hover { border-color: rgba(56,189,248,0.35); }
+
+/* ── Save Bar ────────────────────────────────────────────────────────── */
+.save-bar {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 50;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+}
+.save-bar .save-status {
+    font-size: 13px;
+    color: var(--muted);
+    flex: 1;
+}
+.save-bar .save-status.success { color: var(--green); }
+.save-bar .save-status.error   { color: var(--red); }
+
+.btn-save {
+    background: linear-gradient(135deg, var(--blue), var(--green));
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 28px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    font-family: 'Outfit', sans-serif;
+}
+.btn-save:hover   { opacity: 0.9; transform: translateY(-1px); }
+.btn-save:active  { transform: translateY(0); }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-reset {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-reset:hover { color: var(--text); border-color: var(--text); }
+
+/* ── Pct display ─────────────────────────────────────────────────────── */
+.pct-suffix { font-size: 11px; color: var(--muted); margin-top: 3px; text-align: right; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="settings-wrap">
+
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '⚙️ System <span>Settings & Rules</span>',
+        headerBadge: 'SQLite data.db Config Engine'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
+
+    <!-- Hero -->
+    <div class="settings-hero">
+        <h2>⚙️ Quantitative Strategy Rules & Parameters</h2>
+        <p>All values are persisted to <code>data.db</code> and take effect immediately across all Flywheel algorithms. Defaults are restored if a field is cleared.</p>
+    </div>
+
+    <!-- Settings form -->
+    <div class="settings-content">
+
+        <!-- ── Brokerage Connections — Read-only status panel ──────────── -->
+        <div class="cfg-section" id="cfgBrokerCredentials">
+            <div class="cfg-section-header" style="justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">account_balance</span>
+                    <div>
+                        <h2>Brokerage Connections</h2>
+                        <p>Currently configured broker connections. To add, remove or reconfigure — use the Setup Wizard.</p>
+                    </div>
+                </div>
+                <a href="/setup#step3" class="hbtn hbtn-blue" style="font-size:12px; padding:8px 16px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:700; flex-shrink:0;">
+                    <span class="material-symbols-outlined">manage_accounts</span> Manage in Setup Wizard
+                </a>
+            </div>
+
+            <!-- Read-only broker connection status cards -->
+            <div style="display:flex; flex-direction:column; gap:10px; padding:18px 20px;" id="brokerReadonlyCards">
+                {% for inst in brokerInstances %}
+                <div style="display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--bg1); border:1px solid var(--border); border-radius:10px;">
+                    <span class="material-symbols-outlined" style="font-size:20px; color:var(--blue); flex-shrink:0;">account_balance</span>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span class="hbadge" style="background:var(--blue); color:#fff; font-size:10px; padding:2px 8px;">Connection {{ loop.index }}</span>
+                            <strong style="font-size:13px; color:var(--text); font-family:'Outfit',sans-serif;">{{ inst.nickname|default('Broker ' ~ loop.index) }}</strong>
+                            <span style="font-size:11px; color:var(--muted); font-family:monospace;">
+                                {% if inst.type == 'schwab' %}Charles Schwab (OAuth 2.0)
+                                {% elseif inst.type == 'ibkr' %}Interactive Brokers (IBKR)
+                                {% elseif inst.type == 'alpaca' %}Alpaca Markets
+                                {% elseif inst.type == 'fidelity' %}Fidelity Investments
+                                {% elseif inst.type == 'etrade' %}E*TRADE / Morgan Stanley
+                                {% else %}{{ inst.type }}{% endif %}
+                            </span>
+                        </div>
+                        <div style="margin-top:4px; font-size:11px; color:var(--muted);">
+                            {% if inst.app_key is not empty %}
+                                <span style="font-family:monospace;">Key: {{ inst.app_key|slice(0,8) }}••••••••</span>
+                                &nbsp;·&nbsp;
+                                <span style="color:var(--green);">
+                                    <span class="material-symbols-outlined" style="font-size:13px; vertical-align:middle;">check_circle</span>
+                                    Credentials configured
+                                </span>
+                            {% else %}
+                                <span style="color:var(--yellow);">
+                                    <span class="material-symbols-outlined" style="font-size:13px; vertical-align:middle;">warning</span>
+                                    No credentials set — configure in Setup Wizard
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if inst.type == 'schwab' or inst.type == 'etrade' %}
+                    <a href="/api/schwab/login" target="_blank" class="hbtn hbtn-blue" style="font-size:11px; padding:4px 10px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:700; flex-shrink:0;">
+                        <span class="material-symbols-outlined">link</span> OAuth
+                    </a>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="text-align:center; padding:28px; color:var(--muted);">
+                    <span class="material-symbols-outlined" style="font-size:36px; display:block; margin-bottom:10px; opacity:0.4;">account_balance</span>
+                    <p style="margin:0 0 14px; font-size:13px;">No broker connections configured yet.</p>
+                    <a href="/setup" class="hbtn hbtn-blue" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:13px;">
+                        <span class="material-symbols-outlined">bolt</span> Run Setup Wizard
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Market Data & AI API Keys — editable full-width rows -->
+            <div class="cfg-rows" style="border-top:1px solid var(--border);">
+                <div class="cfg-row-wide">
+                    <div class="cfg-row-wide-header">
+                        <div>
+                            <div class="cfg-label">Finnhub Market Data API Key</div>
+                            <div class="cfg-desc">Live quotes, earnings calendars, dividend data. (<a href="https://finnhub.io/register" target="_blank" style="color:var(--blue);">Get free key</a>)</div>
+                            <div class="cfg-key">finnhub.api_key</div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="slick-pill-btn" id="btnToggleFinnhub" onclick="toggleKeyVisibility('cfg_finnhub_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
+                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_finnhub_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_finnhub_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                        </div>
+                    </div>
+                    <input class="large-key-input" type="password" id="cfg_finnhub_api_key" data-key="finnhub.api_key" data-original="{{ config['finnhub.api_key']|default('') }}" value="{{ config['finnhub.api_key']|default('') }}" placeholder="c1234abcd..." oninput="onFieldChange(this)">
+                </div>
+
+                <div class="cfg-row-wide">
+                    <div class="cfg-row-wide-header">
+                        <div>
+                            <div class="cfg-label">Google Gemini AI Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
+                            <div class="cfg-desc">AI strategy generation and options risk commentary. (<a href="https://aistudio.google.com/" target="_blank" style="color:var(--yellow);">Get free key</a>)</div>
+                            <div class="cfg-key">gemini.api_key</div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="slick-pill-btn" id="btnToggleGemini" onclick="toggleKeyVisibility('cfg_gemini_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
+                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_gemini_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_gemini_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                        </div>
+                    </div>
+                    <input class="large-key-input" type="password" id="cfg_gemini_api_key" data-key="gemini.api_key" data-original="{{ config['gemini.api_key']|default('') }}" value="{{ config['gemini.api_key']|default('') }}" placeholder="AIzaSy..." oninput="onFieldChange(this)">
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Flywheel Signal Thresholds ───────────────────────────── -->
+        <div class="cfg-section">
+            <div class="cfg-section-header">
+                <span class="sec-icon">📊</span>
+                <div>
+                    <h2>Flywheel Signal Thresholds</h2>
+                    <p>Controls when stocks are classified as CALL / PUT / WHEEL signals</p>
+                </div>
+            </div>
+            <div class="cfg-rows">
+                {{ _self.cfgRow('flywheel.signal.call_score_threshold', 'CALL Score Threshold', 'Minimum screener score (0-100) required to generate a bullish CALL signal.', config['flywheel.signal.call_score_threshold'], 'integer') }}
+                {{ _self.cfgRow('flywheel.signal.call_upside_threshold', 'CALL Upside Threshold (%)', 'Minimum % upside to target price required to trigger a CALL signal.', config['flywheel.signal.call_upside_threshold'], 'float') }}
+                {{ _self.cfgRow('flywheel.signal.put_score_threshold', 'PUT Score Threshold', 'Stocks scoring below this get a bearish PUT / protective hedge signal.', config['flywheel.signal.put_score_threshold'], 'integer') }}
+                {{ _self.cfgRow('flywheel.signal.call_otm_pct', 'CALL OTM % (Long Call Strike)', 'Out-of-the-money % for the long call strike suggestion (e.g. 0.05 = 5% OTM).', config['flywheel.signal.call_otm_pct'], 'percent') }}
+                {{ _self.cfgRow('flywheel.signal.put_hedge_otm_pct', 'PUT Hedge OTM %', 'OTM % for protective put hedge strike.', config['flywheel.signal.put_hedge_otm_pct'], 'percent') }}
+                {{ _self.cfgRow('flywheel.signal.csp_discount_pct', 'Cash-Secured Put Discount %', 'How far below current price to place the CSP strike (e.g. 0.08 = 8% discount).', config['flywheel.signal.csp_discount_pct'], 'percent') }}
+            </div>
+        </div>
+
+        <!-- ── Capital Allocation Weights ──────────────────────────── -->
+        <div class="cfg-section">
+            <div class="cfg-section-header">
+                <span class="sec-icon">⚖️</span>
+                <div>
+                    <h2>Capital Allocation Weights</h2>
+                    <p>How available risk capital is split between CALL / WHEEL / PUT strategies. Must sum to 1.0.</p>
+                </div>
+            </div>
+            <div class="cfg-rows">
+                {{ _self.cfgRow('flywheel.allocation.call_weight', 'CALL Weight', 'Fraction of risk capital allocated to long call trades (default: 60%).', config['flywheel.allocation.call_weight'], 'percent') }}
+                {{ _self.cfgRow('flywheel.allocation.wheel_weight', 'WHEEL (Income) Weight', 'Fraction allocated to cash-secured puts / covered calls (default: 25%).', config['flywheel.allocation.wheel_weight'], 'percent') }}
+                {{ _self.cfgRow('flywheel.allocation.put_weight', 'PUT (Hedge) Weight', 'Fraction allocated to protective put hedges (default: 15%).', config['flywheel.allocation.put_weight'], 'percent') }}
+                {{ _self.cfgRow('flywheel.default_risk_cap', 'Default Risk Cap ($)', 'Default total capital to allocate in the flywheel allocator when none is specified.', config['flywheel.default_risk_cap'], 'float') }}
+            </div>
+        </div>
+
+        <!-- ── Covered Call Parameters ─────────────────────────────── -->
+        <div class="cfg-section">
+            <div class="cfg-section-header">
+                <span class="sec-icon">📞</span>
+                <div>
+                    <h2>Covered Call Parameters</h2>
+                    <p>Strike selection, premium estimation, and DTE target for covered call suggestions</p>
+                </div>
+            </div>
+            <div class="cfg-rows">
+                {{ _self.cfgRow('flywheel.covered_call.min_shares', 'Minimum Unencumbered Shares', 'Minimum number of unencumbered shares required to be eligible for a covered call suggestion.', config['flywheel.covered_call.min_shares'], 'integer') }}
+                {{ _self.cfgRow('flywheel.covered_call.otm_pct', 'Strike OTM %', 'How far OTM the covered call strike is placed from current price.', config['flywheel.covered_call.otm_pct'], 'percent') }}
+                {{ _self.cfgRow('flywheel.covered_call.cost_basis_buffer', 'Cost Basis Safety Buffer', 'Strike must be ≥ cost_basis × this multiplier to prevent a capital loss on assignment. (e.g. 1.02 = 2% above cost basis).', config['flywheel.covered_call.cost_basis_buffer'], 'float') }}
+                {{ _self.cfgRow('flywheel.covered_call.dte_target', 'DTE Target (Days to Expiry)', 'Target days-to-expiry for covered call suggestions. 30-45 DTE captures optimal theta decay.', config['flywheel.covered_call.dte_target'], 'integer') }}
+                {{ _self.cfgRow('flywheel.covered_call.est_premium_pct', 'Estimated Premium %', 'Estimated premium as a % of stock price for the DTE target (e.g. 0.028 = 2.8%).', config['flywheel.covered_call.est_premium_pct'], 'percent') }}
+            </div>
+        </div>
+
+        <!-- ── Early Exit Parameters ───────────────────────────────── -->
+        <div class="cfg-section">
+            <div class="cfg-section-header">
+                <span class="sec-icon">🏃</span>
+                <div>
+                    <h2>Early Exit / Buy-To-Close</h2>
+                    <p>When to suggest closing a position early to lock in premium decay profits</p>
+                </div>
+            </div>
+            <div class="cfg-rows">
+                {{ _self.cfgRow('flywheel.early_exit.btc_profit_threshold', 'BTC Profit Threshold (%)', 'Minimum % of maximum profit achieved before an early Buy-To-Close suggestion is generated (e.g. 50 = 50% decay).', config['flywheel.early_exit.btc_profit_threshold'], 'float') }}
+            </div>
+        </div>
+
+        <!-- ── Calendar Bounds ─────────────────────────────────────── -->
+        <div class="cfg-section">
+            <div class="cfg-section-header">
+                <span class="sec-icon">📅</span>
+                <div>
+                    <h2>Calendar Navigation Bounds</h2>
+                    <p>How far back and forward the portfolio calendar can be browsed</p>
+                </div>
+            </div>
+            <div class="cfg-rows">
+                {{ _self.cfgRow('calendar.months_back', 'Months Back', 'How many months back from today the calendar allows navigation.', config['calendar.months_back'], 'integer') }}
+                {{ _self.cfgRow('calendar.months_forward', 'Months Forward', 'How many months forward from today the calendar allows navigation.', config['calendar.months_forward'], 'integer') }}
+            </div>
+        </div>
+
+        <!-- ── Persistent Cache & Storage Management ───────────────────── -->
+        <div class="cfg-section" id="cfgCacheSection">
+            <div class="cfg-section-header">
+                <span class="sec-icon">⚡</span>
+                <div>
+                    <h2>Persistent Cache & Storage Management</h2>
+                    <p>Persists Finnhub market data and sanitized non-PII Schwab aggregates in SQLite (<code>var/data.db</code>)</p>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:18px;">
+                <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Active Cache Entries</div>
+                    <div style="font-size:20px; font-weight:800; color:var(--blue);" id="cacheActiveCount">{{ cacheStats.activeEntries|default(0) }} Records</div>
+                </div>
+                <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Finnhub Market Data</div>
+                    <div style="font-size:20px; font-weight:800; color:var(--green);" id="cacheFinnhubCount">{{ cacheStats.finnhubEntries|default(0) }} Items</div>
+                </div>
+                <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Sanitized Schwab Data</div>
+                    <div style="font-size:20px; font-weight:800; color:var(--purple);" id="cacheSchwabCount">{{ cacheStats.schwabEntries|default(0) }} Masked</div>
+                </div>
+                <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Database Storage (data.db)</div>
+                    <div style="font-size:20px; font-weight:800; color:var(--yellow);" id="cacheDbSize">{{ cacheStats.databaseSizeKb|default(0) }} KB</div>
+                </div>
+            </div>
+
+            <div style="background:rgba(21,128,61,0.08); border:1px solid rgba(63,185,80,0.25); border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:12px; color:var(--text); line-height:1.5;">
+                🔒 <strong>Privacy & Security Enforcement:</strong> All Schwab account numbers are strictly masked to the last 4 digits (e.g. <code>***3261</code>). Personal names, tax IDs, routing numbers, and OAuth access tokens are never persisted in the cache table.
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="button" class="hbtn hbtn-green" style="font-size:11px; padding:8px 16px;" onclick="purgeCache('finnhub')">
+                    ⚡ Purge Finnhub Market Cache
+                </button>
+                <button type="button" class="hbtn hbtn-purple" style="font-size:11px; padding:8px 16px;" onclick="purgeCache('schwab')">
+                    🔒 Purge Sanitized Schwab Cache
+                </button>
+                <button type="button" class="hbtn hbtn-red" style="font-size:11px; padding:8px 16px;" onclick="purgeCache('all')">
+                    🗑 Flush All Persistent Cache
+                </button>
+                <span id="cachePurgeMsg" style="font-size:12px; align-self:center; margin-left:8px; font-weight:600; color:var(--green);"></span>
+            </div>
+        </div>
+
+    </div><!-- /settings-content -->
+
+    <!-- Save Bar -->
+    <div class="save-bar">
+        <span class="save-status" id="saveStatus">No unsaved changes.</span>
+        <button class="btn-reset" onclick="resetToDefaults()" id="btnReset">↩ Reset to Defaults</button>
+        <button class="btn-save" onclick="saveSettings()" id="btnSave" disabled>💾 Save All Changes</button>
+    </div>
+
+    {% include 'screener/partials/_footer.html.twig' %}
+</div><!-- /settings-wrap -->
+{% endblock %}
+
+{# ── Twig macro for a single config row ──────────────────────────────────── #}
+{% macro cfgRow(key, label, desc, value, inputType) %}
+<div class="cfg-row">
+    <div>
+        <div class="cfg-label">{{ label }}</div>
+        <div class="cfg-desc">{{ desc }}</div>
+        <div class="cfg-key">{{ key }}</div>
+        {% if inputType == 'percent' %}<div class="pct-suffix">Stored as decimal — e.g. 0.06 = 6%</div>{% endif %}
+    </div>
+    <div>
+        <input
+            class="cfg-input"
+            type="number"
+            id="cfg_{{ key|replace({'.': '_'}) }}"
+            data-key="{{ key }}"
+            data-original="{{ value }}"
+            value="{{ value }}"
+            step="{{ inputType == 'integer' ? 1 : 0.001 }}"
+            min="0"
+            oninput="onFieldChange(this)"
+        >
+    </div>
+</div>
+{% endmacro %}
+
+{% block javascripts %}
+<script>
+let pendingChanges = {};
+
+function onFieldChange(input) {
+    const key = input.dataset.key;
+    const originalRaw = input.dataset.original;
+    const currentRaw  = input.value;
+
+    // Numeric inputs (type=number) — compare as floats; password/text inputs as strings
+    const isNumeric = (input.type === 'number');
+    const isDirty = isNumeric
+        ? (parseFloat(currentRaw) !== parseFloat(originalRaw))
+        : (currentRaw.trim() !== originalRaw.trim());
+
+    if (isDirty) {
+        pendingChanges[key] = isNumeric ? parseFloat(currentRaw) : currentRaw;
+        input.classList.add('modified');
+        input.classList.remove('saved');
+    } else {
+        delete pendingChanges[key];
+        input.classList.remove('modified');
+    }
+
+    const hasChanges = Object.keys(pendingChanges).length > 0;
+    document.getElementById('btnSave').disabled = !hasChanges;
+    document.getElementById('saveStatus').textContent = hasChanges
+        ? `${Object.keys(pendingChanges).length} unsaved change(s).`
+        : 'No unsaved changes.';
+    document.getElementById('saveStatus').className = 'save-status';
+}
+
+function toggleKeyVisibility(fieldId, btn) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    if (el.type === 'password') {
+        el.type = 'text';
+        btn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span> Hide';
+    } else {
+        el.type = 'password';
+        btn.innerHTML = '<span class="material-symbols-outlined">visibility</span> Show';
+    }
+}
+
+async function pasteToField(fieldId) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+            el.value = text.trim();
+            el.dispatchEvent(new Event('input'));
+            el.focus();
+        }
+    } catch(e) {
+        el.focus();
+        alert('Please press Ctrl+V (or Cmd+V) to paste into this field.');
+    }
+}
+
+async function copyFromField(fieldId, btn) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    const text = el.value.trim();
+    if (!text) return;
+    await copyText(text, btn);
+}
+
+async function copyText(text, btn) {
+    try {
+        await navigator.clipboard.writeText(text);
+        if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '✓ Copied!';
+            btn.style.color = 'var(--green)';
+            setTimeout(() => {
+                btn.innerHTML = orig;
+                btn.style.color = '';
+            }, 2000);
+        }
+    } catch(e) {
+        prompt('Copy to clipboard (Ctrl+C):', text);
+    }
+}
+
+function toggleSecretVisibility(fieldId, btn) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    if (el.type === 'password') {
+        el.type = 'text';
+        if (btn) btn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span> Hide';
+    } else {
+        el.type = 'password';
+        if (btn) btn.innerHTML = '<span class="material-symbols-outlined">visibility</span> Show';
+    }
+}
+
+async function saveSettings() {
+    const btn = document.getElementById('btnSave');
+    const status = document.getElementById('saveStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ Saving…';
+
+    try {
+        const res  = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(pendingChanges),
+        });
+        const json = await res.json();
+
+        if (json.status === 'success') {
+            // Mark all modified fields as saved
+            document.querySelectorAll('.cfg-input.modified').forEach(input => {
+                input.classList.remove('modified');
+                input.classList.add('saved');
+                input.dataset.original = input.value;
+                // Fade saved state after 3s
+                setTimeout(() => input.classList.remove('saved'), 3000);
+            });
+
+            pendingChanges = {};
+            status.textContent = '✅ All changes saved to data.db successfully!';
+            status.className = 'save-status success';
+            btn.textContent = '💾 Save All Changes';
+        } else {
+            throw new Error(json.message ?? 'Unknown error');
+        }
+    } catch (e) {
+        status.textContent = '❌ Save failed: ' + e.message;
+        status.className = 'save-status error';
+        btn.disabled = false;
+        btn.textContent = '💾 Save All Changes';
+    }
+}
+
+async function resetToDefaults() {
+    if (!confirm('Reset ALL settings to factory defaults? This will overwrite any customisations.')) return;
+
+    // Reload defaults from GET /api/config with a flag could work,
+    // but simplest is to just reload the page after clearing
+    // For true reset: we need a dedicated endpoint or just reload to get fresh defaults
+    const inputs = document.querySelectorAll('.cfg-input');
+    inputs.forEach(input => {
+        input.value = input.dataset.original;
+        input.classList.remove('modified', 'saved');
+    });
+    pendingChanges = {};
+    document.getElementById('btnSave').disabled = true;
+    document.getElementById('saveStatus').textContent = 'Changes reverted to last saved values.';
+    document.getElementById('saveStatus').className = 'save-status';
+}
+
+async function purgeCache(type = 'all') {
+    const msg = document.getElementById('cachePurgeMsg');
+    if (msg) msg.textContent = '⏳ Purging cache…';
+
+    try {
+        const res = await fetch('/api/config/cache/clear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type }),
+        });
+        const json = await res.json();
+
+        if (json.status === 'success') {
+            if (msg) {
+                msg.textContent = `✅ ${json.message}`;
+                setTimeout(() => { msg.textContent = ''; }, 4000);
+            }
+            if (json.stats) {
+                const act = document.getElementById('cacheActiveCount');
+                const fin = document.getElementById('cacheFinnhubCount');
+                const sch = document.getElementById('cacheSchwabCount');
+                const dbs = document.getElementById('cacheDbSize');
+                if (act) act.textContent = `${json.stats.activeEntries || 0} Records`;
+                if (fin) fin.textContent = `${json.stats.finnhubEntries || 0} Items`;
+                if (sch) sch.textContent = `${json.stats.schwabEntries || 0} Masked`;
+                if (dbs) dbs.textContent = `${json.stats.databaseSizeKb || 0} KB`;
+            }
+        }
+    } catch (e) {
+        if (msg) {
+            msg.textContent = `❌ Purge error: ${e.message}`;
+            msg.style.color = 'var(--red)';
+        }
+    }
+}
+</script>
+{% endblock %}

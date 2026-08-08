@@ -1,0 +1,67 @@
+{# ── UNIFIED APP FOOTER PARTIAL ─────────────────────────────────────────── #}
+<footer class="app-footer">
+    <div class="footer-top-grid">
+        <!-- BRAND & SYSTEM INFO -->
+        <div class="footer-brand-col">
+            <h4>
+                <span>🚀</span>
+                <span>KHAPRE <strong style="color:var(--purple)">MoonShot</strong> Portfolio</span>
+            </h4>
+            <p>
+                Quantitative Capital Flywheel and Level 1 Defined-Risk Options Execution Engine. Designed for covered calls on owned equities and 100% cash-secured puts with zero naked margin traps.
+            </p>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                <span class="footer-status-pill">
+                    <span class="footer-status-dot"></span>
+                    <span>Brokerage API: Connected</span>
+                </span>
+                <span class="footer-status-pill">
+                    <span class="footer-status-dot" style="background:var(--blue); box-shadow:0 0 6px rgba(88,166,255,0.6);"></span>
+                    <span>Finnhub Market Data: Live</span>
+                </span>
+                <span class="footer-status-pill">
+                    <span class="footer-status-dot" style="background:var(--purple); box-shadow:0 0 6px rgba(188,140,255,0.6);"></span>
+                    <span>Gemini AI Q-Engine: Active</span>
+                </span>
+                <span class="footer-status-pill">
+                    <span class="footer-status-dot" style="background:var(--yellow); box-shadow:0 0 6px rgba(210,153,34,0.6);"></span>
+                    <span>SQLite data.db: Persisted</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- QUICK NAVIGATION -->
+        <div>
+            <div class="footer-col-title">Portfolio Navigation</div>
+            <ul class="footer-links-list">
+                <li><a href="/">📊 Executive Dashboard</a></li>
+                <li><a href="/planner">🌅 Daily Morning Planner</a></li>
+                <li><a href="/screener">⚡ Stock Screener & Options Flywheel</a></li>
+                <li><a href="/portfolio">💼 Portfolio Details (Brokerage Accounts)</a></li>
+                <li><a href="/discover">🔍 Discover & Tracked Stocks</a></li>
+                <li><a href="/settings">⚙️ Settings & Configuration</a></li>
+            </ul>
+        </div>
+
+        <!-- STRATEGY & COMPLIANCE -->
+        <div>
+            <div class="footer-col-title">Execution Rules</div>
+            <ul class="footer-links-list">
+                <li><span style="color:var(--text); font-size:12px; font-weight:600;">Level 1 Options:</span> <span style="font-size:11px;">100% Covered</span></li>
+                <li><span style="color:var(--text); font-size:12px; font-weight:600;">Covered Calls:</span> <span style="font-size:11px;">&ge; Cost Basis</span></li>
+                <li><span style="color:var(--text); font-size:12px; font-weight:600;">Cash-Secured Puts:</span> <span style="font-size:11px;">Fully Collateralized</span></li>
+                <li><span style="color:var(--text); font-size:12px; font-weight:600;">Early BTC Exits:</span> <span style="font-size:11px;">50-80% Profit Lock</span></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- FOOTER BOTTOM & DISCLAIMER -->
+    <div class="footer-bottom">
+        <div class="footer-disclaimer">
+            ⚠️ <strong>Disclaimer:</strong> KHAPRE MoonShot Portfolio is an analytical & personal trade execution assistant. All options strategies are strictly Level 1 Covered or Cash-Secured (Defined Risk). Options trading involves substantial risk of loss and is not suitable for all investors.
+        </div>
+        <div class="footer-copy">
+            &copy; {{ "now"|date("Y") }} <strong>KHAPRE MoonShot Portfolio v3.0</strong> • All rights reserved.
+        </div>
+    </div>
+</footer>

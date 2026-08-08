@@ -1,47 +1,55 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Schwab Portfolio & Positions — Moonshot Screener{% endblock %}
+{% block title %}Brokerage Portfolio & Accounts — KHAPRE MoonShot Portfolio{% endblock %}
 
 {% block body %}
 <div id="app">
-    <!-- HEADER -->
-    <div class="header">
-        <h1>💼 Charles Schwab <span>Portfolio</span></h1>
-        <span class="hbadge">Live Brokerage API</span>
-        <div class="hright">
-            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
-            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
-        </div>
-    </div>
-
-    <!-- MAIN PAGE NAVIGATION LINKS -->
-    <div class="nav-tabs">
-        <a href="/" class="nav-link">📊 Executive Dashboard</a>
-        <a href="/screener" class="nav-link">⚡ Stock Screener & Options Flywheel</a>
-        <a href="/portfolio" class="nav-link active">💼 Portfolio Details (Schwab Accounts)</a>
-        <a href="/discover" class="nav-link">🔍 Discover & Manage Tracked Stocks</a>
-    </div>
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '💼 Brokerage <span>Portfolio</span>',
+        headerBadge: 'Live Brokerage API'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
 
     <!-- PAGE 2 CONTENT: PORTFOLIO DETAILS -->
     <div class="port-container">
-        <!-- PORTFOLIO COVERED CALL TRADE ASSISTANT PLAYBOOK -->
-        <div style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border: 1px solid rgba(63,185,80,0.4); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
-                <div>
-                    <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--green); display:flex; align-items:center; gap:8px;">
-                        <span>🔥 Capital Flywheel — Suggested Covered Call Trades</span>
-                        <span class="hbadge" style="background:rgba(63,185,80,0.2); color:var(--green); border-color:rgba(63,185,80,0.4);">Option Level 1 Basic</span>
-                    </h3>
-                    <div style="font-size:12px; color:var(--muted);">
-                        Scanned your unencumbered 100-share blocks. Selling these suggested Covered Calls generates <strong class="g" id="portPlaybookTotalIncome">+$2,482.00 Instant Premium Income</strong>!
-                    </div>
-                </div>
+        <!-- DATA SOURCE PROVENANCE WIDGET -->
+        <div class="data-source-widget" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:10px 16px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; font-size:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span style="font-weight:700; color:var(--text); display:flex; align-items:center; gap:6px; font-family:'Outfit',sans-serif;">
+                    <span style="font-size:14px;">📡</span> Data Origin & Compliance:
+                </span>
+                <span class="hbadge" style="background:rgba(56,189,248,0.15); color:var(--blue); border-color:rgba(56,189,248,0.3); font-weight:700;">
+                    🏦 {{ portfolio.dataSource.provider|default('Connected Brokerage API') }}
+                </span>
+                <span style="font-family:'SFMono-Regular',Consolas,monospace; font-size:11px; color:var(--purple); background:var(--bg3); padding:3px 8px; border-radius:6px; border:1px solid rgba(188,140,255,0.2);">
+                    {{ portfolio.dataSource.endpoint|default('/trader/v1/accounts?fields=positions') }}
+                </span>
             </div>
 
-            <div id="portCoveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
-                <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">⚡ Scanning Schwab unencumbered stock positions...</div>
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:11px;">
+                {% if portfolio.dataSource.mode|default('LIVE_API') == 'LIVE_API' %}
+                    <span style="color:var(--green); font-weight:700; display:flex; align-items:center; gap:5px;">
+                        <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 6px rgba(34,197,94,0.6);"></span>
+                        LIVE API (OAuth 2.0)
+                    </span>
+                {% else %}
+                    <span style="color:var(--yellow); font-weight:700; display:flex; align-items:center; gap:5px;">
+                        <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--yellow);"></span>
+                        SIMULATED / DEMO MODE
+                    </span>
+                {% endif %}
+
+                <span style="color:var(--muted); border-left:1px solid var(--border); padding-left:10px;">
+                    🕒 Last Synced: <strong style="color:var(--text);">{{ portfolio.dataSource.timestamp|default("now"|date("H:i T")) }}</strong>
+                </span>
+
+                <span style="color:var(--muted); border-left:1px solid var(--border); padding-left:10px;" title="Strict PII Sanitization Enforced">
+                    🔒 <span style="color:var(--green); font-weight:600;">Non-PII Encrypted</span>
+                </span>
             </div>
         </div>
+
         <!-- PORTFOLIO SUMMARY CARDS -->
         <div class="port-summary">
             <div class="port-card">
@@ -63,54 +71,246 @@
 
         <!-- VIEW MODE SELECTOR SUBTABS -->
         <div class="view-subtabs">
-            <button class="vtab-btn active" id="vtabAccounts" onclick="switchPortSubView('accounts')">🏦 Account Aggregated View</button>
-            <button class="vtab-btn" id="vtabEquities" onclick="switchPortSubView('equities')">📈 Equity Aggregated View</button>
-            <a href="/" class="hbtn" style="margin-left:auto; background:rgba(63,185,80,0.15); color:var(--green); border:1px solid rgba(63,185,80,0.3);">⚡ Load Cash into Options Allocator</a>
-        </div>
-
-        <!-- SUBVIEW 1: ACCOUNT AGGREGATED VIEW -->
-        <div id="subViewAccounts">
-            <div class="acc-grid">
-                {% if portfolio.accounts is defined and portfolio.accounts|length > 0 %}
-                    {% for acc in portfolio.accounts %}
-                        <div class="acc-box">
-                            <div>
-                                <h4>
-                                    <span>🏦 Account {{ acc.accountNumber }}</span>
-                                    <span class="hbadge">{{ acc.type }}</span>
-                                </h4>
-                                <div style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">
-                                    <div>Liquidation Value: <strong style="color:var(--text);">${{ acc.liquidationValue|number_format(2) }}</strong></div>
-                                    <div>Cash Available for Trading: <strong style="color:var(--green);">${{ acc.cashAvailable|number_format(2) }}</strong></div>
-                                </div>
-                                <div style="background: var(--bg3); border-radius: 8px; padding: 10px; border: 1px solid var(--border); margin-bottom: 14px;">
-                                    <div style="font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 6px;">Positions ({{ acc.positionsCount }})</div>
-                                    {% for p in acc.positions %}
-                                        <div class="row" style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(46,53,69,0.3); font-size:12px;">
-                                            <span><strong>{{ p.symbol }}</strong> ({{ p.quantity }})</span>
-                                            <span>${{ p.marketValue|number_format(2) }} <small class="{% if p.unrealizedPL >= 0 %}g{% else %}r{% endif %}">({% if p.unrealizedPL >= 0 %}+{% endif %}${{ p.unrealizedPL|number_format(0) }})</small></span>
-                                        </div>
-                                    {% else %}
-                                        <div class="m" style="font-size:12px;">No active positions</div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <a href="/" class="btn btn-pri" style="width: 100%; text-align: center; text-decoration:none;">
-                                ⚡ Load ${{ acc.cashAvailable|number_format(0) }} Cash into Options Engine
-                            </a>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="m" style="grid-column: 1/-1; text-align:center; padding:30px; background:var(--bg2); border-radius:12px; border:1px solid var(--border);">
-                        No Schwab account details available. Please click <strong>Connect Schwab</strong> above.
-                    </div>
-                {% endif %}
+            <button class="vtab-btn active" id="vtabCalendar" onclick="switchPortSubView('calendar')">📅 Options & Equities Calendar</button>
+            <button class="vtab-btn" id="vtabFlywheel" onclick="switchPortSubView('flywheel')">🔥 Suggested Covered Call Trades</button>
+            <button class="vtab-btn" id="vtabAccounts" onclick="switchPortSubView('holdings')">💼 Portfolio Holdings & Accounts</button>
+            <div style="margin-left:auto; display:flex; gap:8px;">
+                <button type="button" class="hbtn" style="background:var(--bg3); font-size:11px; padding:6px 12px;" onclick="forceRefreshPortfolioData()" title="Bypass persistent cache and query live brokerage APIs">
+                    🔄 Refresh Live Data
+                </button>
+                <a href="/screener" class="hbtn hbtn-green">⚡ Load Cash into Options Allocator</a>
             </div>
         </div>
 
-        <!-- SUBVIEW 2: EQUITY AGGREGATED VIEW -->
-        <div id="subViewEquities" style="display:none;">
-            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+        <!-- SUBVIEW: 30-DAY ACCOUNT ACTIVITY & REALIZED CASH HISTORY -->
+        <div id="subViewHistory" style="display:none;">
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+                    <div>
+                        <h3 style="font-family:'Outfit',sans-serif; font-size:18px; margin:0 0 4px 0; color:var(--text); display:flex; align-items:center; gap:8px;">
+                            <span>⏮ 30-Day Account Activity & Realized Cash Flow</span>
+                            <span class="hbadge" style="background:rgba(188,140,255,0.18); color:var(--purple); border-color:rgba(188,140,255,0.35);">Live Brokerage History</span>
+                        </h3>
+                        <div style="font-size:12px; color:var(--muted);">
+                            Realized dividends, option premiums harvested, early profit locks (BTC), and collateral releases over the last 30 days.
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="hbtn" style="padding:6px 12px; font-size:11px; background:var(--bg3);" onclick="loadPortfolioHistory(15)">15 Days</button>
+                        <button class="hbtn active" style="padding:6px 12px; font-size:11px; background:var(--blue); color:#fff;" id="btnHist30" onclick="loadPortfolioHistory(30)">30 Days</button>
+                        <button class="hbtn" style="padding:6px 12px; font-size:11px; background:var(--bg3);" onclick="loadPortfolioHistory(60)">60 Days</button>
+                    </div>
+                </div>
+
+                <!-- 30-DAY STAT CARDS -->
+                <div class="hist-grid" id="histStatCards">
+                    <div class="hist-card">
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Realized Cash Dividends</div>
+                        <div class="val g" id="histTotalDivs">$0.00</div>
+                    </div>
+                    <div class="hist-card">
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Option Premiums Harvested</div>
+                        <div class="val" style="color:var(--yellow);" id="histTotalPremiums">$0.00</div>
+                    </div>
+                    <div class="hist-card">
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Net Realized Cash Impact</div>
+                        <div class="val" style="color:var(--blue);" id="histNetCash">$0.00</div>
+                    </div>
+                    <div class="hist-card">
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Completed Activities</div>
+                        <div class="val" style="color:var(--purple);" id="histTxCount">0 Transactions</div>
+                    </div>
+                </div>
+
+                <!-- TRANSACTION ACTIVITY TABLE -->
+                <div class="hist-table-wrap">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid var(--border); background:var(--bg3); flex-wrap:wrap; gap:10px;">
+                        <span style="font-weight:700; font-size:12px; color:var(--text); text-transform:uppercase; letter-spacing:.5px;">📜 Brokerage Activity Log</span>
+                        <div style="display:flex; gap:6px;">
+                            <button class="hbtn active" style="padding:4px 8px; font-size:10px;" id="histFilterAll" onclick="filterHistoryRows('ALL')">All</button>
+                            <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterDiv" onclick="filterHistoryRows('DIVIDEND')">💵 Dividends</button>
+                            <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterOpt" onclick="filterHistoryRows('OPTION')">💰 Options</button>
+                            <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterTrade" onclick="filterHistoryRows('TRADE')">📈 Trades</button>
+                        </div>
+                    </div>
+                    <table class="hist-table" id="histTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Account</th>
+                                <th>Activity Type</th>
+                                <th>Symbol</th>
+                                <th>Description / Rationale</th>
+                                <th style="text-align:right;">Cash Flow Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody id="histTableBody">
+                            <tr><td colspan="6" style="text-align:center; padding:20px;" class="m">Loading 30-day account history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUBVIEW: CAPITAL FLYWHEEL SUGGESTED COVERED CALL TRADES (DEDICATED TAB) -->
+        <div id="subViewFlywheel" style="display:none;">
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+                    <div>
+                        <h3 style="font-family:'Outfit',sans-serif; font-size:18px; margin:0 0 4px 0; color:var(--text); display:flex; align-items:center; gap:8px;">
+                            <span>🔥 Capital Flywheel — Suggested Covered Call Trades</span>
+                            <span class="hbadge" style="background:rgba(63,185,80,0.2); color:var(--green); border-color:rgba(63,185,80,0.4);">Option Level 1 Basic</span>
+                        </h3>
+                        <div style="font-size:12px; color:var(--muted);">
+                            Scanned your unencumbered 100-share stock blocks. Selling these suggested Covered Calls generates <strong class="g" id="portPlaybookTotalIncome">+$2,482.00 Instant Premium Income</strong>!
+                        </div>
+                    </div>
+                </div>
+
+                <div id="portCoveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+                    <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">⚡ Scanning unencumbered stock positions...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUBVIEW 1: OPTIONS & EQUITIES CALENDAR VIEW (DEFAULT FIRST TAB) -->
+        <div id="subViewCalendar">
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                    <div>
+                        <h3 style="font-family:'Outfit',sans-serif; font-size:18px; color:var(--text); margin:0 0 4px 0; display:flex; align-items:center; gap:8px;">
+                            <span>📅 Options & Equities Forward Calendar</span>
+                        </h3>
+                        <div style="font-size:12px; color:var(--muted);">
+                            Browse forward up to 6 months to view future option expirations, projected cash releases, and earnings announcements.
+                        </div>
+                    </div>
+
+                    <!-- 6-MONTH FORWARD BROWSABLE MONTH CONTROLS -->
+                    <div style="display:flex; align-items:center; gap:8px; background:var(--bg3); padding:4px 10px; border-radius:10px; border:1px solid var(--border);">
+                        <button onclick="changeCalMonth(-1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2);">◀ Prev Month</button>
+                        <select id="calMonthSelect" onchange="selectCalMonth(this.value)" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer;">
+                            <!-- Populated dynamically via JS -->
+                        </select>
+                        <button onclick="changeCalMonth(1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2);">Next Month ▶</button>
+                    </div>
+
+                    <div id="calCashProjectionHeader" style="display:flex; gap:12px; flex-wrap:wrap; width:100%; margin-top:8px;">
+                        <!-- Dynamically populated cash projections badge -->
+                    </div>
+                </div>
+
+                <div id="calendarFilterBar" style="margin-top:16px; margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;"></div>
+
+                <div id="calendarMonthGrid" style="display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; margin-bottom:20px;">
+                    <div class="m" style="grid-column:1/-1; text-align:center; padding:30px;">Loading Monthly Options Calendar...</div>
+                </div>
+
+                <h4 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px;">⏰ Chronological Expiration & Cash Availability Timeline</h4>
+                <div id="calendarEventsList" style="display:flex; flex-direction:column; gap:10px;">
+                    <div class="m" style="text-align:center; padding:20px;">Loading Timeline...</div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- SUBVIEW 2: PORTFOLIO HOLDINGS & ACCOUNTS COMBINED VIEW -->
+        <div id="subViewAccounts" style="display:none;">
+
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; background:var(--bg2); padding:12px 18px; border-radius:12px; border:1px solid var(--border);">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:16px;">💼</span>
+                    <strong style="font-size:14px; color:var(--text);">Portfolio Holdings & Accounts</strong>
+                    <span class="hbadge" style="font-size:11px;">{% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">View Mode:</span>
+                    <div style="display:flex; background:var(--bg3); padding:3px; border-radius:8px; border:1px solid var(--border);">
+                        <button id="accViewModeGrid" onclick="setAccountViewLayout('grid')" style="border:none; background:var(--bg2); color:var(--text); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease;">🎴 Cards (1-6 / Row)</button>
+                        <button id="accViewModeList" onclick="setAccountViewLayout('list')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease;">☰ Compact List</button>
+                        <button id="accViewModeSec" onclick="setAccountViewLayout('security')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease;">📈 Security Aggregated</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LAYOUT CONTAINER 1: CARDS / COMPACT LIST MODE -->
+            <div id="accountCardsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+
+                {% if portfolio.accounts is defined and portfolio.accounts|length > 0 %}
+                    {% for acc in portfolio.accounts %}
+                        {% set cardId = 'accCard_' ~ loop.index %}
+                        <div class="acc-layout-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <!-- CARD HEADER SUMMARY BAR -->
+                                <div onclick="toggleAccCard('{{ cardId }}')" style="display:flex; justify-content:space-between; align-items:flex-start; padding:16px 18px; cursor:pointer; background:var(--bg2); user-select:none; border-bottom:1px solid var(--border);">
+                                    <div>
+                                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                            <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0; color:var(--text);">
+                                                🏦 {% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}
+                                            </h3>
+                                            <span id="{{ cardId }}_chevron" style="font-size:12px; color:var(--muted); transition:transform 0.2s ease; transform:rotate(0deg);">▼</span>
+                                        </div>
+                                        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                                            {% if acc.isPrimary %}<span class="hbadge" style="background:rgba(63,185,80,0.15); color:var(--green); border-color:rgba(63,185,80,0.3); font-size:9px;">⭐ PRIMARY</span>{% endif %}
+                                            <span class="hbadge" style="font-size:9px;">{{ acc.type }}</span>
+                                            <span class="rb rLOW" style="font-size:9px;">{{ acc.positionsCount }} Positions</span>
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:16px; font-weight:800; color:var(--text);">${{ acc.liquidationValue|number_format(0) }}</div>
+                                        <div style="font-size:11px; color:var(--green); font-weight:600;">${{ acc.cashAvailable|number_format(0) }} Cash</div>
+                                    </div>
+                                </div>
+
+                                <!-- CARD QUICK SUMMARY STATS -->
+                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:12px 18px; font-size:11px; color:var(--muted); background:var(--bg3); border-bottom:1px solid var(--border);">
+                                    <div>Buying Power: <strong style="color:var(--blue);">${{ acc.buyingPower|number_format(0) }}</strong></div>
+                                    <div>Day Trade BP: <strong style="color:var(--purple);">${{ acc.dayTradingBuyingPower|number_format(0) }}</strong></div>
+                                    <div>Margin Maint: <strong style="color:var(--yellow);">${{ acc.maintenanceRequirement|number_format(0) }}</strong></div>
+                                    <div>Lot Strategy: <strong style="color:var(--text);">{{ acc.lotSelectionMethod }}</strong></div>
+                                </div>
+
+                                <!-- COLLAPSIBLE DETAILS BODY -->
+                                <div id="{{ cardId }}_body" style="display:none; padding:14px 18px; background:var(--bg2); border-top:1px solid var(--border);">
+                                    <!-- POSITIONS LIST -->
+                                    <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 8px;">Top Holdings (Sorted by Value)</div>
+                                    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px;">
+                                        {% for p in acc.positions %}
+                                            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:var(--bg3); border-radius:6px; border:1px solid var(--border); font-size:12px;">
+                                                <div>
+                                                    <strong style="color:var(--text);">{{ p.symbol }}</strong>
+                                                    <span style="font-size:10px; color:var(--muted);">({{ p.quantity }})</span>
+                                                </div>
+                                                <div style="text-align:right;">
+                                                    <strong>${{ p.marketValue|number_format(2) }}</strong>
+                                                    <small class="{% if p.unrealizedPL >= 0 %}g{% else %}r{% endif %}" style="display:block; font-size:10px;">
+                                                        {% if p.unrealizedPL >= 0 %}+{% endif %}${{ p.unrealizedPL|number_format(0) }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="m" style="font-size:11px; text-align:center; padding:8px;">No positions</div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="padding:12px 18px; background:var(--bg2); border-top:1px solid var(--border);">
+                                <a href="/screener" class="btn btn-pri" style="width:100%; text-align:center; text-decoration:none; display:block; box-sizing:border-box; font-size:12px; padding:8px;">
+                                    ⚡ Load ${{ acc.cashAvailable|number_format(0) }} Cash
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="m" style="grid-column:1/-1; text-align:center; padding:30px; background:var(--bg2); border-radius:12px; border:1px solid var(--border);">
+                        No brokerage account details available. Please configure your brokerage connection in Setup or Settings.
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- LAYOUT CONTAINER 2: SECURITY AGGREGATED BREAKDOWN TABLE -->
+            <div id="securityBreakdownContainer" style="display:none; background:var(--bg2); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
                 <table>
                     <thead>
                         <tr>
@@ -119,7 +319,7 @@
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
                                         <div class="col-popover-title">📌 Stock Ticker Symbol</div>
-                                        Queried directly from connected Charles Schwab Brokerage API (<code>/trader/v1/accounts?fields=positions</code>).
+                                        Queried directly from connected Brokerage API (<code>/trader/v1/accounts?fields=positions</code>).
                                     </span>
                                 </span>
                             </th>
@@ -128,7 +328,7 @@
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
                                         <div class="col-popover-title">🏷 Asset Class</div>
-                                        Schwab instrument type classification (<code>EQUITY</code>, <code>OPTION</code>, <code>FIXED_INCOME</code>).
+                                        Brokerage instrument type classification (<code>EQUITY</code>, <code>OPTION</code>, <code>FIXED_INCOME</code>).
                                     </span>
                                 </span>
                             </th>
@@ -137,7 +337,7 @@
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
                                         <div class="col-popover-title">📊 Total Shares / Contracts</div>
-                                        Aggregated quantity of shares or option contracts held across all 4 connected Schwab accounts.
+                                        Aggregated quantity of shares or option contracts held across all connected brokerage accounts.
                                     </span>
                                 </span>
                             </th>
@@ -146,7 +346,7 @@
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
                                         <div class="col-popover-title">💵 Average Purchase Price</div>
-                                        Weighted average cost basis per share from trade executions in your Schwab accounts.
+                                        Weighted average cost basis per share from trade executions in your brokerage accounts.
                                     </span>
                                 </span>
                             </th>
@@ -155,7 +355,7 @@
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
                                         <div class="col-popover-title">💲 Live Market Valuation</div>
-                                        Real-time market valuation calculated by Schwab API based on current bid/ask price stream.
+                                        Real-time market valuation calculated by Brokerage API based on current bid/ask price stream.
                                     </span>
                                 </span>
                             </th>
@@ -182,7 +382,7 @@
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
                                         <div class="col-popover-title">🏦 Account Count</div>
-                                        Number of distinct connected Schwab accounts currently holding this ticker.
+                                        Number of distinct connected brokerage accounts currently holding this ticker.
                                     </span>
                                 </span>
                             </th>
@@ -193,7 +393,7 @@
                             {% for e in portfolio.aggregatedEquities %}
                                 {% set subId = 'opt-sub-' ~ loop.index %}
                                 <!-- MAIN LEVEL 1: AGGREGATED STOCK TICKER ROW -->
-                                <tr onclick="toggleOptionSubItem('{{ subId }}', this)" style="cursor:pointer; background: rgba(88,166,255,0.03);">
+                                <tr onclick="toggleOptionSubItem('{{ subId }}', this)" style="cursor:pointer; background: var(--bg2);">
                                     <td>
                                         <div style="display:flex; align-items:center; gap:8px;">
                                             <span class="sub-toggle-icon" style="color:var(--blue); font-size:12px; font-weight:700; transition:transform 0.2s;">▼</span>
@@ -235,13 +435,13 @@
                                 <!-- LEVEL 2: SECOND-LEVEL ACCOUNT BREAKDOWN SUB-ROWS -->
                                 {% if e.accountBreakdown is defined %}
                                     {% for acc in e.accountBreakdown %}
-                                        <tr class="{{ subId }}" style="background: rgba(31,38,55,0.7); border-bottom: 1px solid rgba(46,53,69,0.4);">
+                                        <tr class="{{ subId }}" style="background: var(--bg3); border-bottom: 1px solid var(--border);">
                                             <td colspan="3" style="padding-left: 28px;">
                                                 <div style="display:flex; align-items:center; gap:8px;">
                                                     <span style="color:var(--blue); font-size:12px; font-weight:700;">🏦</span>
-                                                    <strong style="font-size:12px; color:var(--text);">Account {{ acc.accountNumber }}</strong>
+                                                    <strong style="font-size:12px; color:var(--text);">{% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}</strong>
                                                     <span class="hbadge" style="font-size:9px;">{{ acc.type }}</span>
-                                                    <span class="rb" style="background:{% if acc.canUseForCalls %}rgba(63,185,80,0.15){% elseif acc.availableShares > 0 %}rgba(210,153,34,0.15){% else %}rgba(248,81,73,0.15){% endif %}; color:{% if acc.canUseForCalls %}var(--green){% elseif acc.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; border:1px solid rgba(255,255,255,0.1); font-size:10px;">
+                                                    <span class="rb" style="background:{% if acc.canUseForCalls %}rgba(21,128,61,0.15){% elseif acc.availableShares > 0 %}rgba(180,83,9,0.15){% else %}rgba(220,38,38,0.15){% endif %}; color:{% if acc.canUseForCalls %}var(--green){% elseif acc.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; font-size:10px;">
                                                         {{ acc.statusBadge }}
                                                     </span>
                                                 </div>
@@ -265,12 +465,12 @@
 
                                 <!-- LEVEL 3: LINKED OPTION ORDER SUB-ITEMS -->
                                 {% for opt in e.linkedOptions %}
-                                    <tr class="{{ subId }}" style="background: rgba(22,27,38,0.95); border-bottom: 1px solid var(--border);">
+                                    <tr class="{{ subId }}" style="background: var(--bg3); border-bottom: 1px solid var(--border);">
                                         <td colspan="4" style="padding-left: 44px;">
                                             <div style="display:flex; align-items:center; gap:8px;">
                                                 <span style="color:var(--yellow); font-size:14px; font-weight:700;">↳</span>
                                                 <strong style="color:var(--yellow); font-size:12px;">{{ opt.symbol }}</strong>
-                                                <span class="rb" style="background:rgba(210,153,34,0.2); color:var(--yellow); font-size:10px;">
+                                                <span class="rb" style="background:rgba(180,83,9,0.18); color:var(--yellow); font-size:10px;">
                                                     {{ opt.status }}
                                                 </span>
                                             </div>
@@ -296,9 +496,24 @@
                     </tbody>
                 </table>
             </div>
+
+
         </div>
     </div>
 </div>
+
+<!-- EVENT EXPLANATION CARD MODAL -->
+<div id="calEventModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:3000; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);">
+    <div class="modal-body-lg" style="width:680px; max-width:94vw; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; border-radius:16px; border:1px solid var(--border); background:var(--bg2); box-shadow:0 25px 60px rgba(0,0,0,0.85);">
+        <div class="modal-hdr" style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg3); flex-shrink:0;">
+            <h2 id="calModalTitle" style="font-family:'Outfit',sans-serif; font-size:17px; color:var(--blue); margin:0; display:flex; align-items:center; gap:8px;">📌 Event Details & Explanation</h2>
+            <button class="rpx" onclick="document.getElementById('calEventModal').style.display='none'" style="background:none; border:none; color:var(--text); font-size:20px; cursor:pointer; padding:4px 8px; border-radius:6px;">✕</button>
+        </div>
+        <div class="modal-cnt" id="calModalCnt" style="padding:20px 24px; font-size:13px; line-height:1.6; overflow-y:auto; flex:1; min-height:0;"></div>
+    </div>
+</div>
+
+
 
 <script>
 function toggleOptionSubItem(subId, rowEl) {
@@ -323,25 +538,778 @@ function toggleOptionSubItem(subId, rowEl) {
 
 function switchPortSubView(mode) {
     const subAcc = document.getElementById('subViewAccounts');
-    const subEq = document.getElementById('subViewEquities');
-    const btnAcc = document.getElementById('vtabAccounts');
-    const btnEq = document.getElementById('vtabEquities');
+    const subCal = document.getElementById('subViewCalendar');
+    const subFly = document.getElementById('subViewFlywheel');
+    const subHis = document.getElementById('subViewHistory');
 
-    if (mode === 'accounts') {
-        subAcc.style.display = 'block';
-        subEq.style.display = 'none';
-        btnAcc.classList.add('active');
-        btnEq.classList.remove('active');
-    } else {
-        subAcc.style.display = 'none';
-        subEq.style.display = 'block';
-        btnAcc.classList.remove('active');
-        btnEq.classList.add('active');
+    const btnAcc = document.getElementById('vtabAccounts');
+    const btnCal = document.getElementById('vtabCalendar');
+    const btnFly = document.getElementById('vtabFlywheel');
+    const btnHis = document.getElementById('vtabHistory');
+
+    const isHoldings = mode === 'holdings' || mode === 'accounts';
+
+    if (subAcc) subAcc.style.display = isHoldings ? 'block' : 'none';
+    if (subCal) subCal.style.display = mode === 'calendar' ? 'block' : 'none';
+    if (subFly) subFly.style.display = mode === 'flywheel' ? 'block' : 'none';
+    if (subHis) subHis.style.display = mode === 'history' ? 'block' : 'none';
+
+    if (btnAcc) btnAcc.classList.toggle('active', isHoldings);
+    if (btnCal) btnCal.classList.toggle('active', mode === 'calendar');
+    if (btnFly) btnFly.classList.toggle('active', mode === 'flywheel');
+    if (btnHis) btnHis.classList.toggle('active', mode === 'history');
+
+    if (mode === 'calendar') {
+        loadPortfolioCalendarEvents();
+    } else if (mode === 'flywheel') {
+        loadPortCoveredCallSuggestions();
+    } else if (mode === 'history') {
+        loadPortfolioHistory(30);
     }
 }
+
+async function forceRefreshPortfolioData() {
+    try {
+        await fetch('/api/config/cache/clear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'all' }),
+        });
+    } catch(e) {}
+    window.location.reload();
+}
+
+let historyRawTransactions = [];
+
+async function loadPortfolioHistory(days = 30) {
+    const tbody = document.getElementById('histTableBody');
+    if (!tbody) return;
+
+    try {
+        const res = await fetch(`/api/schwab/history?days=${days}`);
+        const json = await res.json();
+
+        if (json.status === 'success' && json.data) {
+            const data = json.data;
+            const summary = data.summary || {};
+            historyRawTransactions = data.transactions || [];
+
+            const totalDivs = document.getElementById('histTotalDivs');
+            const totalPrem = document.getElementById('histTotalPremiums');
+            const netCash = document.getElementById('histNetCash');
+            const txCount = document.getElementById('histTxCount');
+
+            if (totalDivs) totalDivs.textContent = `+$${(summary.totalDividends || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            if (totalPrem) totalPrem.textContent = `+$${(summary.totalPremiums || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            if (netCash) netCash.textContent = `$${(summary.netCashImpact || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+            if (txCount) txCount.textContent = `${summary.totalTransactions || historyRawTransactions.length} Transactions`;
+
+            renderHistoryRows(historyRawTransactions);
+        }
+    } catch(e) {
+        console.error('Failed to load portfolio history:', e);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--red);">Failed to load transaction history: ${e.message}</td></tr>`;
+    }
+}
+
+function renderHistoryRows(txList) {
+    const tbody = document.getElementById('histTableBody');
+    if (!tbody) return;
+
+    if (txList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:25px;" class="m">No account activity recorded in this time period.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = txList.map(tx => {
+        const amt = tx.amount || 0;
+        const isCredit = tx.isCredit !== false;
+        const amtColor = isCredit ? 'var(--green)' : 'var(--yellow)';
+        const amtSign = isCredit ? '+' : '';
+        const badgeColor = tx.badgeColor === 'b' ? 'var(--blue)' : (tx.badgeColor === 'y' ? 'var(--yellow)' : 'var(--green)');
+        const badgeBg = tx.badgeColor === 'b' ? 'rgba(88,166,255,0.18)' : (tx.badgeColor === 'y' ? 'rgba(210,153,34,0.18)' : 'rgba(34,197,94,0.18)');
+
+        return `
+            <tr class="hist-row" data-type="${tx.type}">
+                <td style="font-weight:700; color:var(--text); white-space:nowrap;">${tx.date}</td>
+                <td>
+                    <strong style="color:var(--text);">${tx.nickname || tx.accountNumber}</strong>
+                    <div style="font-size:10px; color:var(--muted);">(***${String(tx.accountNumber).slice(-4)})</div>
+                </td>
+                <td>
+                    <span class="hbadge" style="background:${badgeBg}; color:${badgeColor}; font-size:10px; font-weight:700;">
+                        ${tx.badge || tx.type}
+                    </span>
+                </td>
+                <td><strong style="font-family:'Outfit',sans-serif; color:var(--text); font-size:13px;">${tx.symbol}</strong></td>
+                <td style="color:var(--muted); font-size:12px;">${tx.description || ''}</td>
+                <td style="text-align:right; white-space:nowrap;">
+                    <strong style="color:${amtColor}; font-size:13px;">${amtSign}$${Math.abs(amt).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterHistoryRows(filter) {
+    document.querySelectorAll('#subViewHistory .hbtn').forEach(b => b.classList.remove('active'));
+    const btnMap = {
+        'ALL': 'histFilterAll',
+        'DIVIDEND': 'histFilterDiv',
+        'OPTION': 'histFilterOpt',
+        'TRADE': 'histFilterTrade',
+    };
+    if (btnMap[filter]) {
+        const btn = document.getElementById(btnMap[filter]);
+        if (btn) btn.classList.add('active');
+    }
+
+    if (filter === 'ALL') {
+        renderHistoryRows(historyRawTransactions);
+    } else if (filter === 'DIVIDEND') {
+        renderHistoryRows(historyRawTransactions.filter(t => t.type && t.type.includes('DIVIDEND')));
+    } else if (filter === 'OPTION') {
+        renderHistoryRows(historyRawTransactions.filter(t => t.type && (t.type.includes('OPTION') || t.type.includes('CALL') || t.type.includes('PUT'))));
+    } else if (filter === 'TRADE') {
+        renderHistoryRows(historyRawTransactions.filter(t => t.type && (t.type.includes('BUY') || t.type.includes('SELL') || t.type.includes('TRADE'))));
+    }
+}
+
+
+
+let currentCalYear = new Date().getFullYear();
+let currentCalMonth = new Date().getMonth();
+let calendarApiData = null;
+
+async function loadPortfolioCalendarEvents() {
+    const grid = document.getElementById('calendarMonthGrid');
+    const list = document.getElementById('calendarEventsList');
+    if (!grid || !list) return;
+
+    try {
+        const res = await fetch('/api/flywheel/calendar');
+        const json = await res.json();
+
+        if (json.status === 'success' && json.data) {
+            calendarApiData = json.data;
+
+            // Populate Dropdown: 1 month back + current + 6 months ahead (8 entries total)
+            const monthSelect = document.getElementById('calMonthSelect');
+            if (monthSelect) {
+                const monthsNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                let opts = '';
+                const baseDate = new Date();
+
+                for (let i = -1; i <= 6; i++) {
+                    const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, 1);
+                    const val = `${d.getFullYear()}-${d.getMonth()}`;
+                    const isPast = i < 0;
+                    const label = `${isPast ? '← ' : ''}${monthsNames[d.getMonth()]} ${d.getFullYear()}${isPast ? ' (Previous)' : ''}`;
+                    const selected = (d.getFullYear() === currentCalYear && d.getMonth() === currentCalMonth) ? 'selected' : '';
+                    opts += `<option value="${val}" ${selected}>${label}</option>`;
+                }
+                monthSelect.innerHTML = opts;
+            }
+
+            renderCalendarForSelectedMonth();
+        }
+    } catch(e) {
+        console.error('Failed to load portfolio calendar events:', e);
+    }
+}
+
+function changeCalMonth(delta) {
+    const now = new Date();
+    const minDate = new Date(now.getFullYear(), now.getMonth() - 1, 1); // 1 month back
+    const maxDate = new Date(now.getFullYear(), now.getMonth() + 6, 1); // 6 months forward
+
+    const proposed = new Date(currentCalYear, currentCalMonth + delta, 1);
+    if (proposed < minDate || proposed > maxDate) return; // clamp
+
+    currentCalYear = proposed.getFullYear();
+    currentCalMonth = proposed.getMonth();
+
+    const monthSelect = document.getElementById('calMonthSelect');
+    if (monthSelect) {
+        monthSelect.value = `${currentCalYear}-${currentCalMonth}`;
+    }
+    renderCalendarForSelectedMonth();
+}
+
+function selectCalMonth(val) {
+    if (!val) return;
+    const parts = val.split('-');
+    currentCalYear = parseInt(parts[0], 10);
+    currentCalMonth = parseInt(parts[1], 10);
+    renderCalendarForSelectedMonth();
+}
+
+function renderCalendarForSelectedMonth() {
+    if (!calendarApiData) return;
+
+    const grid = document.getElementById('calendarMonthGrid');
+    const list = document.getElementById('calendarEventsList');
+    const events = calendarApiData.events || [];
+    const cashProjections = calendarApiData.cashProjections || [];
+    const currentCash = calendarApiData.currentPortfolioCash || 0;
+
+    // Build 7-column Calendar Header (Sun - Sat)
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    let html = daysOfWeek.map(d => `<div style="text-align:center; font-size:11px; font-weight:800; color:var(--muted); text-transform:uppercase; padding:6px; background:var(--bg3); border-radius:6px; border:1px solid var(--border);">${d}</div>`).join('');
+
+    // Group events by date string: 'YYYY-MM-DD'
+    const eventsByDate = {};
+    events.forEach(ev => {
+        if (!eventsByDate[ev.date]) eventsByDate[ev.date] = [];
+        eventsByDate[ev.date].push(ev);
+    });
+
+    // Render Header Cash Projection Summary Badges (Clean, Single Executive Bar)
+    const headerContainer = document.getElementById('calCashProjectionHeader');
+    if (headerContainer) {
+        let maxProj = currentCash;
+        cashProjections.forEach(p => {
+            if (p.projectedPortfolioCash > maxProj) maxProj = p.projectedPortfolioCash;
+        });
+
+        headerContainer.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:linear-gradient(135deg, rgba(63,185,80,0.12), rgba(2,132,199,0.1)); border:1px solid rgba(63,185,80,0.3); border-radius:12px; padding:10px 16px; width:100%;">
+                <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                    <div>
+                        <span style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Live Cash Balance:</span>
+                        <strong class="g" style="font-size:15px; margin-left:4px;">$${currentCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
+                    </div>
+                    <div style="height:18px; width:1px; background:var(--border);"></div>
+                    <div>
+                        <span style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Max 6-Mo Projected Cash:</span>
+                        <strong style="color:var(--yellow); font-size:15px; margin-left:4px;">$${maxProj.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
+                    </div>
+                    <div style="height:18px; width:1px; background:var(--border);"></div>
+                    <div>
+                        <span style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Total Maturing Events:</span>
+                        <strong style="color:var(--blue); font-size:14px; margin-left:4px;">${events.length} Records</strong>
+                    </div>
+                </div>
+                <button onclick="switchPortSubView('history')" class="hbtn hbtn-purple" style="padding:5px 12px; font-size:11px;">
+                    ⏮ View 30-Day Activity History
+                </button>
+            </div>
+        `;
+    }
+
+    // Build Month Days for currently selected Year and Month
+    const year = currentCalYear;
+    const month = currentCalMonth;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Blank padding days before 1st of month
+    for (let i = 0; i < firstDay; i++) {
+        html += `<div style="background:var(--bg3); opacity:0.3; border-radius:8px; min-height:95px; border:1px dashed var(--border);"></div>`;
+    }
+
+    // Map cash projections by date for easy day-cell lookup
+    const projByDate = {};
+    cashProjections.forEach(p => { projByDate[p.date] = p; });
+
+    const now = new Date();
+
+    // Days 1 through N
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dayStr = String(day).padStart(2, '0');
+        const mStr = String(month + 1).padStart(2, '0');
+        const dateKey = `${year}-${mStr}-${dayStr}`;
+        const dayEvents = eventsByDate[dateKey] || [];
+        const dayProj = projByDate[dateKey];
+        const isToday = (day === now.getDate() && month === now.getMonth() && year === now.getFullYear());
+
+        html += `
+            <div style="background:var(--bg2); border:1px solid ${isToday ? 'var(--blue)' : (dayProj ? 'rgba(63,185,80,0.4)' : 'var(--border)')}; border-radius:8px; padding:8px; min-height:110px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:${isToday ? '0 0 10px rgba(2,132,199,0.3)' : 'none'};">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:12px; font-weight:800; color:${isToday ? 'var(--blue)' : 'var(--text)'};">${day}</span>
+                        ${isToday ? '<span class="hbadge" style="font-size:8px; background:var(--blue); color:#fff;">TODAY</span>' : ''}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px;">
+                        ${dayEvents.map(e => {
+                            const encData = encodeURIComponent(JSON.stringify(e));
+                            const isEarn  = e.category && e.category.startsWith('EARNINGS');
+                            const isDiv   = e.category && e.category.startsWith('DIVIDEND');
+                            const isPast  = !!e.isPast;
+
+                            let bg, fg, border, label;
+                            if (isDiv) {
+                                bg     = isPast ? 'rgba(34,197,94,0.12)' : 'rgba(34,197,94,0.22)';
+                                fg     = 'var(--green)';
+                                border = isPast ? 'rgba(34,197,94,0.25)' : 'rgba(34,197,94,0.5)';
+                                label  = isPast ? `✓ ${e.symbol} Div +$${e.totalPayout}` : `💵 ${e.symbol} Div +$${e.totalPayout}`;
+                            } else if (isEarn) {
+                                bg     = isPast ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.22)';
+                                fg     = 'var(--purple)';
+                                border = isPast ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.5)';
+                                label  = isPast ? `📢 ${e.symbol} Q Report` : `📢 ${e.symbol} Earnings`;
+                            } else {
+                                bg     = isPast ? 'rgba(210,153,34,0.12)' : 'rgba(210,153,34,0.22)';
+                                fg     = 'var(--yellow)';
+                                border = isPast ? 'rgba(210,153,34,0.25)' : 'rgba(210,153,34,0.5)';
+                                label  = isPast ? `✓ ${e.symbol} $${e.strike}` : `🔒 ${e.symbol} $${e.strike}`;
+                            }
+                            
+                            const catStr = isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION');
+                            return `
+                                <div class="tip cal-event-bubble" data-category="${catStr}" data-is-past="${isPast ? '1' : '0'}" style="width:100%; border-bottom:none;">
+                                    <div onclick="openCalEventCard('${encData}')" style="font-size:10px; font-weight:700; padding:3px 6px; border-radius:4px; background:${bg}; color:${fg}; border:1px solid ${border}; cursor:pointer; display:flex; justify-content:space-between; align-items:center; opacity:${isPast ? '0.85' : '1'};">
+                                        <span>${label}</span>
+                                    </div>
+                                    <div class="tip-box">
+                                        <strong>${e.title}</strong><br/>
+                                        Date: ${e.date}<br/>
+                                        ${e.details || ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                ${dayProj ? `
+                    <div onclick="openDateAccountSummaryModal('${dateKey}')" class="cal-day-bubble" title="Projected Portfolio Cash: $${dayProj.projectedPortfolioCash.toLocaleString()}">
+                        💰 +$${((dayProj.totalAssignedCash || 0) + (dayProj.totalDividendCash || 0)).toLocaleString(undefined, {maximumFractionDigits:0})} Release
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    grid.innerHTML = html;
+
+    // Store global cash projections map for date-level click modal
+    window.globalCashProjectionsByDate = projByDate;
+    window.globalEventsByDate = eventsByDate;
+
+    // Filter events to the current viewing month for the Chronological Timeline
+    const currentMonthEvents = events.filter(ev => {
+        if (!ev.date) return false;
+        const [y, m] = ev.date.split('-');
+        return parseInt(y, 10) === currentCalYear && (parseInt(m, 10) - 1) === currentCalMonth;
+    });
+
+    // Build Chronological Visual Timeline with Filter Tabs
+    list.innerHTML = '';
+    const sortedEvents = [...currentMonthEvents].sort((a,b) => a.date.localeCompare(b.date));
+
+    if (sortedEvents.length === 0) {
+        list.innerHTML = '<div class="m" style="text-align:center; padding:20px;">No events recorded in this calendar window.</div>';
+        const filterBarContainer = document.getElementById('calendarFilterBar');
+        if (filterBarContainer) filterBarContainer.innerHTML = '';
+    } else {
+        // Quick Category Filter Bar
+        const divCount  = sortedEvents.filter(e => e.category && e.category.startsWith('DIVIDEND')).length;
+        const optCount  = sortedEvents.filter(e => e.category && e.category.startsWith('OPTION')).length;
+        const earnCount = sortedEvents.filter(e => e.category && e.category.startsWith('EARNINGS')).length;
+        const pastCount = sortedEvents.filter(e => e.isPast).length;
+
+        const filterBarContainer = document.getElementById('calendarFilterBar');
+        if (filterBarContainer) {
+            filterBarContainer.innerHTML = `
+                <button class="fbtn active" id="calFilterAll" onclick="filterCalTimeline('ALL')">All Events (${sortedEvents.length})</button>
+                <button class="fbtn" id="calFilterDiv" onclick="filterCalTimeline('DIVIDEND')">💵 Dividends (${divCount})</button>
+                <button class="fbtn" id="calFilterOpt" onclick="filterCalTimeline('OPTION')">🔒 Options (${optCount})</button>
+                <button class="fbtn" id="calFilterEarn" onclick="filterCalTimeline('EARNINGS')">📢 Earnings (${earnCount})</button>
+                <button class="fbtn" id="calFilterPast" onclick="filterCalTimeline('PAST')">⏮ Past 30 Days (${pastCount})</button>
+            `;
+        }
+
+        const timelineContainer = document.createElement('div');
+        timelineContainer.id = 'timelineItemsWrap';
+        timelineContainer.style.position = 'relative';
+        timelineContainer.style.paddingLeft = '28px';
+        timelineContainer.style.marginTop = '10px';
+        timelineContainer.style.display = 'flex';
+        timelineContainer.style.flexDirection = 'column';
+        timelineContainer.style.gap = '16px';
+
+        // Vertical Spine Line
+        const spine = document.createElement('div');
+        spine.style.position = 'absolute';
+        spine.style.left = '11px';
+        spine.style.top = '10px';
+        spine.style.bottom = '10px';
+        spine.style.width = '3px';
+        spine.style.background = 'linear-gradient(to bottom, var(--yellow), var(--blue), var(--green))';
+        spine.style.borderRadius = '3px';
+        timelineContainer.appendChild(spine);
+
+        const todayObj = new Date();
+        todayObj.setHours(0,0,0,0);
+
+        sortedEvents.forEach((ev, index) => {
+            const encData = encodeURIComponent(JSON.stringify(ev));
+            const expDateObj = new Date(ev.date + 'T00:00:00');
+            const diffTime = expDateObj - todayObj;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const isDiv  = ev.category && ev.category.startsWith('DIVIDEND');
+            const isEarn = ev.category && ev.category.startsWith('EARNINGS');
+            const isOpt  = ev.category && ev.category.startsWith('OPTION');
+            const isPast = !!ev.isPast;
+
+            let badgeBg = 'rgba(88,166,255,0.15)';
+            let badgeFg = 'var(--blue)';
+            let dotColor = 'var(--blue)';
+
+            if (isDiv) {
+                badgeBg  = isPast ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.25)';
+                badgeFg  = 'var(--green)';
+                dotColor = 'var(--green)';
+            } else if (isEarn) {
+                badgeBg  = 'rgba(168,85,247,0.2)';
+                badgeFg  = 'var(--purple)';
+                dotColor = 'var(--purple)';
+            } else if (isOpt) {
+                badgeBg  = isPast ? 'rgba(88,166,255,0.15)' : 'rgba(210,153,34,0.2)';
+                badgeFg  = isPast ? 'var(--blue)' : 'var(--yellow)';
+                dotColor = isPast ? 'var(--blue)' : 'var(--yellow)';
+            }
+
+            let dteLabel = isPast ? `PAST (${Math.abs(diffDays)}d ago)` : (diffDays === 0 ? 'TODAY' : `${diffDays} Days Away`);
+            const proj = projByDate[ev.date];
+
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            item.dataset.category = isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION');
+            item.dataset.isPast = isPast ? '1' : '0';
+            item.style.position = 'relative';
+            item.style.cursor = 'pointer';
+
+            const dot = document.createElement('div');
+            dot.style.position = 'absolute';
+            dot.style.left = '-28px';
+            dot.style.top = '16px';
+            dot.style.width = '19px';
+            dot.style.height = '19px';
+            dot.style.borderRadius = '50%';
+            dot.style.background = 'var(--bg1)';
+            dot.style.border = `3px solid ${dotColor}`;
+            dot.style.boxShadow = `0 0 8px ${dotColor}`;
+            dot.style.zIndex = '2';
+            item.appendChild(dot);
+
+            const card = document.createElement('div');
+            card.style.background = isPast ? 'var(--bg2)' : 'var(--bg3)';
+            card.style.border = '1px solid var(--border)';
+            card.style.borderRadius = '12px';
+            card.style.padding = '14px 18px';
+            card.style.display = 'flex';
+            card.style.justifyContent = 'space-between';
+            card.style.alignItems = 'center';
+            card.style.flexWrap = 'wrap';
+            card.style.gap = '12px';
+            card.style.transition = 'all 0.2s ease';
+            card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+            card.style.opacity = isPast ? '0.85' : '1';
+
+            card.onmouseenter = () => { card.style.borderColor = dotColor; card.style.transform = 'translateX(4px)'; };
+            card.onmouseleave = () => { card.style.borderColor = 'var(--border)'; card.style.transform = 'translateX(0)'; };
+
+            card.innerHTML = `
+                <div onclick="openCalEventCard('${encData}')" style="flex:1;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap;">
+                        <strong style="font-size:15px; font-family:'Outfit',sans-serif; color:var(--text);">${ev.title}</strong>
+                        <span class="hbadge" style="background:${badgeBg}; color:${badgeFg}; font-size:10px; font-weight:700;">${ev.badge || dteLabel}</span>
+                        ${isPast ? '<span class="hbadge" style="background:rgba(255,255,255,0.06); color:var(--muted); font-size:9px;">✓ LAST 30 DAYS</span>' : ''}
+                    </div>
+                    <div style="font-size:12px; color:var(--muted);">
+                        Date: <strong style="color:var(--text);">${ev.date}</strong> &bull; ${ev.details || ''}
+                    </div>
+                </div>
+                ${proj ? `
+                    <div style="text-align:right;" onclick="openDateAccountSummaryModal('${ev.date}')">
+                        <div style="font-size:11px; color:var(--muted);">Projected Total Cash:</div>
+                        <div style="font-size:16px; font-weight:800;" class="g">$${proj.projectedPortfolioCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                        <div style="font-size:10px; color:var(--blue); font-weight:600; margin-top:2px;">Account Details →</div>
+                    </div>
+                ` : ''}
+            `;
+
+            item.appendChild(card);
+            timelineContainer.appendChild(item);
+        });
+
+        list.appendChild(timelineContainer);
+    }
+}
+
+function filterCalTimeline(filter) {
+    document.querySelectorAll('#calendarEventsList .fbtn').forEach(btn => btn.classList.remove('active'));
+    const btnMap = {
+        'ALL': 'calFilterAll',
+        'DIVIDEND': 'calFilterDiv',
+        'OPTION': 'calFilterOpt',
+        'EARNINGS': 'calFilterEarn',
+        'PAST': 'calFilterPast',
+    };
+    if (btnMap[filter]) {
+        const activeBtn = document.getElementById(btnMap[filter]);
+        if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    const calBubbles = document.querySelectorAll('.cal-event-bubble');
+
+    const applyFilter = (el) => {
+        if (filter === 'ALL') {
+            el.style.display = 'block';
+        } else if (filter === 'PAST') {
+            el.style.display = el.dataset.isPast === '1' ? 'block' : 'none';
+        } else {
+            el.style.display = el.dataset.category === filter ? 'block' : 'none';
+        }
+    };
+
+    timelineItems.forEach(applyFilter);
+    calBubbles.forEach(applyFilter);
+}
+
+function openCalEventCard(encodedJson) {
+    const ev = JSON.parse(decodeURIComponent(encodedJson));
+    const modal = document.getElementById('calEventModal');
+    const title = document.getElementById('calModalTitle');
+    const cnt = document.getElementById('calModalCnt');
+    if (!modal || !cnt) return;
+
+    const isOption = ev.category && ev.category.startsWith('OPTION');
+
+    title.innerHTML = isOption 
+        ? `🔒 Option Expiration Card: ${ev.symbol} ${ev.strike || ''}` 
+        : `📈 Equity Holding Details: ${ev.symbol}`;
+
+    let accountRowsHtml = '';
+    if (ev.accountBreakdown && ev.accountBreakdown.length > 0) {
+        accountRowsHtml = `
+            <div style="margin-top:14px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px;">
+                <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
+                    <span>🏦 Account Level Cash Projections & Collateral</span>
+                </h5>
+                <div style="overflow-x:auto; width:100%;">
+                    <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left;">
+                                <th style="padding:4px 0;">Account</th>
+                                <th style="padding:4px 0; text-align:right;">Current Cash</th>
+                                <th style="padding:4px 0; text-align:right;">Shares Held</th>
+                                <th style="padding:4px 0; text-align:right;">Cash Released if Called</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${ev.accountBreakdown.map(a => `
+                                <tr style="border-bottom:1px solid var(--border);">
+                                    <td style="padding:6px 0;">
+                                        <strong style="color:var(--text);">${a.nickname}</strong>
+                                        <span style="font-size:10px; color:var(--muted); font-weight:normal;">(***${a.accountNumber.slice(-4)})</span>
+                                    </td>
+                                    <td style="padding:6px 0; text-align:right;">$${a.cashAvailable.toLocaleString()}</td>
+                                    <td style="padding:6px 0; text-align:right;">${a.sharesHeld} sh</td>
+                                    <td style="padding:6px 0; text-align:right;" class="g"><strong>+$${a.assignedCashIfExercised.toLocaleString()}</strong></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    cnt.innerHTML = `
+        <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border); margin-bottom:14px;">
+            <h4 style="font-size:16px; font-weight:800; color:var(--text); margin:0 0 6px 0;">${ev.title}</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px; margin-top:10px;">
+                <div>Event Date: <strong style="color:var(--blue);">${ev.date}</strong></div>
+                <div>Category: <strong style="color:var(--purple);">${ev.category}</strong></div>
+                <div>Option Market Value: <strong style="color:var(--yellow);">${ev.marketValue}</strong></div>
+                <div>Pledged Collateral: <strong class="g">${ev.pledgedShares} Shares (${ev.symbol})</strong></div>
+            </div>
+        </div>
+
+        ${accountRowsHtml}
+
+        <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.25); border-radius:8px; padding:12px; margin-top:14px; margin-bottom:16px;">
+            <h5 style="font-size:13px; font-weight:700; color:var(--blue); margin:0 0 6px 0;">💡 Cash Projection Explanation</h5>
+            <p style="margin:0; font-size:12px; color:var(--text); line-height:1.5;">
+                ${isOption 
+                    ? `On <strong>${ev.date}</strong>, this <strong>${ev.symbol} $${ev.strike} Call</strong> expires. If exercised (assigned), selling your <strong>${ev.pledgedShares} shares</strong> at the <strong>$${ev.strike} strike price</strong> releases <strong class="g">+$${ev.assignedCashIfExercised ? ev.assignedCashIfExercised.toLocaleString() : '0'} in cash liquidity</strong> back into your brokerage account!`
+                    : `This represents your active <strong>${ev.symbol} equity holding</strong> in your connected brokerage portfolio.`}
+        <div style="display:flex; justify-content:flex-end;">
+            <a href="/screener?symbol=${ev.symbol}" class="hbtn hbtn-blue" style="text-decoration:none;">⚡ Inspect ${ev.symbol} Option Chain</a>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+function openDateAccountSummaryModal(dateKey) {
+
+    const proj = window.globalCashProjectionsByDate ? window.globalCashProjectionsByDate[dateKey] : null;
+    const eventsOnDate = window.globalEventsByDate ? (window.globalEventsByDate[dateKey] || []) : [];
+
+    const modal = document.getElementById('calEventModal');
+    const title = document.getElementById('calModalTitle');
+    const cnt = document.getElementById('calModalCnt');
+    if (!modal || !cnt) return;
+
+    title.innerHTML = `💵 Cash Projection Summary for ${dateKey}`;
+
+    let optionsListHtml = eventsOnDate.map(e => `
+        <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:6px 0;">
+                <strong style="color:var(--text);">${e.symbol} ${e.strike} CALL</strong>
+                <div style="font-size:10px; color:var(--muted);">${e.pledgedShares} shares collateral pledged</div>
+            </td>
+            <td style="padding:6px 0; text-align:right;">${e.contracts} Contract(s)</td>
+            <td style="padding:6px 0; text-align:right;" class="g"><strong>+$${e.assignedCashIfExercised ? e.assignedCashIfExercised.toLocaleString() : '0'}</strong></td>
+        </tr>
+    `).join('');
+
+    let accountSummaryHtml = '';
+    if (proj && proj.accountSummary) {
+        accountSummaryHtml = proj.accountSummary.map(a => `
+            <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 0;">
+                    <strong style="color:var(--text);">${a.nickname}</strong>
+                    <span style="font-size:10px; color:var(--muted);">(***${a.accountNumber.slice(-4)})</span>
+                </td>
+                <td style="padding:6px 0; text-align:right;">$${a.startingCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                <td style="padding:6px 0; text-align:right;" class="g"><strong>+$${a.freedOnDate.toLocaleString()}</strong></td>
+                <td style="padding:6px 0; text-align:right;" style="color:var(--blue);"><strong>$${a.projectedAccountCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong></td>
+            </tr>
+        `).join('');
+    }
+
+    cnt.innerHTML = `
+        <div style="background:rgba(21,128,61,0.15); border:1px solid rgba(63,185,80,0.4); padding:16px; border-radius:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Date Expiration Cash Release</div>
+                <strong class="g" style="font-size:22px; font-family:'Outfit',sans-serif;">+$${proj ? proj.totalAssignedCash.toLocaleString() : '0'} New Cash</strong>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Projected Total Portfolio Cash</div>
+                <strong style="font-size:22px; font-family:'Outfit',sans-serif; color:var(--blue);">$${proj ? proj.projectedPortfolioCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '0.00'}</strong>
+            </div>
+        </div>
+
+        <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border); margin-bottom:16px;">
+            <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase;">
+                📋 Expiring Contracts on ${dateKey} (${eventsOnDate.length} Total)
+            </h5>
+            <div style="overflow-x:auto; width:100%;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left;">
+                            <th style="padding:4px 0;">Contract</th>
+                            <th style="padding:4px 0; text-align:right;">Contracts</th>
+                            <th style="padding:4px 0; text-align:right;">Cash Released if Called</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${optionsListHtml}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:16px;">
+            <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase;">
+                🏦 Account Cash Projections for ${dateKey}
+            </h5>
+            <div style="overflow-x:auto; width:100%;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left;">
+                            <th style="padding:4px 0;">Account</th>
+                            <th style="padding:4px 0; text-align:right;">Current Cash</th>
+                            <th style="padding:4px 0; text-align:right;">Freed on ${dateKey}</th>
+                            <th style="padding:4px 0; text-align:right;">Projected Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${accountSummaryHtml}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(88,166,255,0.08); border:1px solid rgba(88,166,255,0.25); padding:12px 16px; border-radius:10px;">
+            <div>
+                <strong style="font-size:13px; color:var(--text); display:block;">⚡ Ready to Compound on ${dateKey}?</strong>
+                <span style="font-size:11px; color:var(--muted);">Load this projected <strong class="g">$${proj ? proj.projectedPortfolioCash.toLocaleString(undefined, {maximumFractionDigits:0}) : '0'} cash</strong> into Stock Screener to find high-yield Cash-Secured Puts & Covered Calls.</span>
+            </div>
+            <a href="/screener?projectedCash=${proj ? proj.projectedPortfolioCash : 0}" class="hbtn hbtn-green" style="text-decoration:none; white-space:nowrap; padding:8px 16px;">
+                ⚡ Stage ${dateKey} Trade Ideas →
+            </a>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+
+
+
+function toggleAccCard(cardId) {
+    const body = document.getElementById(cardId + '_body');
+    const chevron = document.getElementById(cardId + '_chevron');
+    if (body.style.display === 'none' || !body.style.display) {
+        body.style.display = 'block';
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+    } else {
+        body.style.display = 'none';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+}
+
+function setAccountViewLayout(mode) {
+    const cardsContainer = document.getElementById('accountCardsContainer');
+    const secContainer = document.getElementById('securityBreakdownContainer');
+    const btnGrid = document.getElementById('accViewModeGrid');
+    const btnList = document.getElementById('accViewModeList');
+    const btnSec = document.getElementById('accViewModeSec');
+
+    if (!cardsContainer || !secContainer) return;
+
+    if (mode === 'security') {
+        cardsContainer.style.display = 'none';
+        secContainer.style.display = 'block';
+
+        if (btnSec) { btnSec.style.background = 'var(--bg2)'; btnSec.style.color = 'var(--text)'; }
+        if (btnGrid) { btnGrid.style.background = 'transparent'; btnGrid.style.color = 'var(--muted)'; }
+        if (btnList) { btnList.style.background = 'transparent'; btnList.style.color = 'var(--muted)'; }
+    } else {
+        secContainer.style.display = 'none';
+        cardsContainer.style.display = 'grid';
+
+        if (mode === 'list') {
+            cardsContainer.style.gridTemplateColumns = '1fr';
+            if (btnList) { btnList.style.background = 'var(--bg2)'; btnList.style.color = 'var(--text)'; }
+            if (btnGrid) { btnGrid.style.background = 'transparent'; btnGrid.style.color = 'var(--muted)'; }
+            if (btnSec) { btnSec.style.background = 'transparent'; btnSec.style.color = 'var(--muted)'; }
+        } else {
+            cardsContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(320px, 1fr))';
+            if (btnGrid) { btnGrid.style.background = 'var(--bg2)'; btnGrid.style.color = 'var(--text)'; }
+            if (btnList) { btnList.style.background = 'transparent'; btnList.style.color = 'var(--muted)'; }
+            if (btnSec) { btnSec.style.background = 'transparent'; btnSec.style.color = 'var(--muted)'; }
+        }
+    }
+}
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
+    switchPortSubView('calendar');
     loadPortCoveredCallSuggestions();
 });
+
+
+
 
 async function loadPortCoveredCallSuggestions() {
     const grid = document.getElementById('portCoveredCallTradeCards');
@@ -386,19 +1354,23 @@ async function loadPortCoveredCallSuggestions() {
 
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--bg2); padding:8px; border-radius:6px; border:1px solid var(--border);">
                             <div>Current Price: <strong style="color:var(--text);">$${s.currentPrice}</strong></div>
+                            <div>Cost Basis: <strong style="color:var(--blue);">$${s.costBasis}</strong></div>
                             <div>Target Strike: <strong class="g">$${s.suggestedStrike} (+${s.otmPercentage}% OTM)</strong></div>
+                            <div>Unrealized P&L: <strong class="${s.unrealizedPLPct >= 0 ? 'g' : 'r'}">${s.unrealizedPLPct >= 0 ? '+' : ''}${s.unrealizedPLPct}%</strong></div>
                             <div>Horizon DTE: <strong style="color:var(--purple);">${s.dteHorizon}</strong></div>
                             <div>Annualized Yield: <strong class="g">${s.annualizedYieldPct}% APY</strong></div>
                         </div>
+
 
                         <p style="font-size:11px; color:var(--muted); margin:0 0 10px 0; line-height:1.4;">
                             ${s.reasoning}
                         </p>
                     </div>
 
-                    <a href="/screener?symbol=${s.symbol}" class="hbtn" style="width:100%; justify-content:center; text-align:center; font-weight:700; text-decoration:none; display:flex; padding:8px 0; background:var(--blue); color:#0b0e14;">
+                    <a href="/screener?symbol=${s.symbol}" class="hbtn hbtn-blue" style="width:100%; justify-content:center; text-align:center; text-decoration:none; display:flex; padding:8px 0;">
                         🔍 Inspect ${s.symbol} Option Chain & Gemini AI Signals
                     </a>
+
                 `;
                 grid.appendChild(card);
             });
@@ -408,4 +1380,6 @@ async function loadPortCoveredCallSuggestions() {
     }
 }
 </script>
+
+{% include 'screener/partials/_footer.html.twig' %}
 {% endblock %}

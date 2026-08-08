@@ -14,53 +14,68 @@ class SchwabService
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
+        private PersistentCacheService $cache,
+        private AppConfigService $appConfig,
         private string $projectDir,
         private ?string $appKey = null,
         private ?string $appSecret = null
     ) {
-        $this->appKey = $appKey ?: $_ENV['SCHWAB_APP_KEY'] ?? null;
-        $this->appSecret = $appSecret ?: $_ENV['SCHWAB_APP_SECRET'] ?? null;
         $this->tokenFilePath = $projectDir . '/var/schwab_token.json';
+    }
+
+    public function getEffectiveAppKey(): ?string
+    {
+        return $this->appConfig->getSchwabAppKey() ?: ($this->appKey ?: ($_ENV['SCHWAB_APP_KEY'] ?? null));
+    }
+
+    public function getEffectiveAppSecret(): ?string
+    {
+        return $this->appConfig->getSchwabAppSecret() ?: ($this->appSecret ?: ($_ENV['SCHWAB_APP_SECRET'] ?? null));
     }
 
     public function isConfigured(): bool
     {
-        return !empty($this->appKey) && !empty($this->appSecret);
+        return !empty($this->getEffectiveAppKey()) && !empty($this->getEffectiveAppSecret());
     }
 
     /**
-     * Absolute security flag check: Returns true only if SCHWAB_TRADING_ENABLED="true" in .env
+     * Universal trading kill switch.
+     * Returns true ONLY if TRADING_ENABLED="true" is explicitly set in the .env file.
+     * This value is NEVER read from the database, NEVER overridable by any API call,
+     * and NEVER changeable by any AI agent. It requires a deliberate human edit of the
+     * .env file to enable. The system is guidance/advice only — NOT execution.
      */
     public function isTradingEnabled(): bool
     {
-        $flag = $_ENV['SCHWAB_TRADING_ENABLED'] ?? false;
+        $flag = $_ENV['TRADING_ENABLED'] ?? false;
         return filter_var($flag, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
-     * Hard security enforcement guardrail. Throws an exception if account mutation is attempted while SCHWAB_TRADING_ENABLED=false
+     * Hard security enforcement guardrail. Call before ANY account mutation.
+     * Throws an unconditional RuntimeException if TRADING_ENABLED != true.
      */
     public function ensureTradingAllowed(): void
     {
         if (!$this->isTradingEnabled()) {
-            throw new \RuntimeException('ACCOUNT MUTATION BLOCKED: Schwab account modifications are disabled in .env (SCHWAB_TRADING_ENABLED=false). Application is running in strict Read-Only mode.');
+            throw new \RuntimeException(
+                'ACCOUNT MUTATION BLOCKED: All brokerage account modifications are disabled ' .
+                '(TRADING_ENABLED=false in .env). This system operates in strict Read-Only / ' .
+                'Guidance mode. No trade execution is permitted.'
+            );
         }
     }
 
     public function isAuthorized(): bool
     {
-        if (!file_exists($this->tokenFilePath)) {
-            return false;
-        }
-        $data = json_decode(file_get_contents($this->tokenFilePath), true);
-        return !empty($data['access_token']) || !empty($data['refresh_token']);
+        return $this->getAccessToken() !== null;
     }
 
     public function getAuthUrl(string $redirectUri): string
     {
         $uri = $_ENV['SCHWAB_REDIRECT_URI'] ?? $redirectUri;
         return 'https://api.schwabapi.com/v1/oauth/authorize?' . http_build_query([
-            'client_id' => $this->appKey,
+            'client_id' => $this->getEffectiveAppKey(),
             'redirect_uri' => $uri,
         ]);
     }
@@ -68,7 +83,7 @@ class SchwabService
     public function exchangeAuthCode(string $code, string $redirectUri): array
     {
         if (!$this->isConfigured()) {
-            return ['error' => 'Schwab APP_KEY and APP_SECRET are missing in .env'];
+            return ['error' => 'Schwab APP_KEY and APP_SECRET are missing in configuration / database'];
         }
 
         $targetUris = array_unique(array_filter([
@@ -84,7 +99,7 @@ class SchwabService
 
         foreach ($targetUris as $uri) {
             try {
-                $credentials = base64_encode($this->appKey . ':' . $this->appSecret);
+                $credentials = base64_encode($this->getEffectiveAppKey() . ':' . $this->getEffectiveAppSecret());
                 $response = $this->httpClient->request('POST', 'https://api.schwabapi.com/v1/oauth/token', [
                     'headers' => [
                         'Authorization' => 'Basic ' . $credentials,
@@ -97,131 +112,154 @@ class SchwabService
                     ],
                 ]);
 
-                $statusCode = $response->getStatusCode();
-                $content = $response->getContent(false);
-
-                if ($statusCode === 200) {
-                    $data = json_decode($content, true) ?? [];
-                    $data['created_at'] = time();
-                    file_put_contents($this->tokenFilePath, json_encode($data, JSON_PRETTY_PRINT));
-                    return ['status' => 'success', 'data' => $data, 'redirect_uri' => $uri];
+                if ($response->getStatusCode() === 200) {
+                    $tokenData = $response->toArray();
+                    $tokenData['expires_at'] = time() + ($tokenData['expires_in'] ?? 1800);
+                    file_put_contents($this->tokenFilePath, json_encode($tokenData, JSON_PRETTY_PRINT));
+                    return ['status' => 'success', 'data' => $tokenData, 'uri_used' => $uri];
                 }
-
-                $lastError = "Status {$statusCode}: {$content} (tested URI: {$uri})";
             } catch (\Throwable $e) {
                 $lastError = $e->getMessage();
-                $this->logger->error('Schwab Code Exchange Error: ' . $e->getMessage());
             }
         }
 
-        return ['error' => 'Schwab OAuth exchange failed. Details: ' . $lastError];
+        return ['error' => 'Failed token exchange across all URI variants: ' . $lastError];
     }
 
-    public function getAccessToken(): ?string
+    public function refreshAccessToken(): ?string
     {
-        if (!$this->isConfigured()) {
+        if (!file_exists($this->tokenFilePath)) {
             return null;
         }
 
-        // 1. Check saved OAuth token file
-        if (file_exists($this->tokenFilePath)) {
-            $data = json_decode(file_get_contents($this->tokenFilePath), true);
-            $createdAt = $data['created_at'] ?? 0;
-            $expiresIn = $data['expires_in'] ?? 1800;
+        $tokenData = json_decode(file_get_contents($this->tokenFilePath), true);
+        $refreshToken = $tokenData['refresh_token'] ?? null;
 
-            // Check if token is still valid (with 60s buffer)
-            if (!empty($data['access_token']) && (time() - $createdAt) < ($expiresIn - 60)) {
-                return $data['access_token'];
-            }
-
-            // Attempt Refresh Token
-            if (!empty($data['refresh_token'])) {
-                try {
-                    $credentials = base64_encode($this->appKey . ':' . $this->appSecret);
-                    $response = $this->httpClient->request('POST', 'https://api.schwabapi.com/v1/oauth/token', [
-                        'headers' => [
-                            'Authorization' => 'Basic ' . $credentials,
-                            'Content-Type' => 'application/x-www-form-urlencoded',
-                        ],
-                        'body' => [
-                            'grant_type' => 'refresh_token',
-                            'refresh_token' => $data['refresh_token'],
-                        ],
-                    ]);
-
-                    if ($response->getStatusCode() === 200) {
-                        $refreshed = $response->toArray();
-                        $refreshed['created_at'] = time();
-                        if (empty($refreshed['refresh_token'])) {
-                            $refreshed['refresh_token'] = $data['refresh_token'];
-                        }
-                        file_put_contents($this->tokenFilePath, json_encode($refreshed, JSON_PRETTY_PRINT));
-                        return $refreshed['access_token'];
-                    }
-                } catch (\Throwable $e) {
-                    $this->logger->error('Schwab Token Refresh Error: ' . $e->getMessage());
-                }
-            }
+        if (!$refreshToken) {
+            return null;
         }
 
-        // 2. Fallback to client_credentials grant
         try {
-            $credentials = base64_encode($this->appKey . ':' . $this->appSecret);
+            $credentials = base64_encode($this->getEffectiveAppKey() . ':' . $this->getEffectiveAppSecret());
             $response = $this->httpClient->request('POST', 'https://api.schwabapi.com/v1/oauth/token', [
                 'headers' => [
                     'Authorization' => 'Basic ' . $credentials,
                     'Content-Type' => 'application/x-www-form-urlencoded',
                 ],
                 'body' => [
-                    'grant_type' => 'client_credentials',
+                    'grant_type' => 'refresh_token',
+                    'refresh_token' => $refreshToken,
                 ],
             ]);
 
             if ($response->getStatusCode() === 200) {
-                $data = $response->toArray();
-                return $data['access_token'] ?? null;
+                $newTokenData = $response->toArray();
+                $newTokenData['refresh_token'] = $newTokenData['refresh_token'] ?? $refreshToken;
+                $newTokenData['expires_at'] = time() + ($newTokenData['expires_in'] ?? 1800);
+                file_put_contents($this->tokenFilePath, json_encode($newTokenData, JSON_PRETTY_PRINT));
+                return $newTokenData['access_token'] ?? null;
             }
         } catch (\Throwable $e) {
-            $this->logger->error('Schwab Client Credentials Error: ' . $e->getMessage());
+            $this->logger->error('Schwab Refresh Token Error: ' . $e->getMessage());
         }
 
         return null;
     }
 
-    /**
-     * Fetch live brokerage portfolio & positions from Schwab Trader API
-     */
-    public function getAccountPortfolio(): array
+    public function getAccessToken(): ?string
     {
-        $token = $this->getAccessToken();
-
-        if ($token && $this->isAuthorized()) {
-            try {
-                $response = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/accounts?fields=positions', [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . $token,
-                        'Accept' => 'application/json',
-                    ],
-                ]);
-
-                if ($response->getStatusCode() === 200) {
-                    return $this->formatSchwabPortfolioResponse($response->toArray());
-                }
-            } catch (\Throwable $e) {
-                $this->logger->error('Schwab Account Portfolio Error: ' . $e->getMessage());
-            }
+        if (!file_exists($this->tokenFilePath)) {
+            return null;
         }
 
-        // Return structured portfolio sample if authorization pending
-        return $this->generateCalculatedPortfolio();
+        $tokenData = json_decode(file_get_contents($this->tokenFilePath), true);
+        $expiresAt = $tokenData['expires_at'] ?? 0;
+
+        if (time() >= $expiresAt - 60) {
+            return $this->refreshAccessToken();
+        }
+
+        return $tokenData['access_token'] ?? null;
     }
 
-    private function formatSchwabPortfolioResponse(array $accounts): array
+    public function purgeTokens(): bool
+    {
+        if (file_exists($this->tokenFilePath)) {
+            return unlink($this->tokenFilePath);
+        }
+        return true;
+    }
+
+    /**
+     * Fetch live brokerage portfolio & positions from Schwab Trader API (with persistent non-PII caching)
+     */
+    public function getAccountPortfolio(bool $forceRefresh = false): array
+    {
+        $cacheKey = 'schwab.portfolio.sanitized';
+        if ($forceRefresh) {
+            $this->cache->delete($cacheKey);
+        }
+
+        return $this->cache->get($cacheKey, function() {
+            $token = $this->getAccessToken();
+
+            if ($token && $this->isAuthorized()) {
+                try {
+                    // 1. Query Schwab User Preferences API for live user-configured account nicknames
+                    $nicknameMap = [];
+                    try {
+                        $prefResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/userPreference', [
+                            'headers' => [
+                                'Authorization' => 'Bearer ' . $token,
+                                'Accept' => 'application/json',
+                            ],
+                        ]);
+                        if ($prefResponse->getStatusCode() === 200) {
+                            $prefData = $prefResponse->toArray();
+                            $prefAccounts = $prefData['accounts'] ?? [];
+                            foreach ($prefAccounts as $pa) {
+                                $accNo = $pa['accountNumber'] ?? null;
+                                if ($accNo) {
+                                    $nicknameMap[$accNo] = $pa;
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        $this->logger->warning('Schwab /userPreference API error: ' . $e->getMessage());
+                    }
+
+                    // 2. Query Portfolio Accounts with Positions
+                    $response = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/accounts?fields=positions', [
+                        'headers' => [
+                            'Authorization' => 'Bearer ' . $token,
+                            'Accept' => 'application/json',
+                        ],
+                    ]);
+
+                    if ($response->getStatusCode() === 200) {
+                        $rawFormatted = $this->formatSchwabPortfolioResponse($response->toArray(), $nicknameMap);
+                        return $this->cache->sanitizeSchwabData($rawFormatted);
+                    }
+                } catch (\Throwable $e) {
+                    $this->logger->error('Schwab Account Portfolio Error: ' . $e->getMessage());
+                }
+            }
+
+            // Return structured portfolio sample if authorization pending
+            return $this->cache->sanitizeSchwabData($this->generateCalculatedPortfolio());
+        }, 180, true); // 3 minutes TTL, marked sensitive (sanitized)
+    }
+
+
+    private function formatSchwabPortfolioResponse(array $accounts, array $apiNicknameMap = []): array
     {
         $totalLiquidation = 0.0;
         $totalCash = 0.0;
         $accountList = [];
         $equityMap = [];
+
+        $instances = $this->appConfig->getBrokerInstances();
+        $instNickname = !empty($instances[0]['nickname']) ? $instances[0]['nickname'] : 'Schwab Main';
 
         foreach ($accounts as $idx => $accWrap) {
             $acc = $accWrap['securitiesAccount'] ?? [];
@@ -229,10 +267,34 @@ class SchwabService
             $maskedNum = strlen($accountNum) > 4 ? '***' . substr($accountNum, -4) : $accountNum;
             $type = $acc['type'] ?? 'MARGIN';
 
+            // Extract Preference Metadata (primaryAccount, lotSelectionMethod, accountColor)
+            $prefItem = $apiNicknameMap[$accountNum] ?? [];
+            $schwabNick = is_array($prefItem) ? ($prefItem['nickName'] ?? ($prefItem['nickname'] ?? null)) : $prefItem;
+            $isPrimary = is_array($prefItem) ? ($prefItem['primaryAccount'] ?? false) : false;
+            $lotMethod = is_array($prefItem) ? ($prefItem['lotSelectionMethod'] ?? 'FIFO') : 'FIFO';
+            $accountColor = is_array($prefItem) ? ($prefItem['accountColor'] ?? 'Blue') : 'Blue';
+
+            if (!empty($schwabNick)) {
+                $nickname = '[' . $instNickname . '] ' . $schwabNick;
+            } else {
+                $nickname = '[' . $instNickname . '] ' . $type . ' Account (' . $maskedNum . ')';
+            }
+
+            // Extract Balances & Compliance Metadata
             $balances = $acc['currentBalances'] ?? [];
-            $liqVal = $balances['liquidationValue'] ?? 0.0;
-            $cashBal = $balances['cashBalance'] ?? 0.0;
-            $cashAvailable = $balances['cashAvailableForTrading'] ?? $cashBal;
+            $liqVal = (float) ($balances['liquidationValue'] ?? 0.0);
+            $cashBal = (float) ($balances['cashBalance'] ?? 0.0);
+            $cashAvailable = (float) ($balances['cashAvailableForTrading'] ?? $cashBal);
+            $buyingPower = (float) ($balances['buyingPower'] ?? $cashAvailable);
+            $dayTradingBuyingPower = (float) ($balances['dayTradingBuyingPower'] ?? 0.0);
+            $maintReq = (float) ($balances['maintenanceRequirement'] ?? 0.0);
+            $sma = (float) ($balances['sma'] ?? 0.0);
+
+            // Risk & Compliance Flags
+            $isDayTrader = (bool) ($acc['isDayTrader'] ?? false);
+            $roundTrips = (int) ($acc['roundTrips'] ?? 0);
+            $isPortfolioMargin = (bool) ($acc['isPortfolioMargin'] ?? false);
+            $isClosingOnly = (bool) ($acc['isClosingOnlyRestricted'] ?? false);
 
             $totalLiquidation += $liqVal;
             $totalCash += $cashAvailable;
@@ -249,6 +311,7 @@ class SchwabService
                     $qty = ($longQty > 0) ? $longQty : (($shortQty != 0) ? abs($shortQty) : 0);
                     $mktVal = (float) ($p['marketValue'] ?? 0.0);
                     $avgPrice = (float) ($p['averagePrice'] ?? 0.0);
+                    $taxLotAvgPrice = (float) ($p['taxLotAverageLongPrice'] ?? $avgPrice);
                     $unrealizedPL = $mktVal - ($qty * $avgPrice);
 
                     $posItem = [
@@ -256,6 +319,7 @@ class SchwabService
                         'assetType' => $assetType,
                         'quantity' => $qty,
                         'averagePrice' => round($avgPrice, 2),
+                        'taxLotAveragePrice' => round($taxLotAvgPrice, 2),
                         'marketValue' => round($mktVal, 2),
                         'unrealizedPL' => round($unrealizedPL, 2),
                         'unrealizedPLPct' => ($qty * $avgPrice) > 0 ? round(($unrealizedPL / ($qty * $avgPrice)) * 100, 1) : 0.0,
@@ -284,6 +348,7 @@ class SchwabService
                     $equityMap[$symbol]['accountCount']++;
                     $equityMap[$symbol]['accounts'][] = [
                         'accountNumber' => $maskedNum,
+                        'nickname' => $nickname,
                         'type' => $type,
                         'quantity' => $qty,
                         'marketValue' => round($mktVal, 2),
@@ -292,21 +357,41 @@ class SchwabService
                 }
             }
 
+            // Sort positions in each account by market value descending
+            usort($accPositions, fn($a, $b) => $b['marketValue'] <=> $a['marketValue']);
+
             $accountList[] = [
                 'accountNumber' => $maskedNum,
+                'nickname' => $nickname,
                 'type' => $type,
+                'isPrimary' => $isPrimary,
+                'accountColor' => $accountColor,
+                'lotSelectionMethod' => $lotMethod,
                 'liquidationValue' => round($liqVal, 2),
                 'cashAvailable' => round($cashAvailable, 2),
+                'buyingPower' => round($buyingPower, 2),
+                'dayTradingBuyingPower' => round($dayTradingBuyingPower, 2),
+                'maintenanceRequirement' => round($maintReq, 2),
+                'sma' => round($sma, 2),
+                'isDayTrader' => $isDayTrader,
+                'roundTrips' => $roundTrips,
+                'isPortfolioMargin' => $isPortfolioMargin,
+                'isClosingOnly' => $isClosingOnly,
                 'positionsCount' => count($accPositions),
                 'positions' => $accPositions,
             ];
         }
 
+
+
+
         // Format aggregated equities and link options contracts to underlying stocks
         $optionsMap = [];
+        $accountOptionPledges = [];
         $aggregatedEquities = [];
 
-        // Separate Options from Equities
+        // Separate Options from Equities and map to specific Account + Root Symbol
+
         foreach ($equityMap as $symbol => $e) {
             if ($e['assetType'] === 'OPTION') {
                 // Parse underlying root symbol from OCC string: e.g. NVDA 260807C00215000 -> NVDA
@@ -326,7 +411,7 @@ class SchwabService
                         $optionsMap[$root] = [];
                     }
 
-                    $optionsMap[$root][] = [
+                    $optItem = [
                         'symbol' => $symbol,
                         'type' => $type,
                         'strike' => $strike,
@@ -337,6 +422,17 @@ class SchwabService
                         'pledgedShares' => $pledgedShares,
                         'status' => "🔒 COVERED CALL ACTIVE — {$pledgedShares} Shares Pledged ({$contractCount} Contracts, Strike: \${$strike}, Exp: {$dateStr})",
                     ];
+
+                    $optionsMap[$root][] = $optItem;
+
+                    // Map option pledge directly to the specific account holding the option
+                    foreach ($e['accounts'] as $optAcc) {
+                        $accNum = $optAcc['accountNumber'];
+                        if (!isset($accountOptionPledges[$root][$accNum])) {
+                            $accountOptionPledges[$root][$accNum] = 0;
+                        }
+                        $accountOptionPledges[$root][$accNum] += ($optAcc['quantity'] * 100);
+                    }
                 }
             }
         }
@@ -359,17 +455,18 @@ class SchwabService
 
                 // Build Second Level Account Breakdown
                 $accountBreakdown = [];
-                $remPledged = $pledgedShares;
 
                 foreach ($e['accounts'] as $accInfo) {
+                    $accNum = $accInfo['accountNumber'];
                     $accQty = $accInfo['quantity'];
-                    $accPledged = min($accQty, $remPledged);
-                    $remPledged -= $accPledged;
+                    // Get exact option pledge for THIS specific account, if any
+                    $accPledged = $accountOptionPledges[$symbol][$accNum] ?? 0;
+                    $accPledged = min($accQty, $accPledged);
                     $accAvail = max(0, $accQty - $accPledged);
                     $canUseForCalls = $accAvail >= 100;
                     $eligibleContracts = floor($accAvail / 100);
 
-                    if ($accAvail == 0) {
+                    if ($accPledged > 0 && $accAvail == 0) {
                         $badge = "🔒 0 Available (100% Pledged to Covered Calls)";
                         $badgeClass = "r";
                     } elseif ($accAvail < 100) {
@@ -381,7 +478,8 @@ class SchwabService
                     }
 
                     $accountBreakdown[] = [
-                        'accountNumber' => $accInfo['accountNumber'],
+                        'accountNumber' => $accNum,
+                        'nickname' => $accInfo['nickname'] ?? '',
                         'type' => $accInfo['type'],
                         'quantity' => $accQty,
                         'marketValue' => $accInfo['marketValue'],
@@ -392,7 +490,9 @@ class SchwabService
                         'statusBadge' => $badge,
                         'badgeClass' => $badgeClass,
                     ];
+
                 }
+
 
                 $aggregatedEquities[] = [
                     'symbol' => $symbol,
@@ -426,6 +526,21 @@ class SchwabService
         // Sort aggregated equities by market value descending
         usort($aggregatedEquities, fn($a, $b) => $b['marketValue'] <=> $a['marketValue']);
 
+        $activeBroker = $this->appConfig->getActiveBroker();
+        $instances = $this->appConfig->getBrokerInstances();
+        $activeInst = $instances[0] ?? ['type' => $activeBroker, 'nickname' => 'Broker Main'];
+        
+        $providerName = match($activeInst['type'] ?? 'schwab') {
+            'schwab' => 'Charles Schwab Trader API',
+            'ibkr' => 'Interactive Brokers Client Portal API',
+            'fidelity' => 'Fidelity Brokerage API',
+            'etrade' => 'E*TRADE Developer API',
+            'alpaca' => 'Alpaca Markets API',
+            default => 'Connected Brokerage API'
+        };
+
+        $isLive = $this->getAccessToken() && $this->isAuthorized();
+
         return [
             'status' => 'CONNECTED',
             'isAuthorized' => true,
@@ -433,6 +548,232 @@ class SchwabService
             'cashBalance' => round($totalCash, 2),
             'accounts' => $accountList,
             'aggregatedEquities' => $aggregatedEquities,
+            'dataSource' => [
+                'provider' => $providerName,
+                'providerCode' => strtoupper($activeInst['type'] ?? 'schwab'),
+                'nickname' => $activeInst['nickname'] ?? 'Primary Broker',
+                'endpoint' => '/trader/v1/accounts?fields=positions',
+                'mode' => $isLive ? 'LIVE_API' : 'SIMULATED_DEMO',
+                'timestamp' => date('Y-m-d H:i:s T'),
+                'isSanitized' => true,
+                'totalAccounts' => count($accountList),
+            ]
+        ];
+    }
+
+    /**
+     * Fetch or calculate 30-day account transaction history (Dividends, Option Expirations, Trades, Premiums)
+     */
+    public function getAccountHistory(int $days = 30, bool $forceRefresh = false): array
+    {
+        $cacheKey = "schwab.history.{$days}";
+        if ($forceRefresh) {
+            $this->cache->delete($cacheKey);
+        }
+
+        return $this->cache->get($cacheKey, function() use ($days) {
+            $token = $this->getAccessToken();
+            $startDate = date('Y-m-d\TH:i:s\Z', strtotime("-{$days} days"));
+            $endDate   = date('Y-m-d\TH:i:s\Z');
+
+            if ($token && $this->isAuthorized()) {
+                try {
+                    $portfolio = $this->getAccountPortfolio();
+                    $accounts = $portfolio['accounts'] ?? [];
+                    $allTransactions = [];
+
+                    foreach ($accounts as $acc) {
+                        $accNum = $acc['accountNumber'];
+                        $response = $this->httpClient->request('GET', self::TRADING_BASE_URL . "/accounts/{$accNum}/transactions", [
+                            'headers' => [
+                                'Authorization' => 'Bearer ' . $token,
+                                'Accept' => 'application/json',
+                            ],
+                            'query' => [
+                                'startDate' => $startDate,
+                                'endDate'   => $endDate,
+                                'types'     => 'TRADE,RECEIVE_AND_DELIVER,DIVIDEND_OR_INTEREST',
+                            ],
+                        ]);
+
+                        if ($response->getStatusCode() === 200) {
+                            $txData = $response->toArray();
+                            foreach ($txData as $tx) {
+                                $allTransactions[] = $this->formatTransactionItem($tx, $acc);
+                            }
+                        }
+                    }
+
+                    if (!empty($allTransactions)) {
+                        usort($allTransactions, fn($a, $b) => strcmp($b['date'], $a['date']));
+                        return [
+                            'status'       => 'CONNECTED',
+                            'days'         => $days,
+                            'transactions' => $allTransactions,
+                            'summary'      => $this->summarizeHistory($allTransactions),
+                        ];
+                    }
+                } catch (\Throwable $e) {
+                    $this->logger->warning('Schwab Account History Error: ' . $e->getMessage());
+                }
+            }
+
+            // Return structured 30-day historical activity
+            return $this->generateCalculatedHistory($days);
+        }, 600, true); // 10 minutes TTL, marked sensitive (sanitized)
+    }
+
+    private function formatTransactionItem(array $tx, array $account): array
+    {
+        $type   = $tx['type'] ?? 'TRADE';
+        $desc   = $tx['description'] ?? '';
+        $netAmt = (float) ($tx['netAmount'] ?? 0.0);
+        $date   = isset($tx['transactionDate']) ? substr($tx['transactionDate'], 0, 10) : date('Y-m-d');
+        $sym    = $tx['transactionItem']['instrument']['symbol'] ?? 'CASH';
+
+        return [
+            'id'            => $tx['activityId'] ?? uniqid('tx_'),
+            'date'          => $date,
+            'accountNumber' => $account['accountNumber'],
+            'nickname'      => $account['nickname'],
+            'symbol'        => $sym,
+            'type'          => $type,
+            'description'   => $desc,
+            'amount'        => $netAmt,
+            'isCredit'      => $netAmt >= 0,
+            'badge'         => $type === 'DIVIDEND_OR_INTEREST' ? '💵 DIVIDEND' : ($netAmt >= 0 ? '💰 CASH INFLOW' : '📈 TRADE'),
+        ];
+    }
+
+    private function generateCalculatedHistory(int $days = 30): array
+    {
+        $today = time();
+        $history = [
+            [
+                'id'            => 'tx_101',
+                'date'          => date('Y-m-d', strtotime('-2 days')),
+                'accountNumber' => '3261',
+                'nickname'      => 'Individual Margin (***3261)',
+                'symbol'        => 'NVDA 260807C00215000',
+                'type'          => 'STO_CALL',
+                'description'   => 'Sold to Open 8x Covered Calls @ $8.375 (100% Cash Collateralized)',
+                'amount'        => 6700.00,
+                'isCredit'      => true,
+                'badge'         => '💰 OPTION PREMIUM HARVESTED',
+                'badgeColor'    => 'g',
+            ],
+            [
+                'id'            => 'tx_102',
+                'date'          => date('Y-m-d', strtotime('-5 days')),
+                'accountNumber' => '6860',
+                'nickname'      => 'Roth IRA Portfolio (***6860)',
+                'symbol'        => 'NVDA',
+                'type'          => 'DIVIDEND',
+                'description'   => 'Cash Dividend Paid ($0.04/sh on 246.39 shares)',
+                'amount'        => 9.86,
+                'isCredit'      => true,
+                'badge'         => '💵 CASH DIVIDEND RECEIVED',
+                'badgeColor'    => 'g',
+            ],
+            [
+                'id'            => 'tx_103',
+                'date'          => date('Y-m-d', strtotime('-11 days')),
+                'accountNumber' => '3261',
+                'nickname'      => 'Individual Margin (***3261)',
+                'symbol'        => 'AAPL',
+                'type'          => 'DIVIDEND',
+                'description'   => 'Cash Dividend Paid ($0.25/sh on 150.18 shares)',
+                'amount'        => 37.55,
+                'isCredit'      => true,
+                'badge'         => '💵 CASH DIVIDEND RECEIVED',
+                'badgeColor'    => 'g',
+            ],
+            [
+                'id'            => 'tx_104',
+                'date'          => date('Y-m-d', strtotime('-14 days')),
+                'accountNumber' => '3261',
+                'nickname'      => 'Individual Margin (***3261)',
+                'symbol'        => 'NVDA 260725C00210000',
+                'type'          => 'OPTION_EXPIRED',
+                'description'   => 'Covered Call Expired 100% OTM — Freed $21,000 Collateral & Retained 100% Premium',
+                'amount'        => 850.00,
+                'isCredit'      => true,
+                'badge'         => '🔒 100% EXPIRED OTM (COLLATERAL FREED)',
+                'badgeColor'    => 'b',
+            ],
+            [
+                'id'            => 'tx_105',
+                'date'          => date('Y-m-d', strtotime('-19 days')),
+                'accountNumber' => '6860',
+                'nickname'      => 'Roth IRA Portfolio (***6860)',
+                'symbol'        => 'MSFT',
+                'type'          => 'DIVIDEND',
+                'description'   => 'Cash Dividend Paid ($0.75/sh on 100.0 shares)',
+                'amount'        => 75.00,
+                'isCredit'      => true,
+                'badge'         => '💵 CASH DIVIDEND RECEIVED',
+                'badgeColor'    => 'g',
+            ],
+            [
+                'id'            => 'tx_106',
+                'date'          => date('Y-m-d', strtotime('-24 days')),
+                'accountNumber' => '3261',
+                'nickname'      => 'Individual Margin (***3261)',
+                'symbol'        => 'PENG',
+                'type'          => 'OPTION_BTC',
+                'description'   => 'Early Profit Lock: Buy-To-Close 1x Call at 85% Profit Decay',
+                'amount'        => 420.00,
+                'isCredit'      => true,
+                'badge'         => '🏃 EARLY PROFIT LOCK (BTC)',
+                'badgeColor'    => 'g',
+            ],
+            [
+                'id'            => 'tx_107',
+                'date'          => date('Y-m-d', strtotime('-28 days')),
+                'accountNumber' => '3261',
+                'nickname'      => 'Individual Margin (***3261)',
+                'symbol'        => 'PENG',
+                'type'          => 'BUY_EQUITY',
+                'description'   => 'Acquired 100 shares @ $67.81 for Covered Call Wheel Strategy',
+                'amount'        => -6781.00,
+                'isCredit'      => false,
+                'badge'         => '📈 WHEEL EQUITY ACQUISITION',
+                'badgeColor'    => 'y',
+            ],
+        ];
+
+        return [
+            'status'       => 'CONNECTED',
+            'days'         => $days,
+            'transactions' => $history,
+            'summary'      => $this->summarizeHistory($history),
+        ];
+    }
+
+    private function summarizeHistory(array $txs): array
+    {
+        $totalDividends = 0.0;
+        $totalPremiums  = 0.0;
+        $totalNetCash   = 0.0;
+        $txCount        = count($txs);
+
+        foreach ($txs as $tx) {
+            $amt  = (float) ($tx['amount'] ?? 0.0);
+            $type = $tx['type'] ?? '';
+
+            if ($type === 'DIVIDEND' || str_contains($type, 'DIVIDEND')) {
+                $totalDividends += $amt;
+            } elseif ($type === 'STO_CALL' || $type === 'OPTION_BTC' || $type === 'OPTION_EXPIRED') {
+                $totalPremiums += $amt;
+            }
+            $totalNetCash += $amt;
+        }
+
+        return [
+            'totalTransactions' => $txCount,
+            'totalDividends'    => round($totalDividends, 2),
+            'totalPremiums'     => round($totalPremiums, 2),
+            'netCashImpact'     => round($totalNetCash, 2),
         ];
     }
 
@@ -441,12 +782,13 @@ class SchwabService
         $rawAccounts = [
             [
                 'securitiesAccount' => [
-                    'accountNumber' => 'ACCOUNT-MAIN-01',
+                    'accountNumber' => '3261',
                     'type' => 'INDIVIDUAL MARGIN',
                     'currentBalances' => [
                         'liquidationValue' => 285400.00,
                         'cashAvailableForTrading' => 18240.00,
                     ],
+
                     'positions' => [
                         [
                             'instrument' => ['symbol' => 'NVDA', 'assetType' => 'EQUITY'],
@@ -476,14 +818,22 @@ class SchwabService
                 ]
             ],
             [
+                'nickname' => 'Roth IRA Portfolio',
                 'securitiesAccount' => [
-                    'accountNumber' => 'ACCOUNT-ROTH-02',
+                    'accountNumber' => '6860',
+                    'nickname' => 'Roth IRA Portfolio',
                     'type' => 'ROTH IRA',
                     'currentBalances' => [
                         'liquidationValue' => 125106.47,
                         'cashAvailableForTrading' => 6903.09,
                     ],
                     'positions' => [
+                        [
+                            'instrument' => ['symbol' => 'NVDA', 'assetType' => 'EQUITY'],
+                            'longQuantity' => 246.3928,
+                            'marketValue' => 55104.57,
+                            'averagePrice' => 183.15,
+                        ],
                         [
                             'instrument' => ['symbol' => 'AAPL', 'assetType' => 'EQUITY'],
                             'longQuantity' => 150.18,
@@ -504,37 +854,47 @@ class SchwabService
         return $this->formatSchwabPortfolioResponse($rawAccounts);
     }
 
+
+
     /**
-     * Fetch live option chain from Schwab API
+     * Fetch live option chain from Schwab API (cached 5 min)
      */
-    public function getOptionChain(string $symbol, float $currentPrice = 100.0): array
+    public function getOptionChain(string $symbol, float $currentPrice = 100.0, bool $forceRefresh = false): array
     {
-        $token = $this->getAccessToken();
-
-        if ($token) {
-            try {
-                $response = $this->httpClient->request('GET', self::BASE_URL . '/chains', [
-                    'headers' => [
-                        'Authorization' => 'Bearer ' . $token,
-                        'Accept' => 'application/json',
-                    ],
-                    'query' => [
-                        'symbol' => strtoupper($symbol),
-                        'contractType' => 'ALL',
-                        'strikeCount' => 6,
-                    ],
-                ]);
-
-                if ($response->getStatusCode() === 200) {
-                    return $this->formatSchwabChainResponse($response->toArray(), $symbol);
-                }
-            } catch (\Throwable $e) {
-                $this->logger->error("Schwab Option Chain Error for {$symbol}: " . $e->getMessage());
-            }
+        $symbol = strtoupper($symbol);
+        $cacheKey = "schwab.chain.{$symbol}";
+        if ($forceRefresh) {
+            $this->cache->delete($cacheKey);
         }
 
-        // Return structured option chain matrix (Live formatted)
-        return $this->generateCalculatedChain($symbol, $currentPrice);
+        return $this->cache->get($cacheKey, function() use ($symbol, $currentPrice) {
+            $token = $this->getAccessToken();
+
+            if ($token) {
+                try {
+                    $response = $this->httpClient->request('GET', self::BASE_URL . '/chains', [
+                        'headers' => [
+                            'Authorization' => 'Bearer ' . $token,
+                            'Accept' => 'application/json',
+                        ],
+                        'query' => [
+                            'symbol' => $symbol,
+                            'contractType' => 'ALL',
+                            'strikeCount' => 6,
+                        ],
+                    ]);
+
+                    if ($response->getStatusCode() === 200) {
+                        return $this->formatSchwabChainResponse($response->toArray(), $symbol);
+                    }
+                } catch (\Throwable $e) {
+                    $this->logger->error("Schwab Option Chain Error for {$symbol}: " . $e->getMessage());
+                }
+            }
+
+            // Return structured option chain matrix (Live formatted)
+            return $this->generateCalculatedChain($symbol, $currentPrice);
+        }, 300, false); // 5 minutes TTL
     }
 
     private function formatSchwabChainResponse(array $data, string $symbol): array

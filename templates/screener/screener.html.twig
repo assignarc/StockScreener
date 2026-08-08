@@ -1,29 +1,18 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Stock Screener & Options Flywheel — Moonshot Screener v3{% endblock %}
+{% block title %}Stock Screener & Options Flywheel — KHAPRE MoonShot Portfolio{% endblock %}
 
 {% block body %}
 <!-- APP DASHBOARD -->
 <div id="app">
-    <!-- HEADER -->
-    <div class="header">
-        <h1>⚡ Capital Flywheel <span>Stock Screener</span></h1>
-        <span class="hbadge">v3 Options Engine</span>
-        <div class="hright">
-            <button class="hbtn hbtn-fw" onclick="openFlywheelPlanner()">🌅 Daily Morning Planner</button>
-            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
-            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
-            <button class="hbtn hbtn-load" onclick="loadLivePrices()">▶ Load Live Quotes</button>
-        </div>
-    </div>
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '⚡ Capital Flywheel <span>Stock Screener</span>',
+        headerBadge: 'v3 Options Engine',
+        showLiveLoadBtn: true
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
 
-    <!-- MAIN PAGE NAVIGATION LINKS -->
-    <div class="nav-tabs">
-        <a href="/" class="nav-link">📊 Executive Dashboard</a>
-        <a href="/screener" class="nav-link active">⚡ Stock Screener & Options Flywheel</a>
-        <a href="/portfolio" class="nav-link">💼 Portfolio Details (Schwab Accounts)</a>
-        <a href="/discover" class="nav-link">🔍 Discover & Manage Tracked Stocks</a>
-    </div>
 
     <!-- FLYWHEEL CONFIGURABLE RISK BANNER -->
     <div class="fw-banner">
@@ -342,6 +331,8 @@
         </div>
     </div>
 </div>
+
+{% include 'screener/partials/_footer.html.twig' %}
 {% endblock %}
 
 {% block javascripts %}

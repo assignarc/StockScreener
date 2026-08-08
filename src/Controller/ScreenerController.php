@@ -63,4 +63,16 @@ class ScreenerController extends AbstractController
             'activePage' => 'discover',
         ]);
     }
+
+    #[Route('/planner', name: 'app_planner')]
+    public function planner(): Response
+    {
+        $portfolioData = $this->schwabService->getAccountPortfolio();
+
+        return $this->render('screener/planner.html.twig', [
+            'portfolio' => $portfolioData,
+            'activePage' => 'planner',
+        ]);
+    }
 }
+

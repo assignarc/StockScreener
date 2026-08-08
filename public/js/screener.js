@@ -11,9 +11,18 @@ let chartInstance = null;
 document.addEventListener('DOMContentLoaded', () => {
     fetchStocks();
     fetchPortfolio();
-    updateFlywheelAllocation();
 
     const urlParams = new URLSearchParams(window.location.search);
+    const projCashParam = urlParams.get('projectedCash');
+    if (projCashParam && parseFloat(projCashParam) > 0) {
+        const totalCapEl = document.getElementById('totalCap');
+        if (totalCapEl) {
+            totalCapEl.value = Math.round(parseFloat(projCashParam));
+        }
+    }
+
+    updateFlywheelAllocation();
+
     const symParam = urlParams.get('symbol');
     if (symParam) {
         setTimeout(() => {
@@ -21,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     }
 });
+
 
 function switchMainTab(tab) {
     const screenerView = document.getElementById('screenerView');
@@ -56,22 +66,30 @@ function switchMainTab(tab) {
 
 function switchPortSubView(mode) {
     const subAcc = document.getElementById('subViewAccounts');
-    const subEq = document.getElementById('subViewEquities');
-    const btnAcc = document.getElementById('vtabAccounts');
-    const btnEq = document.getElementById('vtabEquities');
+    const subCal = document.getElementById('subViewCalendar');
+    const subFly = document.getElementById('subViewFlywheel');
 
-    if (mode === 'accounts') {
-        subAcc.style.display = 'block';
-        subEq.style.display = 'none';
-        btnAcc.classList.add('active');
-        btnEq.classList.remove('active');
-    } else {
-        subAcc.style.display = 'none';
-        subEq.style.display = 'block';
-        btnAcc.classList.remove('active');
-        btnEq.classList.add('active');
+    const btnAcc = document.getElementById('vtabAccounts');
+    const btnCal = document.getElementById('vtabCalendar');
+    const btnFly = document.getElementById('vtabFlywheel');
+
+    const isHoldings = mode === 'holdings' || mode === 'accounts';
+
+    if (subAcc) subAcc.style.display = isHoldings ? 'block' : 'none';
+    if (subCal) subCal.style.display = mode === 'calendar' ? 'block' : 'none';
+    if (subFly) subFly.style.display = mode === 'flywheel' ? 'block' : 'none';
+
+    if (btnAcc) btnAcc.classList.toggle('active', isHoldings);
+    if (btnCal) btnCal.classList.toggle('active', mode === 'calendar');
+    if (btnFly) btnFly.classList.toggle('active', mode === 'flywheel');
+
+    if (mode === 'calendar' && typeof loadPortfolioCalendarEvents === 'function') {
+        loadPortfolioCalendarEvents();
+    } else if (mode === 'flywheel' && typeof loadPortCoveredCallSuggestions === 'function') {
+        loadPortCoveredCallSuggestions();
     }
 }
+
 
 function useCashInFlywheel(amount) {
     let cashToUse = amount;
@@ -773,10 +791,11 @@ async function fetchDiscoverSuggestions() {
                             <div>Score: <strong class="g">${s.score} / 100</strong></div>
                         </div>
 
-                        <div class="tb" style="background:rgba(88,166,255,0.05); border-color:rgba(88,166,255,0.3); margin-bottom:10px; padding:10px;">
-                            <h4 style="color:var(--blue); font-size:10px; margin-bottom:4px;">💡 WHY TRACK THIS STOCK (REASONING):</h4>
-                            <p style="font-size:12px; margin:0; line-height:1.4;">${s.reasoning}</p>
+                        <div class="tb" style="background:var(--bg3); border:1px solid var(--border); margin-bottom:10px; padding:10px; border-radius:8px;">
+                            <h4 style="color:var(--purple); font-size:11px; font-weight:700; margin:0 0 4px 0; text-transform:uppercase;">💡 Investment Reasoning:</h4>
+                            <p style="font-size:12px; color:var(--text); margin:0; line-height:1.4;">${s.reasoning}</p>
                         </div>
+
 
                         <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">
                             <div><strong>⚡ Sector Catalysts:</strong> ${s.catalysts}</div>

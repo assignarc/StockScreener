@@ -1,28 +1,12 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Moonshot Screener v3 — Options Flywheel Engine{% endblock %}
+{% block title %}Stock Screener & Options Flywheel — KHAPRE MoonShot Portfolio{% endblock %}
 
 {% block stylesheets %}
 <style>
     /* MODAL & OVERLAY */
     #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
     #overlay.show { display: flex; }
-
-    /* HEADER */
-    .header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--bg2); }
-    .header h1 { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
-    .header h1 span { color: var(--purple); }
-    .hbadge { background: rgba(188,140,255,0.15); border: 1px solid rgba(188,140,255,0.3); border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 700; color: var(--purple); }
-    .hright { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .hbtn { padding: 8px 16px; border: none; border-radius: 7px; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-    .hbtn-load { background: var(--purple); color: #0b0e14; }
-    .hbtn-load:hover { filter: brightness(1.1); }
-
-    /* PAGE NAVIGATION BAR */
-    .nav-tabs { display: flex; background: var(--bg3); border-bottom: 1px solid var(--border); padding: 0 24px; gap: 4px; }
-    .nav-link { padding: 12px 20px; font-size: 13px; font-weight: 700; color: var(--muted); background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; text-decoration: none; transition: all 0.15s; display: flex; align-items: center; gap: 8px; }
-    .nav-link:hover { color: var(--text); }
-    .nav-link.active { color: var(--blue); border-bottom-color: var(--blue); background: rgba(88,166,255,0.05); }
 
     /* FLYWHEEL CAPITAL ALLOCATOR WIDGET */
     .fw-panel { padding: 14px 24px; background: linear-gradient(135deg, rgba(31,38,55,0.9), rgba(22,27,38,0.95)); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
@@ -123,22 +107,13 @@
 {% block body %}
 <!-- APP DASHBOARD -->
 <div id="app">
-    <!-- HEADER -->
-    <div class="header">
-        <h1>⚡ Capital Flywheel <span>Screener</span></h1>
-        <span class="hbadge">v3 Options Engine</span>
-        <div class="hright">
-            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
-            <button class="hbtn hbtn-load" onclick="loadLivePrices()">▶ Load Live Quotes</button>
-        </div>
-    </div>
-
-    <!-- MAIN PAGE NAVIGATION LINKS -->
-    <div class="nav-tabs">
-        <a href="/" class="nav-link active">⚡ Stock Screener & Options Flywheel</a>
-        <a href="/portfolio" class="nav-link">💼 Portfolio Details (Schwab Accounts)</a>
-        <a href="/discover" class="nav-link">🔍 Discover & Manage Tracked Stocks</a>
-    </div>
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '⚡ Capital Flywheel <span>Stock Screener</span>',
+        headerBadge: 'v3 Options Engine',
+        showLiveLoadBtn: true
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
 
     <!-- PAGE 1 CONTENT: STOCK SCREENER -->
     <div id="screenerView">
@@ -414,6 +389,8 @@
         </div>
     </div>
 </div>
+
+{% include 'screener/partials/_footer.html.twig' %}
 {% endblock %}
 
 {% block javascripts %}

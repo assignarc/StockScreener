@@ -1,0 +1,98 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Daily Morning Order Planner — KHAPRE MoonShot Portfolio{% endblock %}
+
+{% block body %}
+<div id="app">
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '🌅 Daily Morning <span>Order Planner</span>',
+        headerBadge: 'Capital Flywheel Trade Engine'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
+
+    <!-- FLYWHEEL CONFIGURABLE RISK BANNER -->
+    <div class="fw-banner">
+        <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">⚙️</span>
+            <div>
+                <div style="font-weight:700;font-size:13px;color:var(--text)">Flywheel Monthly Risk Guardrail: <span id="fwRiskCapText" style="color:var(--blue);cursor:pointer;font-weight:800;" onclick="changeRiskConfig()" title="Click to adjust monthly risk cap">$10,000</span> <span style="font-size:10px;color:var(--muted);">(Click to change)</span></div>
+                <div style="font-size:11px;color:var(--muted)">Enforces 100% Covered & Cash-Collateralized Option Trades (Zero Margin Traps)</div>
+            </div>
+        </div>
+        <div class="fw-risk-box">
+            <div class="fw-risk-lbl">
+                <span>Existing Open Risk: <strong id="fwUsedRiskText" style="color:var(--yellow)">$2,500</strong></span>
+                <span>Staged Today: <strong id="fwStagedRiskText" style="color:var(--blue)">$3,800</strong></span>
+                <span>Available Remaining: <strong id="fwFreeRiskText" style="color:var(--green)">$3,700</strong></span>
+            </div>
+            <div class="fw-progress-bg">
+                <div id="fwBarUsed" class="fw-bar-used" style="width:25%" title="Existing Open Risk"></div>
+                <div id="fwBarStaged" class="fw-bar-staged" style="width:38%" title="Staged Today Risk"></div>
+                <div id="fwBarFree" class="fw-bar-free" style="width:37%" title="Available Risk Remaining"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DAILY PLANNER PAGE CONTAINER -->
+    <div style="padding: 24px;">
+        <div style="margin-bottom: 20px;">
+            <h2 style="font-family:'Outfit',sans-serif; font-size: 20px; font-weight: 800; margin: 0 0 6px 0; color: var(--text);">
+                🌅 Morning Broker Execution Package
+            </h2>
+            <p style="font-size: 13px; color: var(--muted); margin: 0;">
+                Log in once in the morning, review your staged orders below, run a real-time Gemini AI sanity check, and copy exact limit order instructions to execute in Schwab/Fidelity.
+            </p>
+        </div>
+
+        <div id="plannerPageContent" style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="lm" style="text-align:center; padding:40px; background:var(--bg2); border-radius:12px; border:1px solid var(--border);">
+                <span class="spin">⟳</span> Loading your personalized Daily Morning Trade Package...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SCENARIO CALCULATOR MODAL -->
+<div id="fwScenarioModal">
+    <div class="modal-body-lg" style="width:740px">
+        <div class="modal-hdr">
+            <h2 id="fwScenTitle">⚖️ Trade Scenario Analysis</h2>
+            <button class="rpx" onclick="document.getElementById('fwScenarioModal').classList.remove('show')">✕</button>
+        </div>
+        <div class="modal-cnt" id="fwScenCnt"></div>
+    </div>
+</div>
+
+{% include 'screener/partials/_footer.html.twig' %}
+{% endblock %}
+
+{% block javascripts %}
+<script src="{{ asset('js/screener.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        loadPlannerPageData();
+    });
+
+    async function loadPlannerPageData() {
+        const cnt = document.getElementById('plannerPageContent');
+        if (!cnt) return;
+
+        cnt.innerHTML = '<div class="lm" style="text-align:center; padding:40px; background:var(--bg2); border-radius:12px; border:1px solid var(--border);"><span class="spin">⟳</span> Fetching Daily Morning Trade Package & Market Risk Intelligence...</div>';
+
+        try {
+            const res = await fetch(`/api/flywheel/daily-planner?riskCap=${userRiskCap}`);
+            if (res.ok) {
+                const json = await res.json();
+                const data = json.data;
+                updateRiskBannerDisplay(data.riskSummary);
+                renderFlywheelPlannerContent(data, cnt);
+            } else {
+                renderFlywheelPlannerFallback(cnt);
+            }
+        } catch(e) {
+            renderFlywheelPlannerFallback(cnt);
+        }
+    }
+</script>
+{% endblock %}

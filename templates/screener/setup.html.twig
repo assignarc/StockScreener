@@ -1,0 +1,692 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Initial Setup Wizard | KHAPRE MoonShot Portfolio{% endblock %}
+
+{% block body %}
+<div style="max-width:960px; margin:0 auto; padding:30px 20px;">
+    
+    <!-- Top Header -->
+    <div style="text-align:center; margin-bottom:32px;">
+        <div style="display:inline-flex; align-items:center; gap:10px; background:var(--bg3); padding:6px 16px; border-radius:20px; border:1px solid var(--border); margin-bottom:12px;">
+            <span class="material-symbols-outlined" style="color:var(--blue); font-size:18px;">bolt</span>
+            <span style="font-size:12px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:1px;">First-Run Configuration Wizard</span>
+        </div>
+        <h1 style="font-family:'Outfit',sans-serif; font-size:32px; font-weight:800; margin:0 0 8px 0; background:linear-gradient(135deg, #fff 40%, var(--blue) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+            Welcome to KHAPRE MoonShot Portfolio
+        </h1>
+        <p style="color:var(--muted); font-size:14px; margin:0 auto; max-width:640px; line-height:1.6;">
+            Your zero-configuration, self-healing options screener and capital flywheel system. Complete these quick steps to connect your market data and broker integrations.
+        </p>
+    </div>
+
+    <!-- Stepper Indicator -->
+    <div style="display:flex; justify-content:space-between; align-items:center; position:relative; margin-bottom:36px; background:var(--bg2); border:1px solid var(--border); padding:16px 24px; border-radius:14px;">
+        <div class="wiz-step-btn active" id="stepIndicator1" onclick="showWizardStep(1)">
+            <div class="step-num">1</div>
+            <div class="step-lbl">Database JIT</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="wiz-step-btn" id="stepIndicator2" onclick="showWizardStep(2)">
+            <div class="step-num">2</div>
+            <div class="step-lbl">Finnhub API</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="wiz-step-btn" id="stepIndicator3" onclick="showWizardStep(3)">
+            <div class="step-num">3</div>
+            <div class="step-lbl">Broker Selection</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="wiz-step-btn" id="stepIndicator4" onclick="showWizardStep(4)">
+            <div class="step-num">4</div>
+            <div class="step-lbl">AI Intelligence</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="wiz-step-btn" id="stepIndicator5" onclick="showWizardStep(5)">
+            <div class="step-num">5</div>
+            <div class="step-lbl">Launch</div>
+        </div>
+    </div>
+
+    <!-- WIZARD STEP 1: JUST-IN-TIME DATABASE -->
+    <div class="wiz-panel" id="wizStep1">
+        <div class="card" style="padding:28px; border-radius:16px;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                <div style="background:rgba(63,185,80,0.18); color:var(--green); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:22px;">check_circle</span>
+                </div>
+                <div>
+                    <h2 style="font-size:20px; margin:0 0 4px 0; color:var(--text); font-family:'Outfit',sans-serif;">Step 1: Just-In-Time Database Provisioning</h2>
+                    <div style="font-size:12px; color:var(--muted);">All SQLite schema tables and seed parameters are automatically ready in <code>var/data.db</code>.</div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:24px;">
+                <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border);">
+                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Database Engine</div>
+                    <div style="font-size:16px; font-weight:800; color:var(--green); margin-top:4px;">SQLite JIT Active</div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:2px;">var/data.db ({{ schemaStatus.databaseSizeKb|default(0) }} KB)</div>
+                </div>
+                <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border);">
+                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Config Table</div>
+                    <div style="font-size:16px; font-weight:800; color:var(--blue); margin-top:4px;">{{ schemaStatus.tables.app_config|default(0) }} Parameters Seeded</div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:2px;">Zero code hardcoding</div>
+                </div>
+                <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border);">
+                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Screener Watchlist</div>
+                    <div style="font-size:16px; font-weight:800; color:var(--purple); margin-top:4px;">{{ schemaStatus.tables.stock|default(0) }} Core Tickers</div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:2px;">NVDA, AAPL, MSFT, etc.</div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end;">
+                <button type="button" class="hbtn hbtn-blue" style="padding:10px 24px; font-size:13px;" onclick="showWizardStep(2)">
+                    Continue to Finnhub Setup →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIZARD STEP 2: FINNHUB API KEY -->
+    <div class="wiz-panel" id="wizStep2" style="display:none;">
+        <div class="card" style="padding:28px; border-radius:16px;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                <div style="background:rgba(2,132,199,0.18); color:var(--blue); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:22px;">trending_up</span>
+                </div>
+                <div>
+                    <h2 style="font-size:20px; margin:0 0 4px 0; color:var(--text); font-family:'Outfit',sans-serif;">Step 2: Connect Finnhub Market Data API</h2>
+                    <div style="font-size:12px; color:var(--muted);">Finnhub powers real-time stock prices, dividend calendars, and company earnings dates.</div>
+                </div>
+            </div>
+
+            <!-- Instructions Box -->
+            <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.25); border-radius:12px; padding:18px; margin-bottom:24px;">
+                <h4 style="margin:0 0 8px 0; font-size:13px; color:var(--blue); font-weight:700;">How to get a Free Finnhub API Key:</h4>
+                <ol style="margin:0; padding-left:20px; font-size:12px; color:var(--text); line-height:1.7;">
+                    <li>Open the free registration page at <a href="https://finnhub.io/register" target="_blank" style="color:var(--blue); font-weight:700; text-decoration:underline;">https://finnhub.io/register</a>.</li>
+                    <li>Sign up with your email (no credit card required).</li>
+                    <li>Copy your <strong>API Key Token</strong> from the Finnhub dashboard.</li>
+                    <li>Paste your key below and click <strong>Test Finnhub Key</strong> to verify live connectivity.</li>
+                </ol>
+            </div>
+
+            <div style="margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px;">
+                        Finnhub API Key Token
+                    </label>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="slick-pill-btn" onclick="pasteToField('wizFinnhubKey')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                        <button type="button" class="slick-pill-btn" onclick="copyFromField('wizFinnhubKey', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                        <button type="button" class="slick-pill-btn" onclick="clearField('wizFinnhubKey')"><span class="material-symbols-outlined">cancel</span> Clear</button>
+                    </div>
+                </div>
+                <div class="key-field-wrap">
+                    <input type="text" id="wizFinnhubKey" class="large-key-input" placeholder="Paste your Finnhub token here (e.g. c123456789abcdef...)" value="{{ finnhubKey|default('') }}" spellcheck="false">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                    <button type="button" class="hbtn hbtn-green" style="padding:8px 18px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px;" onclick="testFinnhubKey()">
+                        <span class="material-symbols-outlined">bolt</span> Test Finnhub Key Live
+                    </button>
+                    <div id="finnhubTestResult" style="font-size:12px; font-weight:600;"></div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+                <button type="button" class="hbtn" style="background:var(--bg3); padding:10px 20px;" onclick="showWizardStep(1)">← Back</button>
+                <button type="button" class="hbtn hbtn-blue" style="padding:10px 24px; font-size:13px;" onclick="showWizardStep(3)">
+                    Continue to Broker Setup →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIZARD STEP 3: DYNAMIC MULTI-BROKER INSTANCES (UP TO 5) -->
+    <div class="wiz-panel" id="wizStep3" style="display:none;">
+        <div class="card" style="padding:28px; border-radius:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="background:rgba(188,140,255,0.18); color:var(--purple); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                        <span class="material-symbols-outlined" style="font-size:22px;">account_balance</span>
+                    </div>
+                    <div>
+                        <h2 style="font-size:20px; margin:0 0 4px 0; color:var(--text); font-family:'Outfit',sans-serif;">Step 3: Multi-Broker Connections & OAuth Authorization</h2>
+                        <div style="font-size:12px; color:var(--muted);">Add up to 5 brokerage connections with short nicknames and direct OAuth 2.0 login integration.</div>
+                    </div>
+                </div>
+                <button type="button" class="hbtn hbtn-purple" id="btnAddBrokerInstance" onclick="addBrokerInstanceCard()" style="font-size:12px; padding:8px 16px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+                    <span class="material-symbols-outlined">add</span> Add Broker Connection (Max 5)
+                </button>
+            </div>
+
+            <!-- Dynamic Broker Instances Container -->
+            <div id="brokerInstancesContainer" style="display:flex; flex-direction:column; gap:20px; margin-bottom:24px;">
+                <!-- JavaScript renders cards here dynamically -->
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+                <button type="button" class="hbtn" style="background:var(--bg3); padding:10px 20px;" onclick="showWizardStep(2)">← Back</button>
+                <button type="button" class="hbtn hbtn-blue" style="padding:10px 24px; font-size:13px;" onclick="showWizardStep(4)">
+                    Continue to AI Setup →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIZARD STEP 4: AI STRATEGY ENGINE (GEMINI) -->
+    <div class="wiz-panel" id="wizStep4" style="display:none;">
+        <div class="card" style="padding:28px; border-radius:16px;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                <div style="background:rgba(210,153,34,0.18); color:var(--yellow); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:22px;">smart_toy</span>
+                </div>
+                <div>
+                    <h2 style="font-size:20px; margin:0 0 4px 0; color:var(--text); font-family:'Outfit',sans-serif;">Step 4: AI Strategy Engine (Google Gemini)</h2>
+                    <div style="font-size:12px; color:var(--muted);">Provides generative market commentary, flywheel option trade rationales, and risk summaries.</div>
+                </div>
+            </div>
+
+            <div style="background:rgba(210,153,34,0.08); border:1px solid rgba(210,153,34,0.25); border-radius:12px; padding:18px; margin-bottom:24px;">
+                <h4 style="margin:0 0 8px 0; font-size:13px; color:var(--yellow); font-weight:700;">Google AI Studio Key:</h4>
+                <p style="margin:0; font-size:12px; color:var(--text); line-height:1.6;">
+                    You can generate a free API key at <a href="https://aistudio.google.com/" target="_blank" style="color:var(--yellow); font-weight:700; text-decoration:underline;">https://aistudio.google.com/</a>. If left blank, the app will operate using quantitative algorithmic scoring and local heuristic models.
+                </p>
+            </div>
+
+            <div style="margin-bottom:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px;">
+                        Google Gemini API Key (Optional)
+                    </label>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="slick-pill-btn" onclick="pasteToField('wizGeminiKey')">📋 Paste</button>
+                        <button type="button" class="slick-pill-btn" onclick="copyFromField('wizGeminiKey', this)">📋 Copy</button>
+                        <button type="button" class="slick-pill-btn" onclick="clearField('wizGeminiKey')">✕ Clear</button>
+                    </div>
+                </div>
+                <div class="key-field-wrap">
+                    <input type="text" id="wizGeminiKey" class="large-key-input" placeholder="Paste your Gemini AI key here (e.g. AIzaSy...)" value="{{ geminiKey|default('') }}" spellcheck="false">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+                <button type="button" class="hbtn" style="background:var(--bg3); padding:10px 20px;" onclick="showWizardStep(3)">← Back</button>
+                <button type="button" class="hbtn hbtn-blue" style="padding:10px 24px; font-size:13px;" onclick="showWizardStep(5)">
+                    Review & Complete Setup →
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIZARD STEP 5: REVIEW & LAUNCH -->
+    <div class="wiz-panel" id="wizStep5" style="display:none;">
+        <div class="card" style="padding:32px; border-radius:16px; text-align:center;">
+            <div style="width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg, rgba(63,185,80,0.3), rgba(2,132,199,0.3)); color:var(--green); display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px auto; border:2px solid var(--green);">
+                🚀
+            </div>
+            <h2 style="font-size:24px; font-weight:800; margin:0 0 8px 0; color:var(--text); font-family:'Outfit',sans-serif;">
+                You're Ready to Launch!
+            </h2>
+            <p style="color:var(--muted); font-size:13px; max-width:540px; margin:0 auto 24px auto; line-height:1.6;">
+                Your configurations will be saved to your local SQLite <code>var/data.db</code> database. All tables, seed parameters, and persistent cache layers are fully initialized.
+            </p>
+
+            <div style="display:inline-flex; flex-direction:column; gap:10px; max-width:400px; width:100%; margin:0 auto 28px auto; text-align:left; background:var(--bg3); border:1px solid var(--border); padding:16px; border-radius:12px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span style="color:var(--muted);">Database Engine:</span>
+                    <strong style="color:var(--green);">SQLite data.db (JIT Seeded)</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span style="color:var(--muted);">Primary Broker:</span>
+                    <strong style="color:var(--purple);" id="reviewBroker">Charles Schwab</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span style="color:var(--muted);">Persistent Caching:</span>
+                    <strong style="color:var(--blue);">Active (Sanitized Non-PII)</strong>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:center; gap:12px;">
+                <button type="button" class="hbtn" style="background:var(--bg3); padding:10px 24px;" onclick="showWizardStep(4)">← Back</button>
+                <button type="button" class="hbtn hbtn-green" id="btnSaveAndLaunch" style="padding:12px 32px; font-size:14px; font-weight:800;" onclick="completeSetupAndLaunch()">
+                    💾 Save Configurations & Launch Portfolio →
+                </button>
+            </div>
+            <div id="saveLaunchMsg" style="margin-top:14px; font-size:13px; font-weight:700;"></div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+.wiz-step-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s, color 0.2s;
+    font-weight: 700;
+}
+.wiz-step-btn.active {
+    opacity: 1;
+    color: var(--blue);
+}
+.step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+.wiz-step-btn.active .step-num {
+    background: var(--blue);
+    color: #fff;
+    border-color: var(--blue);
+}
+.step-lbl {
+    font-size: 12px;
+}
+.step-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    margin: 0 12px;
+}
+.broker-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.broker-card.active {
+    border-color: var(--blue);
+    background: rgba(2,132,199,0.08);
+    box-shadow: 0 0 12px rgba(2,132,199,0.25);
+}
+
+/* ── Large Text Key Fields & Edit Wrap ────────────────────────────── */
+.key-field-wrap {
+    position: relative;
+    width: 100%;
+}
+.large-key-input {
+    width: 100%;
+    height: 42px;
+    min-height: 42px;
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0 14px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', Monaco, monospace;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    outline: none;
+    box-sizing: border-box;
+    transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.large-key-input:hover {
+    border-color: rgba(56,189,248,0.5);
+}
+/* WHEN CLICKED / FOCUSED: Turns solid obsidian black in all modes */
+.large-key-input:focus, .large-key-input:active {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 16px rgba(56,189,248,0.4) !important;
+}
+
+/* Slick modern pill button chips */
+.slick-pill-btn {
+    border-radius: 20px;
+    font-size: 11px;
+    padding: 4px 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.slick-pill-btn:hover {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(2,132,199,0.3);
+}
+
+/* ── Stylized Custom Select Dropdown ────────────────────────────── */
+.styled-select-input {
+    width: 100%;
+    height: 42px;
+    background-color: var(--bg1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%3C%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0 38px 0 14px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.styled-select-input:hover {
+    border-color: var(--blue);
+    background-color: var(--bg2);
+}
+.styled-select-input:focus {
+    border-color: #38bdf8;
+    background-color: #000000;
+    color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(56,189,248,0.25);
+}
+
+.material-symbols-outlined {
+    font-size: 18px;
+    vertical-align: middle;
+    line-height: 1;
+}
+</style>
+
+<script>
+let brokerInstances = {{ brokerInstances|json_encode|raw }};
+if (!Array.isArray(brokerInstances) || brokerInstances.length === 0) {
+    brokerInstances = [
+        { id: 'broker_1', type: 'schwab', nickname: 'Schwab Main', app_key: '{{ schwabKey|default("") }}', app_secret: '{{ schwabSecret|default("") }}' }
+    ];
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderBrokerInstances();
+});
+
+function showWizardStep(step) {
+    for (let i = 1; i <= 5; i++) {
+        const p = document.getElementById('wizStep' + i);
+        const ind = document.getElementById('stepIndicator' + i);
+        if (p) p.style.display = (i === step) ? 'block' : 'none';
+        if (ind) ind.classList.toggle('active', i === step);
+    }
+}
+
+function escapeHtml(text) {
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function renderBrokerInstances() {
+    const container = document.getElementById('brokerInstancesContainer');
+    if (!container) return;
+
+    let html = '';
+    brokerInstances.forEach((inst, index) => {
+        const iNum = index + 1;
+        const removeBtn = (brokerInstances.length > 1) 
+            ? `<button type="button" class="slick-pill-btn" style="color:var(--red); border-color:rgba(248,113,113,0.3);" onclick="removeBrokerInstanceCard(${index})"><span class="material-symbols-outlined">delete</span> Remove</button>` 
+            : '';
+
+        const oauthBtn = (inst.type === 'schwab' || inst.type === 'etrade')
+            ? `<a href="/api/schwab/login" target="_blank" class="hbtn hbtn-blue" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px; font-weight:700; text-decoration:none;"><span class="material-symbols-outlined">link</span> Connect via OAuth</a>`
+            : '';
+
+        html += `
+        <div class="broker-instance-card" style="background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:22px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span class="hbadge" style="background:var(--blue); color:#fff; font-weight:800;">Connection #${iNum}</span>
+                    <strong style="font-size:14px; color:var(--text); font-family:'Outfit',sans-serif;">${escapeHtml(inst.nickname || 'Broker Connection ' + iNum)}</strong>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    ${oauthBtn}
+                    ${removeBtn}
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div>
+                    <label style="display:block; font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; margin-bottom:6px;">Brokerage Integration Type</label>
+                    <select class="styled-select-input" onchange="updateInstanceField(${index}, 'type', this.value)">
+                        <option value="schwab" ${inst.type === 'schwab' ? 'selected' : ''}>Charles Schwab (OAuth 2.0 API)</option>
+                        <option value="ibkr" ${inst.type === 'ibkr' ? 'selected' : ''}>Interactive Brokers (IBKR Gateway)</option>
+                        <option value="alpaca" ${inst.type === 'alpaca' ? 'selected' : ''}>Alpaca Markets (Trading API)</option>
+                        <option value="fidelity" ${inst.type === 'fidelity' ? 'selected' : ''}>Fidelity Investments (Direct)</option>
+                        <option value="etrade" ${inst.type === 'etrade' ? 'selected' : ''}>E*TRADE / Morgan Stanley (OAuth)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; margin-bottom:6px;">Short Account Nickname (Displayed on Portfolio)</label>
+                    <input type="text" class="large-key-input" style="height:42px;" placeholder="e.g. Schwab Main, Schwab IRA, IBKR Margin" value="${escapeHtml(inst.nickname || '')}" oninput="updateInstanceField(${index}, 'nickname', this.value)">
+                </div>
+            </div>
+
+            <!-- Credentials Fields -->
+            <div style="margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase;">App Key / Client ID</label>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="slick-pill-btn" onclick="pasteToField('bKey_${index}')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                        <button type="button" class="slick-pill-btn" onclick="copyFromField('bKey_${index}', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                    </div>
+                </div>
+                <input type="text" id="bKey_${index}" class="large-key-input" placeholder="App Key / Client ID..." value="${escapeHtml(inst.app_key || '')}" oninput="updateInstanceField(${index}, 'app_key', this.value)">
+            </div>
+
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase;">App Secret / Token</label>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="slick-pill-btn" onclick="toggleSecretVisibility('bSec_${index}', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
+                        <button type="button" class="slick-pill-btn" onclick="pasteToField('bSec_${index}')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                        <button type="button" class="slick-pill-btn" onclick="copyFromField('bSec_${index}', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                    </div>
+                </div>
+                <input type="password" id="bSec_${index}" class="large-key-input" placeholder="App Secret..." value="${escapeHtml(inst.app_secret || '')}" oninput="updateInstanceField(${index}, 'app_secret', this.value)">
+            </div>
+        </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    const addBtn = document.getElementById('btnAddBrokerInstance');
+    if (addBtn) {
+        addBtn.disabled = (brokerInstances.length >= 5);
+        addBtn.style.opacity = (brokerInstances.length >= 5) ? '0.4' : '1';
+    }
+
+    const review = document.getElementById('reviewBroker');
+    if (review) {
+        const names = brokerInstances.map(i => `${i.nickname || 'Broker'} (${i.type.toUpperCase()})`).join(', ');
+        review.textContent = names;
+    }
+}
+
+function updateInstanceField(index, field, value) {
+    if (brokerInstances[index]) {
+        brokerInstances[index][field] = value;
+        if (field === 'type') {
+            renderBrokerInstances();
+        } else if (field === 'nickname') {
+            const review = document.getElementById('reviewBroker');
+            if (review) {
+                const names = brokerInstances.map(i => `${i.nickname || 'Broker'} (${i.type.toUpperCase()})`).join(', ');
+                review.textContent = names;
+            }
+        }
+    }
+}
+
+function addBrokerInstanceCard() {
+    if (brokerInstances.length >= 5) return;
+    const n = brokerInstances.length + 1;
+    brokerInstances.push({
+        id: 'broker_' + Date.now(),
+        type: 'schwab',
+        nickname: 'Schwab Account ' + n,
+        app_key: '',
+        app_secret: ''
+    });
+    renderBrokerInstances();
+}
+
+function removeBrokerInstanceCard(index) {
+    if (brokerInstances.length <= 1) return;
+    brokerInstances.splice(index, 1);
+    renderBrokerInstances();
+}
+
+async function pasteToField(fieldId) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+            el.value = text.trim();
+            el.dispatchEvent(new Event('input'));
+            el.focus();
+        }
+    } catch(e) {
+        el.focus();
+        alert('Please press Ctrl+V (or Cmd+V) to paste into this field.');
+    }
+}
+
+async function copyFromField(fieldId, btn) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    const text = el.value.trim();
+    if (!text) return;
+    await copyText(text, btn);
+}
+
+async function copyText(text, btn) {
+    try {
+        await navigator.clipboard.writeText(text);
+        if (btn) {
+            const orig = btn.innerHTML;
+            btn.innerHTML = '✓ Copied!';
+            btn.style.color = 'var(--green)';
+            setTimeout(() => {
+                btn.innerHTML = orig;
+                btn.style.color = '';
+            }, 2000);
+        }
+    } catch(e) {
+        prompt('Copy to clipboard (Ctrl+C):', text);
+    }
+}
+
+function clearField(fieldId) {
+    const el = document.getElementById(fieldId);
+    if (el) {
+        el.value = '';
+        el.dispatchEvent(new Event('input'));
+        el.focus();
+    }
+}
+
+function toggleSecretVisibility(fieldId, btn) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    if (el.type === 'password') {
+        el.type = 'text';
+        if (btn) btn.innerHTML = '🔒 Hide';
+    } else {
+        el.type = 'password';
+        if (btn) btn.innerHTML = '👁 Show';
+    }
+}
+
+async function testFinnhubKey() {
+    const key = document.getElementById('wizFinnhubKey').value.trim();
+    const resDiv = document.getElementById('finnhubTestResult');
+    if (!key) {
+        resDiv.innerHTML = '<span style="color:var(--yellow);">Please enter a Finnhub API Key first.</span>';
+        return;
+    }
+
+    resDiv.innerHTML = '<span style="color:var(--blue);">⏳ Testing Finnhub connection…</span>';
+
+    try {
+        const res = await fetch('/api/setup/test-finnhub', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ apiKey: key })
+        });
+        const json = await res.json();
+
+        if (json.status === 'success') {
+            resDiv.innerHTML = `<span style="color:var(--green);">✅ ${json.message}</span>`;
+        } else {
+            resDiv.innerHTML = `<span style="color:var(--red);">❌ ${json.message}</span>`;
+        }
+    } catch (e) {
+        resDiv.innerHTML = `<span style="color:var(--red);">❌ Connection error: ${e.message}</span>`;
+    }
+}
+
+async function completeSetupAndLaunch() {
+    const btn = document.getElementById('btnSaveAndLaunch');
+    const msg = document.getElementById('saveLaunchMsg');
+    btn.disabled = true;
+    btn.textContent = '⏳ Saving…';
+
+    const primaryBroker = brokerInstances[0] ? brokerInstances[0].type : 'schwab';
+    const primaryAppKey = brokerInstances[0] ? brokerInstances[0].app_key : '';
+    const primaryAppSecret = brokerInstances[0] ? brokerInstances[0].app_secret : '';
+
+    const payload = {
+        finnhub_api_key: document.getElementById('wizFinnhubKey').value.trim(),
+        schwab_app_key: primaryAppKey,
+        schwab_app_secret: primaryAppSecret,
+        gemini_api_key: document.getElementById('wizGeminiKey').value.trim(),
+        broker_active_provider: primaryBroker,
+        broker_instances: brokerInstances,
+        mark_completed: true,
+    };
+
+    try {
+        const res = await fetch('/api/setup/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+
+        if (json.status === 'success') {
+            msg.innerHTML = '<span style="color:var(--green);">✅ Setup Complete! Redirecting to your portfolio…</span>';
+            setTimeout(() => {
+                window.location.href = '/portfolio';
+            }, 1000);
+        } else {
+            throw new Error(json.message ?? 'Save error');
+        }
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '💾 Save Configurations & Launch Portfolio →';
+        msg.innerHTML = `<span style="color:var(--red);">❌ ${e.message}</span>`;
+    }
+}
+</script>
+{% endblock %}

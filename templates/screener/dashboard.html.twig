@@ -1,27 +1,16 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Executive Financial Dashboard — Moonshot Screener v3{% endblock %}
+{% block title %}Executive Financial Dashboard — KHAPRE MoonShot Portfolio{% endblock %}
 
 {% block body %}
 <div id="app">
-    <!-- HEADER -->
-    <div class="header">
-        <h1>📊 Executive <span>Dashboard</span></h1>
-        <span class="hbadge">Capital Flywheel Command Center</span>
-        <div class="hright">
-            <button class="hbtn hbtn-fw" onclick="openFlywheelPlanner()">🌅 Daily Morning Planner</button>
-            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
-            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
-        </div>
-    </div>
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '📊 Executive <span>Dashboard</span>',
+        headerBadge: 'Capital Flywheel Command Center'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
 
-    <!-- MAIN PAGE NAVIGATION LINKS -->
-    <div class="nav-tabs">
-        <a href="/" class="nav-link active">📊 Executive Dashboard</a>
-        <a href="/screener" class="nav-link">⚡ Stock Screener & Options Flywheel</a>
-        <a href="/portfolio" class="nav-link">💼 Portfolio Details (Schwab Accounts)</a>
-        <a href="/discover" class="nav-link">🔍 Discover & Manage Tracked Stocks</a>
-    </div>
 
     <!-- FLYWHEEL CONFIGURABLE RISK BANNER -->
     <div class="fw-banner">
@@ -99,20 +88,21 @@
                     <span>${{ (cashVal * 0.15)|number_format(0) }}</span>
                 </div>
             </div>
+        </div>
         <!-- PORTFOLIO COVERED CALL TRADE ASSISTANT PLAYBOOK -->
-        <div style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border: 1px solid rgba(63,185,80,0.4); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+        <div class="dash-widget-green">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
                 <div>
                     <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--green); display:flex; align-items:center; gap:8px;">
                         <span>🔥 Capital Flywheel — Actionable Covered Call Trades</span>
-                        <span class="hbadge" style="background:rgba(63,185,80,0.2); color:var(--green); border-color:rgba(63,185,80,0.4);">Schwab Portfolio Live</span>
+                        <span class="hbadge" style="background:rgba(21,128,61,0.15); color:var(--green); border-color:rgba(21,128,61,0.3);">Schwab Portfolio Live</span>
                     </h3>
                     <div style="font-size:12px; color:var(--muted);">
                         Scanned your unencumbered 100-share blocks. Executing these suggested Covered Calls generates <strong class="g" id="playbookTotalIncome">+$2,482.00 Instant Cash Premium Income</strong>!
                     </div>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <a href="/portfolio" class="hbtn" style="background:var(--green); color:#0b0e14; font-weight:700;">💼 View Portfolio & Accounts</a>
+                    <a href="/portfolio" class="hbtn hbtn-green">💼 View Portfolio & Accounts</a>
                 </div>
             </div>
 
@@ -122,7 +112,7 @@
         </div>
 
         <!-- GEMINI AI PORTFOLIO ASSISTANT WIDGET -->
-        <div style="background: linear-gradient(135deg, rgba(188,140,255,0.12), rgba(31,38,55,0.95)); border: 1px solid rgba(188,140,255,0.4); border-radius: 14px; padding: 20px; margin-bottom: 24px;">
+        <div class="dash-widget-purple">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
                 <div>
                     <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--purple); display:flex; align-items:center; gap:8px;">
@@ -134,33 +124,20 @@
                     </div>
                 </div>
                 <div>
-                    <button class="hbtn" style="background:var(--purple); color:#0b0e14; font-weight:700;" onclick="loadGeminiAiIdeas(true)">
+                    <button class="hbtn hbtn-purple" onclick="loadGeminiAiIdeas(true)">
                         ✨ Refresh Gemini AI Analysis
                     </button>
                 </div>
             </div>
+
 
             <div id="geminiAiCardsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
                 <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">🤖 Querying Gemini AI for portfolio trade ideas...</div>
             </div>
         </div>
 
-        <!-- QUICK LAUNCH MODULES -->
-        <h4 style="font-size:13px; color:var(--blue); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px;">Command Center Quick Navigation</h4>
-        <div class="action-grid">
-            <a href="/screener" class="action-box">
-                <h3>⚡ Stock Screener & Options Signals</h3>
-                <p>Filter candidates by 🟢 CALL, 🟡 WHEEL, and 🔴 PUT signals. Inspect Schwab live option chains and target strikes.</p>
-            </a>
-            <a href="/portfolio" class="action-box">
-                <h3>💼 Schwab Portfolio & Accounts</h3>
-                <p>View Account Aggregated cash available ($25,143) and Equity Aggregated holdings across all 4 Schwab accounts.</p>
-            </a>
-            <a href="/discover" class="action-box">
-                <h3>🔍 Discover & Manage Tracked Candidates</h3>
-                <p>Explore Wall Street suggestions with deep investment reasoning, 1-click import, and candidate management.</p>
-            </a>
-        </div>
+
+
 
         <!-- TOP PORTFOLIO HOLDINGS OVERVIEW TABLE -->
         <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px;">
@@ -170,7 +147,7 @@
                 </h4>
                 <a href="/portfolio" class="hbtn" style="background:var(--bg3); border:1px solid var(--border); color:var(--blue);">View All Accounts →</a>
             </div>
-            <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+            <div style="border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
                 <table>
                     <thead>
                         <tr>
@@ -264,7 +241,7 @@ async function loadGeminiAiIdeas(isRefresh = false) {
                         </div>
                     </div>
 
-                    <a href="/screener" class="btn btn-pri" style="width:100%; text-align:center; font-weight:700; text-decoration:none; display:block; padding:8px 0; background:var(--purple); color:#0b0e14;">
+                    <a href="/screener" class="hbtn hbtn-purple" style="width:100%; justify-content:center; text-align:center; text-decoration:none; display:flex; padding:8px 0;">
                         ⚡ Inspect ${item.ticker} Option Chain
                     </a>
                 `;
@@ -308,12 +285,12 @@ async function loadCoveredCallSuggestions() {
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                             <div>
                                 <strong style="font-size:16px; color:var(--text);">${s.symbol}</strong>
-                                <span class="hbadge" style="margin-left:6px; background:rgba(63,185,80,0.15); color:var(--green);">${s.eligibleContracts} Contract(s) Eligible</span>
+                                <span class="hbadge" style="margin-left:6px; background:rgba(21,128,61,0.15); color:var(--green);">${s.eligibleContracts} Contract(s) Eligible</span>
                             </div>
                             <span class="g" style="font-size:15px; font-weight:800;">+$${s.estTotalIncome} Income</span>
                         </div>
 
-                        <div style="background:rgba(63,185,80,0.06); border:1px solid rgba(63,185,80,0.2); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700;">
+                        <div style="background:rgba(21,128,61,0.08); border:1px solid rgba(21,128,61,0.25); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700;">
                             ⚡ ${s.tradeActionText}
                         </div>
 
@@ -329,9 +306,10 @@ async function loadCoveredCallSuggestions() {
                         </p>
                     </div>
 
-                    <a href="/screener?symbol=${s.symbol}" class="hbtn" style="width:100%; justify-content:center; text-align:center; font-weight:700; text-decoration:none; display:flex; padding:8px 0; background:var(--blue); color:#0b0e14;">
+                    <a href="/screener?symbol=${s.symbol}" class="hbtn hbtn-blue" style="width:100%; justify-content:center; text-align:center; text-decoration:none; display:flex; padding:8px 0;">
                         🔍 Inspect ${s.symbol} Option Chain & Gemini AI Signals
                     </a>
+
                 `;
                 grid.appendChild(card);
             });
@@ -341,4 +319,6 @@ async function loadCoveredCallSuggestions() {
     }
 }
 </script>
+
+{% include 'screener/partials/_footer.html.twig' %}
 {% endblock %}

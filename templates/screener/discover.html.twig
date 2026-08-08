@@ -1,37 +1,27 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Discover & Manage Tracked Stocks — Moonshot Screener{% endblock %}
+{% block title %}Discover & Manage Tracked Stocks — KHAPRE MoonShot Portfolio{% endblock %}
 
 {% block body %}
 <div id="app">
-    <!-- HEADER -->
-    <div class="header">
-        <h1>🔍 Discover & Manage <span>Tracked Stocks</span></h1>
-        <span class="hbadge">Finnhub & Schwab Intelligence</span>
-        <div class="hright">
-            <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
-            <a href="/api/schwab/login" target="_blank" class="hbtn" style="background: rgba(63,185,80,0.2); color: var(--green); border: 1px solid rgba(63,185,80,0.4);">🏦 Connect Schwab</a>
-        </div>
-    </div>
-
-    <!-- MAIN PAGE NAVIGATION LINKS -->
-    <div class="nav-tabs">
-        <a href="/" class="nav-link">📊 Executive Dashboard</a>
-        <a href="/screener" class="nav-link">⚡ Stock Screener & Options Flywheel</a>
-        <a href="/portfolio" class="nav-link">💼 Portfolio Details (Schwab Accounts)</a>
-        <a href="/discover" class="nav-link active">🔍 Discover & Manage Tracked Stocks</a>
-    </div>
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '🔍 Discover & Manage <span>Tracked Stocks</span>',
+        headerBadge: 'Finnhub & Schwab Intelligence'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
 
     <!-- PAGE 3 CONTENT: DISCOVER & MANAGE TRACKED STOCKS -->
     <div class="port-container">
         <!-- SCANNER & DISCOVERY HEADER -->
-        <div style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;">
+        <div style="background: var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;">
             <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 8px 0; color:var(--purple); display:flex; align-items:center; gap:8px;">
                 <span>🔥 AI Market Intelligence & Wall Street Ideas (Live Internet Suggestions)</span>
             </h3>
             <p style="font-size:12px; color:var(--muted); margin:0 0 16px 0; line-height:1.5;">
                 Explore top-rated Wall Street stock suggestions with detailed investment reasoning, sector catalysts, and Level 1 options strategies. Click <strong>"➕ Add to Tracked Screener"</strong> to import any candidate into your live options engine!
             </p>
+
 
             <div style="display:flex; gap:10px;">
                 <input id="tab3SymbolInput" placeholder="Enter any custom Stock Ticker (e.g. AMD, AMZN, MSFT, GOOGL, META...)" style="flex:1; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:8px; font-size:13px; outline:none; text-transform:uppercase;">
@@ -317,4 +307,6 @@ async function deleteTrackedStock(id) {
     }
 }
 </script>
+
+{% include 'screener/partials/_footer.html.twig' %}
 {% endblock %}
