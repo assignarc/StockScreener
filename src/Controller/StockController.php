@@ -25,15 +25,15 @@ class StockController extends AbstractController
         private AppConfigService $appConfig,
         private EntityManagerInterface $entityManager,
     ) {}
-
     #[Route('/stocks', name: 'stocks_list', methods: ['GET'])]
     public function listStocks(Request $request): JsonResponse
     {
-        $sector = $request->query->get('sector', 'ALL');
-        $risk   = $request->query->get('risk', 'ALL');
-        $query  = $request->query->get('q');
+        $sector    = $request->query->get('sector', 'ALL');
+        $risk      = $request->query->get('risk', 'ALL');
+        $assetType = $request->query->get('assetType', 'ALL');
+        $query     = $request->query->get('q');
 
-        $stocks        = $this->stockRepository->findByFilters($sector, $risk, $query);
+        $stocks        = $this->stockRepository->findByFilters($sector, $risk, $query, $assetType);
         $watchlistItems = array_map(fn($w) => $w->getSymbol(), $this->watchlistRepository->findAll());
 
         $data = array_map(function (Stock $stock) use ($watchlistItems) {
@@ -76,7 +76,8 @@ class StockController extends AbstractController
               ->setMarketCap($data['marketCap'] ?? '$50B')
               ->setThesis($data['thesis'] ?? 'High conviction candidate.')
               ->setCatalysts($data['catalysts'] ?? 'Earnings growth.')
-              ->setKeyRisks($data['keyRisks'] ?? 'Market volatility.');
+              ->setKeyRisks($data['keyRisks'] ?? 'Market volatility.')
+              ->setAssetType($data['assetType'] ?? 'STOCK');
 
         $this->entityManager->persist($stock);
         $this->entityManager->flush();

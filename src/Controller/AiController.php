@@ -93,6 +93,9 @@ class AiController extends AbstractController
                     'suggestedStrategy'=> $idea['strategyType'] ?? '',
                     'estimatedPremium'=> $idea['estimatedPremium'] ?? null,
                     'apy'             => $idea['APY'] ?? null,
+                    'delta'           => $idea['delta'] ?? 'N/A',
+                    'probabilityOfProfit'=> $idea['probabilityOfProfit'] ?? 'N/A',
+                    'impliedVolatilityRank'=> $idea['impliedVolatilityRank'] ?? 'N/A',
                     'source'          => $aiResult['source'] ?? 'AI Engine',
                     '_live'           => true,
                 ];

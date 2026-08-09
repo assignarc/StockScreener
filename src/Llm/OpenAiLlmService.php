@@ -121,12 +121,12 @@ Analyze this Schwab Investor Portfolio:
 
 - Top Tracked Screener Candidates: {$trackedContext}
 
-Please generate 3 high-conviction Option Level 1 Basic rules strategy ideas:
+Please generate 3 high-conviction Option Level 1 Basic rules strategy ideas. You can suggest stocks, liquid ETFs (like SPY, QQQ, IWM, XLF) or short-term treasury/bond ETFs (like SGOV, BIL, SHV) for yield-shielding cash collateral:
 1. Covered Call Strategy for unencumbered stock blocks (100+ shares).
 2. Cash-Secured Put Strategy using available cash reserves (\${$cashAvailable}).
-3. Growth & Hedging Portfolio Optimization.
+3. Growth, Hedging, or Capital Preservation/Fixed Income Yield Strategy.
 
-Output clear JSON formatting. The JSON must be an array of 3 strategy objects. Each object must have keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail.";
+Output clear JSON formatting. The JSON must be an array of 3 strategy objects. Each object must have keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
 
         $aiText = $this->callChatCompletion($prompt, true);
         if ($aiText) {
@@ -164,40 +164,55 @@ Output clear JSON formatting. The JSON must be an array of 3 strategy objects. E
     {
         return [
             [
-                'title' => '🤖 OpenAI AI Idea 1: Monetize Unencumbered NVDA Shares via 6% OTM Covered Call',
+                'title' => 'Monetize Unencumbered NVDA Shares via OTM Covered Call',
                 'ticker' => 'NVDA',
                 'strategyType' => 'Covered Call (Option Level 1 Basic)',
                 'targetStrike' => '$235.00',
+                'strike' => '$235.00',
                 'expiration' => date('M d', strtotime('+35 days')),
                 'estimatedPremium' => '+$1,244.00 Instant Cash',
                 'annualizedYield' => '29.2% APY',
-                'reasoning' => 'You hold unencumbered NVDA shares. Selling OTM Covered Calls locks in cash premium while allowing NVDA to appreciate up to strike.',
-                'riskGuardrail' => '100% Covered by owned stock. Capped upside above strike, zero cash margin requirement.',
-                'actionBadge' => '🟢 HIGH CONVICTION'
+                'APY' => '29.2% APY',
+                'reasoning' => 'You hold NVDA shares. Selling Covered Calls locks in cash premium while allowing NVDA to appreciate up to $235.',
+                'riskGuardrail' => '100% Covered by owned stock. Capped upside above $235, zero cash margin requirement.',
+                'delta' => '0.28',
+                'probabilityOfProfit' => '72%',
+                'impliedVolatilityRank' => '45%',
+                'actionBadge' => 'HIGH CONVICTION'
             ],
             [
-                'title' => '🤖 OpenAI AI Idea 2: Deploy $' . number_format($cash * 0.40, 0) . ' Cash into AMD Cash-Secured Put',
-                'ticker' => 'AMD',
+                'title' => 'Deploy Cash into QQQ Cash-Secured Put for Index Exposure',
+                'ticker' => 'QQQ',
                 'strategyType' => 'Cash-Secured Put (Option Level 1 Basic)',
-                'targetStrike' => '$140.00 (7% Discount Entry)',
+                'targetStrike' => '$440.00',
+                'strike' => '$440.00',
                 'expiration' => date('M d', strtotime('+30 days')),
-                'estimatedPremium' => '+$420.00 Instant Cash',
-                'annualizedYield' => '24.5% APY',
-                'reasoning' => 'With $' . number_format($cash, 0) . ' available cash, sell AMD Puts. If AMD stays above strike, keep premium. If assigned, acquire AMD at discount.',
+                'estimatedPremium' => '+$650.00 Instant Cash',
+                'annualizedYield' => '18.5% APY',
+                'APY' => '18.5% APY',
+                'reasoning' => 'With available cash, sell QQQ Puts for diversified index entry. Lower volatility risk compared to single stocks.',
                 'riskGuardrail' => '100% Backed by liquid cash reserves. Defined downside risk with built-in discount entry.',
-                'actionBadge' => '🟡 WHEEL ENTRY'
+                'delta' => '-0.25',
+                'probabilityOfProfit' => '75%',
+                'impliedVolatilityRank' => '38%',
+                'actionBadge' => 'WHEEL ENTRY'
             ],
             [
-                'title' => '🤖 OpenAI AI Idea 3: Monetize AAPL Shares via Covered Call',
-                'ticker' => 'AAPL',
-                'strategyType' => 'Covered Call (Option Level 1 Basic)',
-                'targetStrike' => '$330.00',
-                'expiration' => date('M d', strtotime('+40 days')),
-                'estimatedPremium' => '+$875.00 Instant Cash',
-                'annualizedYield' => '26.8% APY',
-                'reasoning' => 'Selling the Covered Call captures premium income ahead of upcoming macro events.',
-                'riskGuardrail' => '100% Covered by owned stock.',
-                'actionBadge' => '🟢 INCOME COMPOUNDER'
+                'title' => 'Deploy Idle Cash to SGOV Treasury Bond ETF for Yield Shield',
+                'ticker' => 'SGOV',
+                'strategyType' => 'Fixed Income / Capital Preservation',
+                'targetStrike' => 'N/A',
+                'strike' => 'N/A',
+                'expiration' => 'N/A',
+                'estimatedPremium' => '+$105.00 Monthly Dividend',
+                'annualizedYield' => '5.2% APY',
+                'APY' => '5.2% APY',
+                'reasoning' => 'Place idle cash in 0-3 Month Treasury Bond ETF to earn low-risk yield while waiting for options entry.',
+                'riskGuardrail' => 'Virtually zero credit risk. Collateral remains highly liquid.',
+                'delta' => 'N/A',
+                'probabilityOfProfit' => '99%',
+                'impliedVolatilityRank' => '5%',
+                'actionBadge' => 'YIELD SHIELD'
             ]
         ];
     }

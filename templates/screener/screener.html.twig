@@ -7,7 +7,7 @@
 <div id="app">
     <!-- UNIFIED BRAND HEADER & NAVIGATION -->
     {% include 'screener/partials/_header.html.twig' with {
-        headerTitle: '⚡ Capital Flywheel <span>Stock Screener</span>',
+        headerTitle: '<span class="material-symbols-outlined">bolt</span> Capital Flywheel <span>Stock Screener</span>',
         headerBadge: 'v3 Options Engine',
         showLiveLoadBtn: true
     } %}
@@ -17,7 +17,7 @@
     <!-- FLYWHEEL CONFIGURABLE RISK BANNER -->
     <div class="fw-banner">
         <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:18px">⚙️</span>
+            <span class="material-symbols-outlined" style="font-size: 24px; color: var(--blue);">settings</span>
             <div>
                 <div style="font-weight:700;font-size:13px;color:var(--text)">Flywheel Monthly Risk Guardrail: <span id="fwRiskCapText" style="color:var(--blue);cursor:pointer;font-weight:800;" onclick="changeRiskConfig()" title="Click to adjust monthly risk cap">$10,000</span> <span style="font-size:10px;color:var(--muted);">(Click to change)</span></div>
                 <div style="font-size:11px;color:var(--muted)">Enforces 100% Covered & Cash-Collateralized Option Trades (Zero Margin Traps)</div>
@@ -35,7 +35,7 @@
                 <div id="fwBarFree" class="fw-bar-free" style="width:37%" title="Available Risk Remaining"></div>
             </div>
         </div>
-        <button class="hbtn hbtn-fw" style="padding:6px 14px;font-size:12px;" onclick="openFlywheelPlanner()">⚡ View Morning Trade Package</button>
+        <button class="hbtn hbtn-fw" style="padding:6px 14px;font-size:12px; display:inline-flex; align-items:center; justify-content:center;" onclick="openFlywheelPlanner()"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">wb_twilight</span> View Morning Trade Package</button>
     </div>
 
 
@@ -99,6 +99,12 @@
                 <button class="fbtn" onclick="filterSector('{{ sector }}', this)">{{ sector }}</button>
             {% endfor %}
             <span class="sp"></span>
+            <select class="fsel" onchange="filterAssetType(this.value)" style="margin-right: 6px;">
+                <option value="ALL">All Asset Types</option>
+                <option value="STOCK">Stocks</option>
+                <option value="ETF">ETFs</option>
+                <option value="BOND_ETF">Fixed Income / Bonds</option>
+            </select>
             <select class="fsel" onchange="filterRisk(this.value)">
                 <option value="ALL">All Risk Levels</option>
                 <option value="LOW">Low Risk</option>

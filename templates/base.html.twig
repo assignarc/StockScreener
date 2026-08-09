@@ -39,7 +39,7 @@
         function updateThemeToggleButtons(theme) {
             const btns = document.querySelectorAll('.theme-toggle-btn');
             btns.forEach(btn => {
-                btn.innerHTML = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+                btn.innerHTML = theme === 'dark' ? '<span class="material-symbols-outlined">light_mode</span> Light Mode' : '<span class="material-symbols-outlined">dark_mode</span> Dark Mode';
             });
         }
 

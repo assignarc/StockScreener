@@ -2,6 +2,7 @@ let allStocks = [];
 let portfolioData = null;
 let activeSector = 'ALL';
 let activeRisk = 'ALL';
+let activeAssetType = 'ALL';
 let activeSignal = 'ALL';
 let searchQuery = '';
 let sortField = 'score';
@@ -109,6 +110,7 @@ async function fetchStocks() {
         const url = new URL('/api/stocks', window.location.origin);
         if (activeSector !== 'ALL') url.searchParams.append('sector', activeSector);
         if (activeRisk !== 'ALL') url.searchParams.append('risk', activeRisk);
+        if (activeAssetType !== 'ALL') url.searchParams.append('assetType', activeAssetType);
         if (searchQuery) url.searchParams.append('q', searchQuery);
 
         const response = await fetch(url);
@@ -148,6 +150,11 @@ function filterSector(sector, btn) {
 
 function filterRisk(risk) {
     activeRisk = risk;
+    fetchStocks();
+}
+
+function filterAssetType(type) {
+    activeAssetType = type;
     fetchStocks();
 }
 

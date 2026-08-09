@@ -6,7 +6,7 @@
 <div id="app">
     <!-- UNIFIED BRAND HEADER & NAVIGATION -->
     {% include 'screener/partials/_header.html.twig' with {
-        headerTitle: '🔍 Discover & Manage <span>Tracked Stocks</span>',
+        headerTitle: '<span class="material-symbols-outlined">search</span> Discover & Manage <span>Tracked Stocks</span>',
         headerBadge: 'Finnhub & Schwab Intelligence'
     } %}
     {% include 'screener/partials/_nav.html.twig' %}
@@ -16,16 +16,16 @@
         <!-- SCANNER & DISCOVERY HEADER -->
         <div style="background: var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:24px;">
             <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 8px 0; color:var(--purple); display:flex; align-items:center; gap:8px;">
-                <span>🔥 AI Market Intelligence & Wall Street Ideas (Live Internet Suggestions)</span>
+                <span><span class="material-symbols-outlined">insights</span> AI Market Intelligence & Wall Street Ideas (Live Internet Suggestions)</span>
             </h3>
             <p style="font-size:12px; color:var(--muted); margin:0 0 16px 0; line-height:1.5;">
-                Explore top-rated Wall Street stock suggestions with detailed investment reasoning, sector catalysts, and Level 1 options strategies. Click <strong>"➕ Add to Tracked Screener"</strong> to import any candidate into your live options engine!
+                Explore top-rated Wall Street stock suggestions with detailed investment reasoning, sector catalysts, and Level 1 options strategies. Click <strong>"Add to Tracked Screener"</strong> to import any candidate into your live options engine!
             </p>
 
 
             <div style="display:flex; gap:10px;">
                 <input id="tab3SymbolInput" placeholder="Enter any custom Stock Ticker (e.g. AMD, AMZN, MSFT, GOOGL, META...)" style="flex:1; padding:10px 14px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:8px; font-size:13px; outline:none; text-transform:uppercase;">
-                <button class="hbtn" style="background:var(--purple); color:#0b0e14; font-weight:700;" onclick="scanStockTab3()">⚡ Scan Ticker</button>
+                <button class="hbtn" style="background:var(--purple); color:#0b0e14; font-weight:700;" onclick="scanStockTab3()"><span class="material-symbols-outlined">radar</span> Scan Ticker</button>
             </div>
             <div id="tab3ScanResult" style="margin-top:14px; display:none; padding:14px; background:var(--bg3); border:1px solid rgba(188,140,255,0.4); border-radius:8px;">
                 <!-- JS Populated Scan Result -->
@@ -35,78 +35,79 @@
         <!-- WALL STREET SUGGESTIONS GRID WITH REASONING -->
         <h4 style="font-size:13px; color:var(--blue); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px;">Curated Market Candidates & Investment Reasoning</h4>
         <div id="suggestionsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:16px; margin-bottom:32px;">
-            <div class="m" style="grid-column:1/-1; text-align:center; padding:20px;">⚡ Gathering live internet market intelligence & suggestions...</div>
+            <div class="m" style="grid-column:1/-1; text-align:center; padding:20px;">Gathering live internet market intelligence & suggestions...</div>
         </div>
 
         <!-- CURRENTLY TRACKED STOCKS MANAGEMENT SECTION -->
         <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px;">
-            <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px;">🛠 Tracked Screener Candidates Management ({{ totalStocks }} Tracked)</h4>
+            <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px;"><span class="material-symbols-outlined">edit_calendar</span> Tracked Screener Candidates Management ({{ totalStocks }} Tracked)</h4>
             <div style="border:1px solid var(--border); border-radius:8px; overflow:hidden;">
                 <table>
                     <thead>
                         <tr>
                             <th>
                                 <span>Ticker</span>
-                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                     <span class="col-popover">
-                                        <div class="col-popover-title">📌 Stock Ticker Symbol</div>
+                                        <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size: 14px;">label</span> Stock Ticker Symbol</div>
                                         Stored in local SQLite/Doctrine database (<code>Stock::$symbol</code>).
                                     </span>
                                 </span>
                             </th>
                             <th>
                                 <span>Company</span>
-                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                     <span class="col-popover">
-                                        <div class="col-popover-title">🏢 Company Name</div>
+                                        <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size: 14px;">business</span> Company Name</div>
                                         Fetched live from Finnhub Profile API (<code>/stock/profile2</code>).
                                     </span>
                                 </span>
                             </th>
                             <th>
                                 <span>Sector</span>
-                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                     <span class="col-popover">
-                                        <div class="col-popover-title">🌐 Industry Sector</div>
+                                        <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size: 14px;">public</span> Industry Sector</div>
                                         Finnhub Industry classification (<code>finnhubIndustry</code>).
                                     </span>
                                 </span>
                             </th>
                             <th style="text-align:right;">
                                 <span>Price</span>
-                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                     <span class="col-popover">
-                                        <div class="col-popover-title">💲 Current Market Price</div>
+                                        <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size: 14px;">payments</span> Current Market Price</div>
                                         Live market quote (<code>c</code>) from Finnhub API (<code>/quote</code>) or Schwab Developer API.
                                     </span>
                                 </span>
                             </th>
                             <th style="text-align:right;">
                                 <span>12M Target</span>
-                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                     <span class="col-popover">
-                                        <div class="col-popover-title">🎯 12M Analyst Target</div>
+                                        <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size: 14px;">track_changes</span> 12M Analyst Target</div>
                                         Aggregated 12-month Wall Street consensus analyst price target.
                                     </span>
                                 </span>
                             </th>
                             <th style="text-align:center;">
                                 <span>Score</span>
-                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                     <span class="col-popover">
-                                        <div class="col-popover-title">⭐ Fundamental Score (0-100)</div>
+                                        <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size: 14px;">grade</span> Fundamental Score (0-100)</div>
                                         Proprietary 0-100 fundamental score calculated by evaluating revenue growth rate, gross margin %, cash runway months, and analyst ratings.
                                     </span>
                                 </span>
                             </th>
                             <th style="text-align:center;">
                                 <span>Action</span>
-                                <span class="col-popover-trigger" tabindex="0">ℹ
+                                <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                     <span class="col-popover">
-                                        <div class="col-popover-title">🛠 Candidate Management</div>
+                                        <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size: 14px;">settings</span> Candidate Management</div>
                                         Delete candidate from database or re-index metrics.
                                     </span>
                                 </span>
+                            </th>          </span>
                             </th>
                         </tr>
                     </thead>
@@ -190,29 +191,37 @@ async function fetchDiscoverSuggestions() {
                         </div>
 
                         <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; font-size:12px; margin-bottom:12px; background:var(--bg3); padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
-                            <div>Price: <strong>$${s.price.toFixed(2)}</strong></div>
-                            <div>12M Target: <strong class="g">$${s.targetPrice.toFixed(2)} (+${upsidePct}%)</strong></div>
-                            <div>Score: <strong class="g">${s.score} / 100</strong></div>
+                            <div>Price: <strong>${s.price ? '$' + s.price.toFixed(2) : '—'}</strong></div>
+                            <div>12M Target: <strong class="g">${s.targetPrice ? '$' + s.targetPrice.toFixed(2) + ' (+' + upsidePct + '%)' : '—'}</strong></div>
+                            <div>Score: <strong class="g">${s.score ? s.score + ' / 100' : '—'}</strong></div>
                         </div>
 
+                        ${(s.delta || s.probabilityOfProfit || s.impliedVolatilityRank) ? `
+                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; font-size:11px; margin-bottom:12px; background:rgba(188,140,255,0.05); padding:8px; border-radius:8px; border:1px solid rgba(188,140,255,0.2);">
+                            <div>Delta: <strong style="color:var(--purple);">${s.delta || 'N/A'}</strong></div>
+                            <div>PoP: <strong style="color:var(--green);">${s.probabilityOfProfit || 'N/A'}</strong></div>
+                            <div>IV Rank: <strong style="color:var(--blue);">${s.impliedVolatilityRank || 'N/A'}</strong></div>
+                        </div>
+                        ` : ''}
+
                         <div class="tb" style="background:rgba(88,166,255,0.05); border-color:rgba(88,166,255,0.3); margin-bottom:10px; padding:10px;">
-                            <h4 style="color:var(--blue); font-size:10px; margin-bottom:4px;">💡 WHY TRACK THIS STOCK (REASONING):</h4>
+                            <h4 style="color:var(--blue); font-size:10px; margin-bottom:4px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">lightbulb</span> WHY TRACK THIS (REASONING):</h4>
                             <p style="font-size:12px; margin:0; line-height:1.4;">${s.reasoning}</p>
                         </div>
 
                         <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">
-                            <div><strong>⚡ Sector Catalysts:</strong> ${s.catalysts}</div>
-                            <div><strong>🔒 Recommended Strategy:</strong> <span style="color:var(--purple); font-weight:600;">${s.suggestedStrategy}</span></div>
+                            <div><strong><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">bolt</span> Sector Catalysts:</strong> ${s.catalysts}</div>
+                            <div style="margin-top:4px;"><strong><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">lock</span> Recommended Strategy:</strong> <span style="color:var(--purple); font-weight:600;">${s.suggestedStrategy}</span></div>
                         </div>
                     </div>
 
                     ${isTracked ? `
                         <button class="fbtn" style="width:100%; border-color:var(--green); color:var(--green); cursor:default;" disabled>
-                            ✓ Already in Tracked Screener
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">check</span> Already in Tracked Screener
                         </button>
                     ` : `
-                        <button class="btn btn-pri" style="width:100%; text-align:center;" onclick="addSuggestionToTracked(${JSON.stringify(s).replace(/"/g, '&quot;')})">
-                            ➕ Add ${s.symbol} to Tracked Screener
+                        <button class="btn btn-pri" style="width:100%; text-align:center; display:inline-flex; align-items:center; justify-content:center;" onclick="addSuggestionToTracked(${JSON.stringify(s).replace(/"/g, '&quot;')})">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">add</span> Add ${s.symbol} to Tracked Screener
                         </button>
                     `}
                 `;

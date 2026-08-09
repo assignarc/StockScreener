@@ -4,32 +4,32 @@
     <!-- 1. EXECUTIVE DASHBOARD -->
     <div class="nav-item">
         <a href="/" class="nav-link {% if activePage is defined and activePage == 'dashboard' %}active{% endif %}">
-            <span>📊</span> Dashboard <span class="nav-caret">▾</span>
+            <span class="material-symbols-outlined">dashboard</span> Dashboard <span class="nav-caret">▾</span>
         </a>
         <div class="nav-dropdown-menu">
             <a href="/" class="nav-subitem">
-                <div class="nav-subitem-icon">📊</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">analytics</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Executive Dashboard</div>
                     <div class="nav-subitem-desc">Portfolio valuation, cash & stats</div>
                 </div>
             </a>
             <a href="/#dashStats" class="nav-subitem">
-                <div class="nav-subitem-icon">💎</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">account_balance_wallet</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Net Liquidation & Cash</div>
                     <div class="nav-subitem-desc">Live liquidity & account summary</div>
                 </div>
             </a>
             <a href="/#riskBanner" class="nav-subitem">
-                <div class="nav-subitem-icon">⚙️</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">shield</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Monthly Risk Guardrail</div>
                     <div class="nav-subitem-desc">Collateral limits & risk meter</div>
                 </div>
             </a>
             <a href="/#dashSuggestions" class="nav-subitem">
-                <div class="nav-subitem-icon">📞</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">call</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Covered Call Opportunities</div>
                     <div class="nav-subitem-desc">Unencumbered equity income</div>
@@ -41,39 +41,39 @@
     <!-- 2. DAILY MORNING PLANNER -->
     <div class="nav-item">
         <a href="/planner" class="nav-link {% if activePage is defined and activePage == 'planner' %}active{% endif %}">
-            <span>🌅</span> Morning Planner <span class="nav-caret">▾</span>
+            <span class="material-symbols-outlined">wb_sunny</span> Morning Planner <span class="nav-caret">▾</span>
         </a>
         <div class="nav-dropdown-menu">
             <a href="/planner" class="nav-subitem">
-                <div class="nav-subitem-icon">🌅</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">wb_twilight</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Daily Execution Package</div>
                     <div class="nav-subitem-desc">1-click staged morning orders</div>
                 </div>
             </a>
             <a href="/planner#earlyExit" class="nav-subitem">
-                <div class="nav-subitem-icon">💰</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">exit_to_app</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Early Profit Locks (BTC)</div>
                     <div class="nav-subitem-desc">50%+ option decay exits</div>
                 </div>
             </a>
             <a href="/planner#coveredCalls" class="nav-subitem">
-                <div class="nav-subitem-icon">📋</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">assignment</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Staged Covered Calls</div>
                     <div class="nav-subitem-desc">Copy exact limit orders for Schwab</div>
                 </div>
             </a>
             <a href="/planner#preTrade" class="nav-subitem">
-                <div class="nav-subitem-icon">🤖</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">smart_toy</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Gemini AI Pre-Trade Check</div>
                     <div class="nav-subitem-desc">Real-time earnings & volatility safety</div>
                 </div>
             </a>
             <a href="/planner#scenarioModal" class="nav-subitem" onclick="if(typeof openFlywheelScenarioModal==='function'){openFlywheelScenarioModal('AAPL'); return false;}">
-                <div class="nav-subitem-icon">⚖️</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">balance</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Strategy Simulator</div>
                     <div class="nav-subitem-desc">Bullish / Neutral / Bearish breakdown</div>
@@ -85,39 +85,39 @@
     <!-- 3. STOCK SCREENER & FLYWHEEL -->
     <div class="nav-item">
         <a href="/screener" class="nav-link {% if activePage is defined and activePage == 'screener' %}active{% endif %}">
-            <span>⚡</span> Screener & Flywheel <span class="nav-caret">▾</span>
+            <span class="material-symbols-outlined">bolt</span> Screener & Flywheel <span class="nav-caret">▾</span>
         </a>
         <div class="nav-dropdown-menu">
             <a href="/screener" class="nav-subitem">
-                <div class="nav-subitem-icon">📊</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">filter_list</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Quantitative Screener</div>
                     <div class="nav-subitem-desc">Multi-factor valuation & scoring</div>
                 </div>
             </a>
             <a href="/screener#capitalAllocator" class="nav-subitem">
-                <div class="nav-subitem-icon">⚙️</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">tune</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Capital Flywheel Allocator</div>
                     <div class="nav-subitem-desc">60% Call / 25% Wheel / 15% Put</div>
                 </div>
             </a>
             <a href="/screener" class="nav-subitem" onclick="if(typeof filterSignal==='function'){filterSignal('CALL'); return false;}">
-                <div class="nav-subitem-icon">🟢</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">trending_up</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Bullish Long CALLs</div>
                     <div class="nav-subitem-desc">High growth defined-risk compounders</div>
                 </div>
             </a>
             <a href="/screener" class="nav-subitem" onclick="if(typeof filterSignal==='function'){filterSignal('WHEEL'); return false;}">
-                <div class="nav-subitem-icon">🟡</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">cached</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">WHEEL Income Candidates</div>
                     <div class="nav-subitem-desc">Cash-secured puts & covered calls</div>
                 </div>
             </a>
             <a href="/screener" class="nav-subitem" onclick="if(typeof filterSignal==='function'){filterSignal('PUT'); return false;}">
-                <div class="nav-subitem-icon">🔴</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">trending_down</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Protective PUT Hedges</div>
                     <div class="nav-subitem-desc">100% capped downside protection</div>
@@ -129,63 +129,62 @@
     <!-- 4. PORTFOLIO DETAILS -->
     <div class="nav-item">
         <a href="/portfolio" class="nav-link {% if activePage is defined and activePage == 'portfolio' %}active{% endif %}">
-            <span>💼</span> Portfolio Details <span class="nav-caret">▾</span>
+            <span class="material-symbols-outlined">work</span> Portfolio Details <span class="nav-caret">▾</span>
         </a>
         <div class="nav-dropdown-menu">
             <a href="/portfolio" class="nav-subitem" onclick="if(typeof switchPortSubView==='function'){switchPortSubView('calendar');}">
-                <div class="nav-subitem-icon">📅</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">calendar_month</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Options & Equities Calendar</div>
                     <div class="nav-subitem-desc">6-month forward cash flow timeline</div>
                 </div>
             </a>
             <a href="/portfolio#subViewFlywheel" class="nav-subitem" onclick="if(typeof switchPortSubView==='function'){switchPortSubView('flywheel');}">
-                <div class="nav-subitem-icon">🔥</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">auto_awesome</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Suggested Covered Calls</div>
                     <div class="nav-subitem-desc">Unencumbered shares & optimal strikes</div>
                 </div>
             </a>
             <a href="/portfolio#subViewHistory" class="nav-subitem" onclick="if(typeof switchPortSubView==='function'){switchPortSubView('history');}">
-                <div class="nav-subitem-icon">⏮</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">history</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">30-Day Account History</div>
                     <div class="nav-subitem-desc">Dividends received, trades & realized cash</div>
                 </div>
             </a>
             <a href="/portfolio#subViewHoldings" class="nav-subitem" onclick="if(typeof switchPortSubView==='function'){switchPortSubView('holdings');}">
-                <div class="nav-subitem-icon">💼</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">account_balance</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Holdings & Accounts</div>
                     <div class="nav-subitem-desc">Brokerage account balances & positions</div>
                 </div>
             </a>
-
         </div>
     </div>
 
     <!-- 5. DISCOVER & MANAGE STOCKS -->
     <div class="nav-item">
         <a href="/discover" class="nav-link {% if activePage is defined and activePage == 'discover' %}active{% endif %}">
-            <span>🔍</span> Discover Stocks <span class="nav-caret">▾</span>
+            <span class="material-symbols-outlined">search</span> Discover Stocks <span class="nav-caret">▾</span>
         </a>
         <div class="nav-dropdown-menu">
             <a href="/discover" class="nav-subitem">
-                <div class="nav-subitem-icon">🔥</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">insights</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">AI Market Intelligence</div>
                     <div class="nav-subitem-desc">Live Wall Street suggestions & reasoning</div>
                 </div>
             </a>
             <a href="/discover#tab3SymbolInput" class="nav-subitem">
-                <div class="nav-subitem-icon">⚡</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">radar</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Real-Time Ticker Scanner</div>
                     <div class="nav-subitem-desc">Scan any symbol via Finnhub & Gemini</div>
                 </div>
             </a>
             <a href="/discover#trackedSection" class="nav-subitem">
-                <div class="nav-subitem-icon">🛠</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">edit_calendar</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Tracked Screener Manager</div>
                     <div class="nav-subitem-desc">Add or remove watchlist stocks</div>
@@ -197,46 +196,46 @@
     <!-- 6. SETTINGS & RULES -->
     <div class="nav-item">
         <a href="/settings" class="nav-link {% if activePage is defined and activePage == 'settings' %}active{% endif %}">
-            <span>⚙️</span> Settings & Rules <span class="nav-caret">▾</span>
+            <span class="material-symbols-outlined">settings</span> Settings & Rules <span class="nav-caret">▾</span>
         </a>
         <div class="nav-dropdown-menu">
             <a href="/settings#cfgThresholds" class="nav-subitem">
-                <div class="nav-subitem-icon">📊</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">tune</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Flywheel Signal Thresholds</div>
                     <div class="nav-subitem-desc">CALL/PUT score & upside % bounds</div>
                 </div>
             </a>
             <a href="/settings#cfgAllocation" class="nav-subitem">
-                <div class="nav-subitem-icon">⚖️</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">account_balance</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Capital Allocation Weights</div>
                     <div class="nav-subitem-desc">Call / Wheel / Put split & risk cap</div>
                 </div>
             </a>
             <a href="/settings#cfgCoveredCall" class="nav-subitem">
-                <div class="nav-subitem-icon">📞</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">call</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Covered Call Parameters</div>
                     <div class="nav-subitem-desc">OTM %, cost basis buffer & DTE</div>
                 </div>
             </a>
             <a href="/settings#cfgEarlyExit" class="nav-subitem">
-                <div class="nav-subitem-icon">🏃</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">exit_to_app</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Early Profit Lock (BTC)</div>
                     <div class="nav-subitem-desc">Decay percentage threshold</div>
                 </div>
             </a>
             <a href="/settings#cfgCalendar" class="nav-subitem">
-                <div class="nav-subitem-icon">📅</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">calendar_month</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Calendar Browsing Bounds</div>
                     <div class="nav-subitem-desc">Configurable months back & forward</div>
                 </div>
             </a>
             <a href="/setup" class="nav-subitem">
-                <div class="nav-subitem-icon">⚡</div>
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">rocket_launch</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Interactive Setup Wizard</div>
                     <div class="nav-subitem-desc">Guided API keys & multi-broker onboarding</div>
@@ -248,7 +247,7 @@
     <!-- 7. HELP & API GUIDE -->
     <div class="nav-item">
         <a href="/help" target="_blank" class="nav-link {% if activePage is defined and activePage == 'help' %}active{% endif %}">
-            <span>📖</span> API Guide
+            <span class="material-symbols-outlined">menu_book</span> API Guide
         </a>
     </div>
 

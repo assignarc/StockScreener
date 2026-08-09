@@ -19,7 +19,7 @@ class StockRepository extends ServiceEntityRepository
     /**
      * @return Stock[]
      */
-    public function findByFilters(?string $sector = null, ?string $risk = null, ?string $query = null): array
+    public function findByFilters(?string $sector = null, ?string $risk = null, ?string $query = null, ?string $assetType = null): array
     {
         $qb = $this->createQueryBuilder('s');
 
@@ -31,6 +31,11 @@ class StockRepository extends ServiceEntityRepository
         if ($risk && $risk !== 'ALL') {
             $qb->andWhere('s.risk = :risk')
                ->setParameter('risk', $risk);
+        }
+
+        if ($assetType && $assetType !== 'ALL') {
+            $qb->andWhere('s.assetType = :assetType')
+               ->setParameter('assetType', $assetType);
         }
 
         if ($query && trim($query) !== '') {

@@ -62,12 +62,12 @@ Analyze this Schwab Investor Portfolio:
 
 - Top Tracked Screener Candidates: {$trackedContext}
 
-Please generate 3 high-conviction AI Capital Flywheel Strategy Ideas following strict Option Level 1 Basic rules:
+Please generate 3 high-conviction AI Capital Flywheel Strategy Ideas following strict Option Level 1 Basic rules. You can suggest stocks, liquid ETFs (like SPY, QQQ, IWM, XLF) or short-term treasury/bond ETFs (like SGOV, BIL, SHV) for yield-shielding cash collateral:
 1. Covered Call Strategy for unencumbered stock blocks (100+ shares).
 2. Cash-Secured Put Strategy using available cash reserves (\${$cashAvailable}).
-3. Growth & Hedging Portfolio Optimization.
+3. Growth, Hedging, or Capital Preservation/Fixed Income Yield Strategy.
 
-Output clear JSON formatting with keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail.";
+Output clear JSON formatting with keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
 
         $apiKey = $this->getEffectiveApiKey();
         if (!empty($apiKey)) {
@@ -114,40 +114,55 @@ Output clear JSON formatting with keys: title, ticker, strategyType, strike, exp
     {
         return [
             [
-                'title' => '🤖 Gemini AI Idea 1: Monetize Unencumbered NVDA Shares via 6% OTM Covered Call',
+                'title' => 'Monetize Unencumbered NVDA Shares via OTM Covered Call',
                 'ticker' => 'NVDA',
                 'strategyType' => 'Covered Call (Option Level 1 Basic)',
                 'targetStrike' => '$235.00',
+                'strike' => '$235.00',
                 'expiration' => date('M d', strtotime('+35 days')),
                 'estimatedPremium' => '+$1,244.00 Instant Cash',
                 'annualizedYield' => '29.2% APY',
-                'reasoning' => 'You hold 262.18 unencumbered NVDA shares. Selling 2x $235 OTM Covered Calls (Delta ~0.28) locks in +$1,244.00 cash premium while allowing NVDA to appreciate up to $235 (+5.8% upside).',
+                'APY' => '29.2% APY',
+                'reasoning' => 'You hold NVDA shares. Selling Covered Calls locks in cash premium while allowing NVDA to appreciate up to $235.',
                 'riskGuardrail' => '100% Covered by owned stock. Capped upside above $235, zero cash margin requirement.',
-                'actionBadge' => '🟢 HIGH CONVICTION'
+                'delta' => '0.28',
+                'probabilityOfProfit' => '72%',
+                'impliedVolatilityRank' => '45%',
+                'actionBadge' => 'HIGH CONVICTION'
             ],
             [
-                'title' => '🤖 Gemini AI Idea 2: Deploy $' . number_format($cash * 0.40, 0) . ' Cash into AMD Cash-Secured Put',
-                'ticker' => 'AMD',
+                'title' => 'Deploy Cash into QQQ Cash-Secured Put for Index Exposure',
+                'ticker' => 'QQQ',
                 'strategyType' => 'Cash-Secured Put (Option Level 1 Basic)',
-                'targetStrike' => '$140.00 (7% Discount Entry)',
+                'targetStrike' => '$440.00',
+                'strike' => '$440.00',
                 'expiration' => date('M d', strtotime('+30 days')),
-                'estimatedPremium' => '+$420.00 Instant Cash',
-                'annualizedYield' => '24.5% APY',
-                'reasoning' => 'With $' . number_format($cash, 0) . ' available cash, sell 3x AMD $140 Puts ($42,000 cash collateralized). If AMD stays above $140, keep +$420 premium. If assigned, acquire AMD at a 7% discount.',
+                'estimatedPremium' => '+$650.00 Instant Cash',
+                'annualizedYield' => '18.5% APY',
+                'APY' => '18.5% APY',
+                'reasoning' => 'With available cash, sell QQQ Puts for diversified index entry. Lower volatility risk compared to single stocks.',
                 'riskGuardrail' => '100% Backed by liquid cash reserves. Defined downside risk with built-in discount entry.',
-                'actionBadge' => '🟡 WHEEL ENTRY'
+                'delta' => '-0.25',
+                'probabilityOfProfit' => '75%',
+                'impliedVolatilityRank' => '38%',
+                'actionBadge' => 'WHEEL ENTRY'
             ],
             [
-                'title' => '🤖 Gemini AI Idea 3: Monetize 150 AAPL Shares via $330 Covered Call',
-                'ticker' => 'AAPL',
-                'strategyType' => 'Covered Call (Option Level 1 Basic)',
-                'targetStrike' => '$330.00',
-                'expiration' => date('M d', strtotime('+40 days')),
-                'estimatedPremium' => '+$875.00 Instant Cash',
-                'annualizedYield' => '26.8% APY',
-                'reasoning' => 'Your 150 unencumbered AAPL shares qualify for 1 Covered Call contract. Selling the $330 Call captures +$875.00 cash income ahead of upcoming product cycle catalysts.',
-                'riskGuardrail' => '100% Covered by 100 shares of AAPL. Zero downside leverage risk.',
-                'actionBadge' => '🟢 INCOME COMPOUNDER'
+                'title' => 'Deploy Idle Cash to SGOV Treasury Bond ETF for Yield Shield',
+                'ticker' => 'SGOV',
+                'strategyType' => 'Fixed Income / Capital Preservation',
+                'targetStrike' => 'N/A',
+                'strike' => 'N/A',
+                'expiration' => 'N/A',
+                'estimatedPremium' => '+$105.00 Monthly Dividend',
+                'annualizedYield' => '5.2% APY',
+                'APY' => '5.2% APY',
+                'reasoning' => 'Place idle cash in 0-3 Month Treasury Bond ETF to earn low-risk yield while waiting for options entry.',
+                'riskGuardrail' => 'Virtually zero credit risk. Collateral remains highly liquid.',
+                'delta' => 'N/A',
+                'probabilityOfProfit' => '99%',
+                'impliedVolatilityRank' => '5%',
+                'actionBadge' => 'YIELD SHIELD'
             ]
         ];
     }

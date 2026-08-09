@@ -45,6 +45,14 @@
 
 /* BASE RESET */
 * { box-sizing: border-box; margin: 0; padding: 0; }
+.material-symbols-outlined {
+    vertical-align: middle;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-right: 4px;
+}
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: var(--bg);

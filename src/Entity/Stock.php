@@ -62,6 +62,9 @@ class Stock
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $keyRisks = null;
 
+    #[ORM\Column(length: 50, options: ["default" => "STOCK"])]
+    private ?string $assetType = 'STOCK';
+
     public function getId(): ?int
     {
         return $this->id;
@@ -243,6 +246,17 @@ class Stock
         return $this;
     }
 
+    public function getAssetType(): ?string
+    {
+        return $this->assetType;
+    }
+
+    public function setAssetType(string $assetType): static
+    {
+        $this->assetType = $assetType;
+        return $this;
+    }
+
     public function toArray(): array
     {
         return [
@@ -263,6 +277,7 @@ class Stock
             'thesis' => $this->thesis,
             'catalysts' => $this->catalysts,
             'keyRisks' => $this->keyRisks,
+            'assetType' => $this->assetType,
         ];
     }
 }

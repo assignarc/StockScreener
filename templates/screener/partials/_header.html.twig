@@ -2,7 +2,7 @@
 <div class="header">
     <!-- BRAND LOGO LOCKUP -->
     <a href="/" class="brand-lockup">
-        <div class="brand-icon-wrap">🚀</div>
+        <div class="brand-icon-wrap"><span class="material-symbols-outlined" style="margin: 0; font-size: 24px; color: var(--purple);">rocket_launch</span></div>
         <div class="brand-text-block">
             <div class="brand-tagline">Capital Flywheel System</div>
             <div class="brand-title">
@@ -27,10 +27,10 @@
     <!-- HEADER RIGHT CONTROLS & STATUS -->
     <div class="hright">
         {% if showLiveLoadBtn is defined and showLiveLoadBtn %}
-            <button class="hbtn hbtn-load" onclick="loadLivePrices()">▶ Load Live Quotes</button>
+            <button class="hbtn hbtn-load"><span class="material-symbols-outlined">play_arrow</span> Load Live Quotes</button>
         {% endif %}
-        <a href="/planner" class="hbtn hbtn-fw">🌅 Morning Planner</a>
-        <a href="/settings" class="hbtn" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text);">⚙️ Settings</a>
-        <button class="theme-toggle-btn" onclick="toggleTheme()">☀️ Light Mode</button>
+        <a href="/planner" class="hbtn hbtn-fw"><span class="material-symbols-outlined">wb_twilight</span> Morning Planner</a>
+        <a href="/settings" class="hbtn" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text);"><span class="material-symbols-outlined">settings</span> Settings</a>
+        <button class="theme-toggle-btn" onclick="toggleTheme()">Light Mode</button>
     </div>
 </div>
