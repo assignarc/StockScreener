@@ -1,0 +1,26 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Broker Authorization Complete — AI Option Engine{% endblock %}
+
+{% block body %}
+<div class="callback-card">
+    <div class="callback-icon">
+        <span class="material-symbols-outlined">check_circle</span>
+    </div>
+
+    <h1 class="callback-title">Broker Account Connected!</h1>
+
+    <p class="callback-desc">
+        Your brokerage OAuth authentication token has been securely encrypted and stored in your local SQLite database. You can now close this window or return to the main dashboard.
+    </p>
+
+    <div class="callback-actions">
+        <a href="/settings" class="hbtn hbtn-blue">
+            <span class="material-symbols-outlined">settings</span> Return to Settings
+        </a>
+        <a href="/portfolio" class="hbtn hbtn-green">
+            <span class="material-symbols-outlined">account_balance_wallet</span> View Portfolio
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}API Keys & Broker Setup Guide — AI Option Engine{% endblock %}
+
+{% block body %}
+<div class="container" style="padding: 40px 24px; max-width: 1000px; margin: 0 auto;">
+    <div style="margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+        <h1 style="font-family: 'Outfit', sans-serif; font-size: 28px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+            <span class="material-symbols-outlined" style="font-size: 32px; color: var(--blue);">help_center</span>
+            API Keys & Broker Setup Guide
+        </h1>
+        <p style="color: var(--muted); margin-top: 8px;">Follow these step-by-step instructions to configure and authorize your broker connections, market data keys, and AI capabilities.</p>
+    </div>
+
+    <!-- ── Market Data Providers ───────────────────────────────────── -->
+    <section style="background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 28px;">
+        <h2 style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 700; color: var(--green); display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+            <span class="material-symbols-outlined">database</span> Market Data Providers
+        </h2>
+        <div style="border-left: 3px solid var(--green); padding-left: 16px; margin-left: 4px;">
+            <h3 style="font-size: 15px; font-weight: 700;">Finnhub Market Data</h3>
+            <p style="font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.5;">
+                Finnhub supplies real-time equity quotes, earnings calendars, and key financial metadata.
+            </p>
+            <ol style="font-size: 13px; margin: 10px 0 0 16px; line-height: 1.6; color: var(--text);">
+                <li>Go to the <a href="https://finnhub.io/register" target="_blank" style="color: var(--green); text-decoration: underline;">Finnhub Registration Page</a>.</li>
+                <li>Enter your details to create a free account.</li>
+                <li>Confirm your email address, then log into your dashboard.</li>
+                <li>Copy the generated <strong>API Key</strong>.</li>
+                <li>Paste it in the Setup Wizard under the "Market Data Keys" section.</li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- ── AI Provider ────────────────────────────────────────────── -->
+    <section style="background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 28px;">
+        <h2 style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 700; color: var(--yellow); display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+            <span class="material-symbols-outlined">smart_toy</span> AI Provider
+        </h2>
+        <div style="border-left: 3px solid var(--yellow); padding-left: 16px; margin-left: 4px;">
+            <h3 style="font-size: 15px; font-weight: 700;">Google Gemini AI API Key</h3>
+            <p style="font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.5;">
+                Gemini is used to analyze options chains and generate capital allocation ideas.
+            </p>
+            <ol style="font-size: 13px; margin: 10px 0 0 16px; line-height: 1.6; color: var(--text);">
+                <li>Visit <a href="https://aistudio.google.com/" target="_blank" style="color: var(--yellow); text-decoration: underline;">Google AI Studio</a>.</li>
+                <li>Sign in using your Google account.</li>
+                <li>Click <strong>"Get API key"</strong> on the left-hand navigation.</li>
+                <li>Create a key in a new project or select an existing project.</li>
+                <li>Copy the generated API key and save it in the Setup Wizard or Settings panel.</li>
+            </ol>
+        </div>
+    </section>
+
+    <!-- ── Brokerage Connections ───────────────────────────────────── -->
+    <section style="background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 28px;">
+        <h2 style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 700; color: var(--blue); display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+            <span class="material-symbols-outlined">account_balance</span> Coded Broker Integrations
+        </h2>
+
+        <!-- Schwab -->
+        <div style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <span class="hbadge badge-blue" style="font-size: 10px;">OAuth 2.0</span> Charles Schwab Developer API
+            </h3>
+            <p style="font-size: 13px; color: var(--muted); margin: 6px 0 10px; line-height: 1.5;">
+                Schwab utilizes an OAuth 2.0 flow to secure connection tokens without retaining raw login info.
+            </p>
+            <ol style="font-size: 13px; margin: 0 0 0 16px; line-height: 1.6;">
+                <li>Register at the <a href="https://developer.schwab.com/" target="_blank" style="color: var(--blue); text-decoration: underline;">Schwab Developer Portal</a>.</li>
+                <li>Create a new application inside the "Apps" dashboard.</li>
+                <li>Set the Redirect URI to match your local callback, typically: <code>https://127.0.0.1:8000/api/broker/b1/callback</code> (where <code>b1</code> matches the broker instance ID slot you are linking). The Setup panel shows this URL automatically.</li>
+                <li>Wait for Schwab to approve your application (usually 1-3 days).</li>
+                <li>Copy the <strong>App Key</strong> (Client ID) and <strong>App Secret</strong> into the Setup page.</li>
+                <li>Click <strong>OAuth Connect</strong> to authorize and link your account.</li>
+            </ol>
+        </div>
+
+        <!-- Tastytrade -->
+        <div style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <span class="hbadge" style="background: var(--purple); color: #fff; font-size: 10px;">API Keys</span> Tastytrade API
+            </h3>
+            <p style="font-size: 13px; color: var(--muted); margin: 6px 0 10px; line-height: 1.5;">
+                Tastytrade provides dedicated developer endpoints for retail accounts.
+            </p>
+            <ol style="font-size: 13px; margin: 0 0 0 16px; line-height: 1.6;">
+                <li>Create or log into your account via <a href="https://tastytrade.com/" target="_blank" style="color: var(--blue); text-decoration: underline;">Tastytrade Portal</a>.</li>
+                <li>Request access for API access through account settings.</li>
+                <li>Generate your API credentials (User Token & Password).</li>
+                <li>Enter the credentials into our setup dashboard.</li>
+            </ol>
+        </div>
+
+        <!-- IBKR -->
+        <div style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <span class="hbadge badge-blue" style="font-size: 10px;">Local Gateway</span> Interactive Brokers (IBKR)
+            </h3>
+            <p style="font-size: 13px; color: var(--muted); margin: 6px 0 10px; line-height: 1.5;">
+                Connects through the local IBKR Client Portal API gateway.
+            </p>
+            <ol style="font-size: 13px; margin: 0 0 0 16px; line-height: 1.6;">
+                <li>Download and extract the <a href="https://www.interactivebrokers.com/en/trading/ib-api.php" target="_blank" style="color: var(--blue); text-decoration: underline;">IBKR Client Portal API Gateway</a>.</li>
+                <li>Launch the Gateway locally on port 5000.</li>
+                <li>Log in to the gateway with your Interactive Brokers credentials.</li>
+                <li>Our app will automatically sync through <code>https://localhost:5000</code>.</li>
+            </ol>
+        </div>
+
+        <!-- Alpaca -->
+        <div style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <span class="hbadge badge-green" style="font-size: 10px;">Commission Free</span> Alpaca Markets
+            </h3>
+            <p style="font-size: 13px; color: var(--muted); margin: 6px 0 10px; line-height: 1.5;">
+                Alpaca is developer-first and supports paper trading sandboxes natively.
+            </p>
+            <ol style="font-size: 13px; margin: 0 0 0 16px; line-height: 1.6;">
+                <li>Log into the <a href="https://alpaca.markets/" target="_blank" style="color: var(--blue); text-decoration: underline;">Alpaca Dashboard</a>.</li>
+                <li>Click <strong>Generate Key</strong> on your dashboard page (supports paper or live).</li>
+                <li>Save both the **API Key ID** and **Secret Key**.</li>
+            </ol>
+        </div>
+
+        <!-- E*TRADE -->
+        <div style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <span class="hbadge" style="background: var(--blue); color:#fff; font-size: 10px;">OAuth 1.0a</span> E*TRADE
+            </h3>
+            <p style="font-size: 13px; color: var(--muted); margin: 6px 0 10px; line-height: 1.5;">
+                Configures developer credential verification via Morgan Stanley/E*TRADE systems.
+            </p>
+            <ol style="font-size: 13px; margin: 0 0 0 16px; line-height: 1.6;">
+                <li>Register at the <a href="https://developer.etrade.com/" target="_blank" style="color: var(--blue); text-decoration: underline;">E*TRADE Developer Center</a>.</li>
+                <li>Request app verification and copy consumer keys to your profile.</li>
+            </ol>
+        </div>
+
+        <!-- Public.com -->
+        <div style="margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <span class="hbadge badge-yellow" style="font-size: 10px;">Bearer Token</span> Public.com API
+            </h3>
+            <p style="font-size: 13px; color: var(--muted); margin: 6px 0 10px; line-height: 1.5;">
+                Official Public Developer API keys.
+            </p>
+            <ol style="font-size: 13px; margin: 0 0 0 16px; line-height: 1.6;">
+                <li>Request access to the developer program on the <a href="https://public.com/" target="_blank" style="color: var(--blue); text-decoration: underline;">Public.com website</a>.</li>
+                <li>Obtain your API Key/Token from the developer portal dashboard.</li>
+            </ol>
+        </div>
+
+        <!-- Robinhood -->
+        <div>
+            <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                <span class="hbadge badge-red" style="font-size: 10px;">Restricted</span> Robinhood API
+            </h3>
+            <p style="font-size: 13px; color: var(--muted); margin: 6px 0 10px; line-height: 1.5;">
+                Supports Crypto API keys officially or private session tokens unofficially.
+            </p>
+            <ol style="font-size: 13px; margin: 0 0 0 16px; line-height: 1.6;">
+                <li>Review developer requirements on the <a href="https://robinhood.com/" target="_blank" style="color: var(--blue); text-decoration: underline;">Robinhood Support Page</a>.</li>
+                <li>Unofficial access requires username, password, and MFA configuration.</li>
+            </ol>
+        </div>
+    </section>
+</div>
+{% endblock %}

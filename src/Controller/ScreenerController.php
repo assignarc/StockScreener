@@ -7,18 +7,20 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
+use App\Service\BrokerManagerService;
+
 class ScreenerController extends AbstractController
 {
     public function __construct(
         private StockRepository $stockRepository,
-        private \App\Service\SchwabService $schwabService
+        private BrokerManagerService $brokerManager
     ) {}
 
     #[Route('/', name: 'app_dashboard')]
     public function dashboard(): Response
     {
         $stocks = $this->stockRepository->findByFilters();
-        $portfolioData = $this->schwabService->getAccountPortfolio();
+        $portfolioData = $this->brokerManager->getAggregatedPortfolio();
 
         return $this->render('screener/dashboard.html.twig', [
             'totalStocks' => count($stocks),
@@ -45,7 +47,7 @@ class ScreenerController extends AbstractController
     #[Route('/portfolio', name: 'app_portfolio')]
     public function portfolio(): Response
     {
-        $portfolioData = $this->schwabService->getAccountPortfolio();
+        $portfolioData = $this->brokerManager->getAggregatedPortfolio();
 
         return $this->render('screener/portfolio.html.twig', [
             'portfolio' => $portfolioData,
@@ -67,11 +69,19 @@ class ScreenerController extends AbstractController
     #[Route('/planner', name: 'app_planner')]
     public function planner(): Response
     {
-        $portfolioData = $this->schwabService->getAccountPortfolio();
+        $portfolioData = $this->brokerManager->getAggregatedPortfolio();
 
         return $this->render('screener/planner.html.twig', [
             'portfolio' => $portfolioData,
             'activePage' => 'planner',
+        ]);
+    }
+
+    #[Route('/help', name: 'app_help')]
+    public function help(): Response
+    {
+        return $this->render('screener/help.html.twig', [
+            'activePage' => 'help',
         ]);
     }
 }

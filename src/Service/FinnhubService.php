@@ -40,6 +40,8 @@ class FinnhubService
                         'symbol' => $symbol,
                         'token'  => $key,
                     ],
+                    'timeout' => 2.5,
+                    'max_duration' => 5.0,
                 ]);
 
                 if ($response->getStatusCode() === 200) {
@@ -64,15 +66,70 @@ class FinnhubService
         }, 300); // 5 minutes TTL
     }
 
+    /**
+     * Parallel Asynchronous Batch Quote Retrieval via Symfony HttpClient streaming
+     */
     public function getBatchQuotes(array $symbols, ?string $apiKey = null, bool $forceRefresh = false): array
     {
+        $key = $this->getEffectiveApiKey($apiKey);
         $results = [];
-        foreach ($symbols as $symbol) {
-            $quote = $this->getQuote($symbol, $apiKey, $forceRefresh);
-            if ($quote) {
-                $results[$symbol] = $quote;
+        $pendingResponses = [];
+
+        foreach ($symbols as $sym) {
+            $symbol = strtoupper(trim($sym));
+            if (empty($symbol)) {
+                continue;
+            }
+
+            $cacheKey = "finnhub.quote.{$symbol}";
+            if ($forceRefresh) {
+                $this->cache->delete($cacheKey);
+            }
+
+            // Check cache first (0ms latency hit)
+            $cached = $this->cache->get($cacheKey);
+            if ($cached !== null) {
+                $results[$symbol] = $cached;
+                continue;
+            }
+
+            if ($key) {
+                // Dispatch parallel non-blocking async HTTP request
+                $pendingResponses[$symbol] = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/quote', [
+                    'query' => [
+                        'symbol' => $symbol,
+                        'token'  => $key,
+                    ],
+                    'timeout' => 2.5,
+                    'max_duration' => 5.0,
+                ]);
             }
         }
+
+        // Resolve pending parallel responses
+        foreach ($pendingResponses as $symbol => $response) {
+            try {
+                if ($response->getStatusCode() === 200) {
+                    $data = $response->toArray();
+                    if (isset($data['c']) && $data['c'] > 0) {
+                        $quote = [
+                            'c'  => $data['c'],
+                            'd'  => $data['d'],
+                            'dp' => $data['dp'],
+                            'h'  => $data['h'],
+                            'l'  => $data['l'],
+                            'o'  => $data['o'],
+                            'pc' => $data['pc'],
+                        ];
+                        $this->cache->set("finnhub.quote.{$symbol}", $quote, 300);
+                        $results[$symbol] = $quote;
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning("Async batch quote error for {$symbol}: " . $e->getMessage());
+            }
+        }
+
         return $results;
     }
 
@@ -96,6 +153,8 @@ class FinnhubService
                         'symbol' => $symbol,
                         'token'  => $key,
                     ],
+                    'timeout' => 3.0,
+                    'max_duration' => 6.0,
                 ]);
 
                 if ($response->getStatusCode() === 200) {
@@ -138,6 +197,8 @@ class FinnhubService
 
                 $response = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/calendar/earnings', [
                     'query' => $query,
+                    'timeout' => 3.5,
+                    'max_duration' => 7.0,
                 ]);
 
                 if ($response->getStatusCode() === 200) {
@@ -175,6 +236,8 @@ class FinnhubService
                         'symbol' => $symbol,
                         'token'  => $key,
                     ],
+                    'timeout' => 3.0,
+                    'max_duration' => 6.0,
                 ]);
 
                 if ($response->getStatusCode() === 200) {

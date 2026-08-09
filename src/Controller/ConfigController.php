@@ -79,7 +79,7 @@ class ConfigController extends AbstractController
 
         $cleared = match ($type) {
             'finnhub' => $this->cache->clearPrefix('finnhub'),
-            'schwab'  => $this->cache->clearPrefix('schwab'),
+            'broker', 'schwab' => $this->cache->clearPrefix('broker'),
             default   => $this->cache->clearAll(),
         };
 

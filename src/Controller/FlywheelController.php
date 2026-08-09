@@ -4,9 +4,9 @@ namespace App\Controller;
 
 use App\Repository\StockRepository;
 use App\Service\AppConfigService;
+use App\Service\BrokerManagerService;
 use App\Service\FinnhubService;
 use App\Service\FlywheelService;
-use App\Service\SchwabService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,7 +18,7 @@ class FlywheelController extends AbstractController
 {
     public function __construct(
         private FlywheelService $flywheelService,
-        private SchwabService $schwabService,
+        private BrokerManagerService $brokerManager,
         private FinnhubService $finnhubService,
         private StockRepository $stockRepository,
         private AppConfigService $appConfig,
@@ -44,7 +44,7 @@ class FlywheelController extends AbstractController
     #[Route('/covered-call-suggestions', name: 'covered_call_suggestions', methods: ['GET'])]
     public function coveredCallSuggestions(): JsonResponse
     {
-        $portfolio   = $this->schwabService->getAccountPortfolio();
+        $portfolio   = $this->brokerManager->getAggregatedPortfolio();
         $suggestions = $this->flywheelService->generatePortfolioCoveredCallSuggestions($portfolio);
 
         return $this->json(['status' => 'success', 'data' => $suggestions]);
@@ -58,7 +58,7 @@ class FlywheelController extends AbstractController
             ?? $content['riskCap']
             ?? $this->appConfig->get('flywheel.default_risk_cap'));
 
-        $portfolio   = $this->schwabService->getAccountPortfolio();
+        $portfolio   = $this->brokerManager->getAggregatedPortfolio();
         $stocks      = $this->stockRepository->findAll();
         $allocation  = $this->flywheelService->calculateAllocation($stocks, $riskCap, $portfolio);
         $earlyExits  = $this->flywheelService->generateEarlyExitSuggestions($portfolio);
@@ -147,7 +147,7 @@ class FlywheelController extends AbstractController
     #[Route('/calendar', name: 'calendar', methods: ['GET'])]
     public function calendar(): JsonResponse
     {
-        $portfolioData    = $this->schwabService->getAccountPortfolio();
+        $portfolioData    = $this->brokerManager->getAggregatedPortfolio();
         $equities         = $portfolioData['aggregatedEquities'] ?? [];
         $accounts         = $portfolioData['accounts'] ?? [];
         $currentCash      = (float) ($portfolioData['cashBalance'] ?? 0.0);

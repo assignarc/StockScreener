@@ -12,6 +12,9 @@ class PersistentCacheService
     /** @var array<string, mixed> Runtime static memory cache */
     private array $memoryCache = [];
 
+    /** @var array<string, bool> Active computation locks for stampede mitigation */
+    private array $pendingLocks = [];
+
     public function __construct(
         private EntityManagerInterface $em,
         private PersistentCacheRepository $cacheRepo,
@@ -29,6 +32,11 @@ class PersistentCacheService
             return $this->memoryCache[$key];
         }
 
+        // Opportunistic expired cache cleanup (1-in-25 probability)
+        if (mt_rand(1, 25) === 1) {
+            $this->pruneExpiredSafely();
+        }
+
         // 2. Check persistent SQLite data.db
         try {
             $cached = $this->cacheRepo->findValid($key);
@@ -41,8 +49,14 @@ class PersistentCacheService
             $this->logger->warning("Persistent cache read error for {$key}: " . $e->getMessage());
         }
 
-        // 3. If no valid cache and fallback given, compute & persist
+        // 3. If no valid cache and fallback given, compute & persist with stampede lock
         if ($fallback !== null) {
+            if (isset($this->pendingLocks[$key])) {
+                // Return whatever is in memory or null to prevent re-entrant recursion
+                return $this->memoryCache[$key] ?? null;
+            }
+
+            $this->pendingLocks[$key] = true;
             try {
                 $freshValue = $fallback();
                 if ($freshValue !== null && $freshValue !== false) {
@@ -52,10 +66,25 @@ class PersistentCacheService
             } catch (\Throwable $e) {
                 $this->logger->error("Persistent cache fallback computation error for {$key}: " . $e->getMessage());
                 throw $e;
+            } finally {
+                unset($this->pendingLocks[$key]);
             }
         }
 
         return null;
+    }
+
+    /**
+     * Safely prunes expired cache entries to prevent SQLite storage bloat
+     */
+    public function pruneExpiredSafely(): int
+    {
+        try {
+            return $this->cacheRepo->purgeExpired();
+        } catch (\Throwable $e) {
+            $this->logger->warning("Failed pruning expired cache: " . $e->getMessage());
+            return 0;
+        }
     }
 
     /**
@@ -67,9 +96,9 @@ class PersistentCacheService
             return;
         }
 
-        // If marked sensitive (e.g. Schwab portfolio), sanitize first
+        // If marked sensitive (e.g. broker portfolio), sanitize first
         if ($isSensitive && is_array($value)) {
-            $value = $this->sanitizeSchwabData($value);
+            $value = $this->sanitizeBrokerData($value);
         }
 
         $this->memoryCache[$key] = $value;
@@ -107,7 +136,7 @@ class PersistentCacheService
     }
 
     /**
-     * Purges keys matching a prefix (e.g. 'finnhub.' or 'schwab.')
+     * Purges keys matching a prefix (e.g. 'finnhub.' or 'broker.')
      */
     public function clearPrefix(string $prefix): int
     {
@@ -123,6 +152,11 @@ class PersistentCacheService
             $this->logger->warning("Persistent cache clearPrefix error for {$prefix}: " . $e->getMessage());
             return 0;
         }
+    }
+
+    public function purgeByPrefix(string $prefix): int
+    {
+        return $this->clearPrefix($prefix);
     }
 
     /**
@@ -148,31 +182,32 @@ class PersistentCacheService
         $dbSize = file_exists($dbPath) ? filesize($dbPath) : 0;
 
         try {
-            $activeCount = $this->cacheRepo->countActive();
+            $activeCount  = $this->cacheRepo->countActive();
             $finnhubCount = count($this->cacheRepo->findBy(['isSensitive' => false]));
-            $schwabCount  = count($this->cacheRepo->findBy(['isSensitive' => true]));
+            $brokerCount  = count($this->cacheRepo->findBy(['isSensitive' => true]));
         } catch (\Throwable) {
-            $activeCount = 0;
+            $activeCount  = 0;
             $finnhubCount = 0;
-            $schwabCount = 0;
+            $brokerCount  = 0;
         }
 
         return [
             'activeEntries'  => $activeCount,
             'finnhubEntries' => $finnhubCount,
-            'schwabEntries'  => $schwabCount,
+            'brokerEntries'  => $brokerCount,
+            'schwabEntries'  => $brokerCount, // Alias for template compatibility
             'databaseSizeKb' => round($dbSize / 1024, 1),
             'storageType'    => 'SQLite Persistent DB (var/data.db)',
         ];
     }
 
     /**
-     * Strict Non-PII Sanitizer for Schwab Brokerage Data:
+     * Strict Non-PII Sanitizer for Brokerage Data:
      * - Masks account numbers to last 4 digits (***1234).
      * - Strips full account numbers, authorization tokens, personal names, SSNs, routing numbers, and contact details.
      * - Retains only structural financial aggregates (symbols, quantities, strikes, expirations, market values).
      */
-    public function sanitizeSchwabData(array $portfolio): array
+    public function sanitizeBrokerData(array $portfolio): array
     {
         $sanitized = $portfolio;
 

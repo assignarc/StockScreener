@@ -251,23 +251,23 @@
                                             <span id="{{ cardId }}_chevron" style="font-size:12px; color:var(--muted); transition:transform 0.2s ease; transform:rotate(0deg);">▼</span>
                                         </div>
                                         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                                            {% if acc.isPrimary %}<span class="hbadge" style="background:rgba(63,185,80,0.15); color:var(--green); border-color:rgba(63,185,80,0.3); font-size:9px;">⭐ PRIMARY</span>{% endif %}
+                                            {% if acc.isPrimary is defined and acc.isPrimary %}<span class="hbadge" style="background:rgba(63,185,80,0.15); color:var(--green); border-color:rgba(63,185,80,0.3); font-size:9px;">⭐ PRIMARY</span>{% endif %}
                                             <span class="hbadge" style="font-size:9px;">{{ acc.type }}</span>
-                                            <span class="rb rLOW" style="font-size:9px;">{{ acc.positionsCount }} Positions</span>
+                                            <span class="rb rLOW" style="font-size:9px;">{{ acc.positionsCount|default(0) }} Positions</span>
                                         </div>
                                     </div>
                                     <div style="text-align:right;">
-                                        <div style="font-size:16px; font-weight:800; color:var(--text);">${{ acc.liquidationValue|number_format(0) }}</div>
-                                        <div style="font-size:11px; color:var(--green); font-weight:600;">${{ acc.cashAvailable|number_format(0) }} Cash</div>
+                                         <div style="font-size:16px; font-weight:800; color:var(--text);">${{ acc.value|default(acc.liquidationValue|default(0))|number_format(0) }}</div>
+                                         <div style="font-size:11px; color:var(--green); font-weight:600;">${{ acc.cash|default(acc.cashAvailable|default(0))|number_format(0) }} Cash</div>
                                     </div>
                                 </div>
 
                                 <!-- CARD QUICK SUMMARY STATS -->
                                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:12px 18px; font-size:11px; color:var(--muted); background:var(--bg3); border-bottom:1px solid var(--border);">
-                                    <div>Buying Power: <strong style="color:var(--blue);">${{ acc.buyingPower|number_format(0) }}</strong></div>
-                                    <div>Day Trade BP: <strong style="color:var(--purple);">${{ acc.dayTradingBuyingPower|number_format(0) }}</strong></div>
-                                    <div>Margin Maint: <strong style="color:var(--yellow);">${{ acc.maintenanceRequirement|number_format(0) }}</strong></div>
-                                    <div>Lot Strategy: <strong style="color:var(--text);">{{ acc.lotSelectionMethod }}</strong></div>
+                                    <div>Buying Power: <strong style="color:var(--blue);">${{ acc.buyingPower|default(0)|number_format(0) }}</strong></div>
+                                    <div>Day Trade BP: <strong style="color:var(--purple);">${{ acc.dayTradingBuyingPower|default(0)|number_format(0) }}</strong></div>
+                                    <div>Margin Maint: <strong style="color:var(--yellow);">${{ acc.maintenanceRequirement|default(0)|number_format(0) }}</strong></div>
+                                    <div>Lot Strategy: <strong style="color:var(--text);">{{ acc.lotSelectionMethod|default('FIFO') }}</strong></div>
                                 </div>
 
                                 <!-- COLLAPSIBLE DETAILS BODY -->
@@ -275,7 +275,7 @@
                                     <!-- POSITIONS LIST -->
                                     <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 8px;">Top Holdings (Sorted by Value)</div>
                                     <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px;">
-                                        {% for p in acc.positions %}
+                                        {% for p in acc.positions|default([]) %}
                                             <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:var(--bg3); border-radius:6px; border:1px solid var(--border); font-size:12px;">
                                                 <div>
                                                     <strong style="color:var(--text);">{{ p.symbol }}</strong>
@@ -297,7 +297,7 @@
 
                             <div style="padding:12px 18px; background:var(--bg2); border-top:1px solid var(--border);">
                                 <a href="/screener" class="btn btn-pri" style="width:100%; text-align:center; text-decoration:none; display:block; box-sizing:border-box; font-size:12px; padding:8px;">
-                                    ⚡ Load ${{ acc.cashAvailable|number_format(0) }} Cash
+                                    ⚡ Load ${{ acc.cash|default(acc.cashAvailable|default(0))|number_format(0) }} Cash
                                 </a>
                             </div>
                         </div>
@@ -1304,7 +1304,7 @@ function setAccountViewLayout(mode) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    switchPortSubView('calendar');
+    switchPortSubView('holdings');
     loadPortCoveredCallSuggestions();
 });
 

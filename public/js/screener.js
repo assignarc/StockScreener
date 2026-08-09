@@ -298,10 +298,10 @@ function formatOptionSymbol(symbol, assetType, qty) {
 
 async function fetchPortfolio() {
     try {
-        const res = await fetch('/api/schwab/portfolio');
+        const res = await fetch('/api/broker/portfolio/aggregated');
         const result = await res.json();
 
-        if (result.status === 'success' && result.data) {
+        if ((result.status === 'success' || result.balances) && result.data) {
             portfolioData = result.data;
             const data = portfolioData;
 
@@ -508,7 +508,7 @@ async function fetchSchwabOptionChain(symbol) {
     try {
         // Fetch option chain & Gemini AI strike analysis in parallel
         const [chainRes, aiRes] = await Promise.all([
-            fetch(`/api/schwab/option-chain/${symbol}`),
+            fetch(`/api/broker/b1/option-chain/${symbol}`),
             fetch(`/api/ai/option-chain-analysis/${symbol}`)
         ]);
 

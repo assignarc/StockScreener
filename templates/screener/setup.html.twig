@@ -93,10 +93,13 @@
                 <div style="background:rgba(2,132,199,0.18); color:var(--blue); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
                     <span class="material-symbols-outlined" style="font-size:22px;">trending_up</span>
                 </div>
-                <div>
+                <div style="flex:1;">
                     <h2 style="font-size:20px; margin:0 0 4px 0; color:var(--text); font-family:'Outfit',sans-serif;">Step 2: Connect Finnhub Market Data API</h2>
                     <div style="font-size:12px; color:var(--muted);">Finnhub powers real-time stock prices, dividend calendars, and company earnings dates.</div>
                 </div>
+                <a href="/help" target="_blank" class="hbtn hbtn-blue" style="font-size:12px; padding:6px 14px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+                    <span class="material-symbols-outlined">help_center</span> View Key Guide
+                </a>
             </div>
 
             <!-- Instructions Box -->
@@ -144,8 +147,8 @@
     <!-- WIZARD STEP 3: DYNAMIC MULTI-BROKER INSTANCES (UP TO 5) -->
     <div class="wiz-panel" id="wizStep3" style="display:none;">
         <div class="card" style="padding:28px; border-radius:16px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <div style="display:flex; align-items:center; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px; flex:1; min-width:280px;">
                     <div style="background:rgba(188,140,255,0.18); color:var(--purple); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
                         <span class="material-symbols-outlined" style="font-size:22px;">account_balance</span>
                     </div>
@@ -154,9 +157,14 @@
                         <div style="font-size:12px; color:var(--muted);">Add up to 5 brokerage connections with short nicknames and direct OAuth 2.0 login integration.</div>
                     </div>
                 </div>
-                <button type="button" class="hbtn hbtn-purple" id="btnAddBrokerInstance" onclick="addBrokerInstanceCard()" style="font-size:12px; padding:8px 16px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
-                    <span class="material-symbols-outlined">add</span> Add Broker Connection (Max 5)
-                </button>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <a href="/help" target="_blank" class="hbtn hbtn-blue" style="font-size:12px; padding:8px 16px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:700;">
+                        <span class="material-symbols-outlined">help_center</span> View API Guide
+                    </a>
+                    <button type="button" class="hbtn hbtn-purple" id="btnAddBrokerInstance" onclick="addBrokerInstanceCard()" style="font-size:12px; padding:8px 16px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+                        <span class="material-symbols-outlined">add</span> Add Broker Connection (Max 5)
+                    </button>
+                </div>
             </div>
 
             <!-- Dynamic Broker Instances Container -->
@@ -410,7 +418,7 @@
 let brokerInstances = {{ brokerInstances|json_encode|raw }};
 if (!Array.isArray(brokerInstances) || brokerInstances.length === 0) {
     brokerInstances = [
-        { id: 'broker_1', type: 'schwab', nickname: 'Schwab Main', app_key: '{{ schwabKey|default("") }}', app_secret: '{{ schwabSecret|default("") }}' }
+        { id: 'b1', type: 'schwab', nickname: 'My Broker Account', app_key: '', app_secret: '' }
     ];
 }
 
@@ -442,19 +450,103 @@ function renderBrokerInstances() {
     let html = '';
     brokerInstances.forEach((inst, index) => {
         const iNum = index + 1;
+        const instId = inst.id || ('b' + iNum);
         const removeBtn = (brokerInstances.length > 1) 
             ? `<button type="button" class="slick-pill-btn" style="color:var(--red); border-color:rgba(248,113,113,0.3);" onclick="removeBrokerInstanceCard(${index})"><span class="material-symbols-outlined">delete</span> Remove</button>` 
             : '';
 
         const oauthBtn = (inst.type === 'schwab' || inst.type === 'etrade')
-            ? `<a href="/api/schwab/login" target="_blank" class="hbtn hbtn-blue" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px; font-weight:700; text-decoration:none;"><span class="material-symbols-outlined">link</span> Connect via OAuth</a>`
+            ? `<a href="/api/broker/${encodeURIComponent(instId)}/login" target="_blank" class="hbtn hbtn-blue" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px; font-weight:700; text-decoration:none;"><span class="material-symbols-outlined">link</span> Connect via OAuth</a>`
             : '';
+
+        // Generate dynamic host redirect URL based on current browser window location
+        const currentScheme = window.location.protocol;
+        const currentHost = window.location.host || '127.0.0.1:8000';
+        const dynamicRedirectUrl = `${currentScheme}//${currentHost}/api/broker/${instId}/callback`;
+
+        // Render Collapsed Help Guidelines based on selected type
+        let helpContent = '';
+        if (inst.type === 'schwab') {
+            helpContent = `
+                <div style="background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:12px; line-height:1.5;">
+                    <div style="font-weight:700; color:var(--blue); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <span class="material-symbols-outlined" style="font-size:16px;">info</span> Charles Schwab OAuth Setup Guide:
+                    </div>
+                    <ol style="margin:0; padding-left:18px;">
+                        <li>Register or log in at the <a href="https://developer.schwab.com/" target="_blank" style="color:var(--blue); text-decoration:underline;">Schwab Developer Portal</a>.</li>
+                        <li>Create a new App and configure the Redirect URI to match your exact dynamic local callback URL below:
+                            <div style="margin:4px 0; font-family:monospace; background:var(--bg1); padding:4px 8px; border-radius:6px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                                <span style="word-break:break-all; color:var(--text);">${dynamicRedirectUrl}</span>
+                                <button type="button" class="slick-pill-btn" onclick="copyDynamicText('${dynamicRedirectUrl}', this)" style="padding:2px 8px;">Copy URL</button>
+                            </div>
+                        </li>
+                        <li>Copy the generated <strong>App Key</strong> (Client ID) and <strong>App Secret</strong> into the fields below, then click <strong>Connect via OAuth</strong> above.</li>
+                    </ol>
+                </div>
+            `;
+        } else if (inst.type === 'tastytrade') {
+            helpContent = `
+                <div style="background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:12px; line-height:1.5;">
+                    <div style="font-weight:700; color:var(--purple); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <span class="material-symbols-outlined" style="font-size:16px;">info</span> Tastytrade API Integration Guide:
+                    </div>
+                    <ol style="margin:0; padding-left:18px;">
+                        <li>Tastytrade API keys correspond directly to your trading account username and password.</li>
+                        <li>Input your Tastytrade Account Username in the <strong>App Key</strong> field.</li>
+                        <li>Input your Account Password in the <strong>App Secret</strong> field (encrypted safely at rest).</li>
+                    </ol>
+                </div>
+            `;
+        } else if (inst.type === 'ibkr') {
+            helpContent = `
+                <div style="background:rgba(210,153,34,0.06); border:1px solid rgba(210,153,34,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:12px; line-height:1.5;">
+                    <div style="font-weight:700; color:var(--yellow); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <span class="material-symbols-outlined" style="font-size:16px;">info</span> Interactive Brokers Local Gateway Guide:
+                    </div>
+                    <ol style="margin:0; padding-left:18px;">
+                        <li>Launch your local IBKR Client Portal API gateway (typically on port 5000).</li>
+                        <li>No credentials need to be saved here; the app will handshake automatically via your local machine session.</li>
+                        <li>Set <strong>App Key</strong> and <strong>App Secret</strong> to <code>gateway</code> or leave them empty.</li>
+                    </ol>
+                </div>
+            `;
+        } else if (inst.type === 'alpaca') {
+            helpContent = `
+                <div style="background:rgba(34,197,94,0.06); border:1px solid rgba(34,197,94,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:12px; line-height:1.5;">
+                    <div style="font-weight:700; color:var(--green); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <span class="material-symbols-outlined" style="font-size:16px;">info</span> Alpaca Markets Key Configuration Guide:
+                    </div>
+                    <ol style="margin:0; padding-left:18px;">
+                        <li>Generate credentials on your Alpaca Web Dashboard (supports both Paper and Live accounts).</li>
+                        <li>Enter your <strong>API Key ID</strong> in the Client ID field.</li>
+                        <li>Enter your <strong>Secret Key</strong> in the App Secret field.</li>
+                    </ol>
+                </div>
+            `;
+        } else if (inst.type === 'etrade') {
+            helpContent = `
+                <div style="background:rgba(2,132,199,0.06); border:1px solid rgba(2,132,199,0.2); border-radius:10px; padding:12px; margin-top:14px; font-size:12px; line-height:1.5;">
+                    <div style="font-weight:700; color:var(--blue); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                        <span class="material-symbols-outlined" style="font-size:16px;">info</span> E*TRADE Developer Access Setup Guide:
+                    </div>
+                    <ol style="margin:0; padding-left:18px;">
+                        <li>Set the E*TRADE OAuth Callback URI inside your E*TRADE portal configuration to:
+                            <div style="margin:4px 0; font-family:monospace; background:var(--bg1); padding:4px 8px; border-radius:6px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                                <span style="word-break:break-all; color:var(--text);">${dynamicRedirectUrl}</span>
+                                <button type="button" class="slick-pill-btn" onclick="copyDynamicText('${dynamicRedirectUrl}', this)" style="padding:2px 8px;">Copy URL</button>
+                            </div>
+                        </li>
+                        <li>Provide your E*TRADE Consumer Key and Consumer Secret in the inputs below, then initiate authentication.</li>
+                    </ol>
+                </div>
+            `;
+        }
 
         html += `
         <div class="broker-instance-card" style="background:var(--bg3); border:1px solid var(--border); border-radius:14px; padding:22px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <span class="hbadge" style="background:var(--blue); color:#fff; font-weight:800;">Connection #${iNum}</span>
+                    <span class="hbadge" style="background:var(--blue); color:#fff; font-weight:800;">Slot ${instId.toUpperCase()}</span>
                     <strong style="font-size:14px; color:var(--text); font-family:'Outfit',sans-serif;">${escapeHtml(inst.nickname || 'Broker Connection ' + iNum)}</strong>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
@@ -468,10 +560,12 @@ function renderBrokerInstances() {
                     <label style="display:block; font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; margin-bottom:6px;">Brokerage Integration Type</label>
                     <select class="styled-select-input" onchange="updateInstanceField(${index}, 'type', this.value)">
                         <option value="schwab" ${inst.type === 'schwab' ? 'selected' : ''}>Charles Schwab (OAuth 2.0 API)</option>
+                        <option value="tastytrade" ${inst.type === 'tastytrade' ? 'selected' : ''}>Tastytrade API</option>
                         <option value="ibkr" ${inst.type === 'ibkr' ? 'selected' : ''}>Interactive Brokers (IBKR Gateway)</option>
                         <option value="alpaca" ${inst.type === 'alpaca' ? 'selected' : ''}>Alpaca Markets (Trading API)</option>
-                        <option value="fidelity" ${inst.type === 'fidelity' ? 'selected' : ''}>Fidelity Investments (Direct)</option>
                         <option value="etrade" ${inst.type === 'etrade' ? 'selected' : ''}>E*TRADE / Morgan Stanley (OAuth)</option>
+                        <option value="public" ${inst.type === 'public' ? 'selected' : ''}>Public.com Developer API</option>
+                        <option value="robinhood" ${inst.type === 'robinhood' ? 'selected' : ''}>Robinhood (Crypto / Unofficial)</option>
                     </select>
                 </div>
                 <div>
@@ -492,7 +586,7 @@ function renderBrokerInstances() {
                 <input type="text" id="bKey_${index}" class="large-key-input" placeholder="App Key / Client ID..." value="${escapeHtml(inst.app_key || '')}" oninput="updateInstanceField(${index}, 'app_key', this.value)">
             </div>
 
-            <div>
+            <div style="margin-bottom:14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase;">App Secret / Token</label>
                     <div style="display:flex; gap:6px;">
@@ -503,6 +597,9 @@ function renderBrokerInstances() {
                 </div>
                 <input type="password" id="bSec_${index}" class="large-key-input" placeholder="App Secret..." value="${escapeHtml(inst.app_secret || '')}" oninput="updateInstanceField(${index}, 'app_secret', this.value)">
             </div>
+
+            <!-- COLLAPSIBLE DETAILED GUIDE PANEL -->
+            ${helpContent}
         </div>
         `;
     });
@@ -541,7 +638,7 @@ function addBrokerInstanceCard() {
     if (brokerInstances.length >= 5) return;
     const n = brokerInstances.length + 1;
     brokerInstances.push({
-        id: 'broker_' + Date.now(),
+        id: 'b' + n,
         type: 'schwab',
         nickname: 'Schwab Account ' + n,
         app_key: '',
@@ -594,6 +691,23 @@ async function copyText(text, btn) {
         }
     } catch(e) {
         prompt('Copy to clipboard (Ctrl+C):', text);
+    }
+}
+
+async function copyDynamicText(text, btn) {
+    try {
+        await navigator.clipboard.writeText(text);
+        if (btn) {
+            const orig = btn.textContent;
+            btn.textContent = '✓ Copied!';
+            btn.style.color = 'var(--green)';
+            setTimeout(() => {
+                btn.textContent = orig;
+                btn.style.color = '';
+            }, 2000);
+        }
+    } catch(e) {
+        prompt('Copy callback link:', text);
     }
 }
 
@@ -652,16 +766,9 @@ async function completeSetupAndLaunch() {
     btn.disabled = true;
     btn.textContent = '⏳ Saving…';
 
-    const primaryBroker = brokerInstances[0] ? brokerInstances[0].type : 'schwab';
-    const primaryAppKey = brokerInstances[0] ? brokerInstances[0].app_key : '';
-    const primaryAppSecret = brokerInstances[0] ? brokerInstances[0].app_secret : '';
-
     const payload = {
         finnhub_api_key: document.getElementById('wizFinnhubKey').value.trim(),
-        schwab_app_key: primaryAppKey,
-        schwab_app_secret: primaryAppSecret,
         gemini_api_key: document.getElementById('wizGeminiKey').value.trim(),
-        broker_active_provider: primaryBroker,
         broker_instances: brokerInstances,
         mark_completed: true,
     };

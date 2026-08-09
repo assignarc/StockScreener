@@ -3,8 +3,8 @@
 namespace App\Controller;
 
 use App\Repository\StockRepository;
-use App\Service\GeminiService;
-use App\Service\SchwabService;
+use App\Service\BrokerManagerService;
+use App\Llm\LlmServiceRouter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,27 +14,27 @@ use Symfony\Component\Routing\Attribute\Route;
 class AiController extends AbstractController
 {
     public function __construct(
-        private GeminiService $geminiService,
-        private SchwabService $schwabService,
+        private LlmServiceRouter $llmService,
+        private BrokerManagerService $brokerManager,
         private StockRepository $stockRepository,
     ) {}
 
     /**
      * Returns AI-generated Capital Flywheel strategy ideas using live portfolio data.
-     * The static hardcoded discover suggestions list has been replaced with a live Gemini call.
+     * The static hardcoded discover suggestions list has been replaced with a live LLM call.
      */
     #[Route('/flywheel-ideas', name: 'flywheel_ideas', methods: ['GET'])]
     public function flywheelIdeas(): JsonResponse
     {
-        $portfolio    = $this->schwabService->getAccountPortfolio();
+        $portfolio    = $this->brokerManager->getAggregatedPortfolio();
         $stocks       = $this->stockRepository->findByFilters();
-        $aiIdeas      = $this->geminiService->generateFlywheelIdeas($portfolio, $stocks);
+        $aiIdeas      = $this->llmService->generateFlywheelIdeas($portfolio, $stocks);
 
         return $this->json(['status' => 'success', 'data' => $aiIdeas]);
     }
 
     /**
-     * Live Gemini AI option chain analysis for a specific symbol.
+     * Live AI option chain analysis for a specific symbol.
      */
     #[Route('/option-chain-analysis/{symbol}', name: 'option_chain_analysis', methods: ['GET'])]
     public function optionChainAnalysis(string $symbol): JsonResponse
@@ -43,8 +43,8 @@ class AiController extends AbstractController
         $stock        = $this->stockRepository->findOneBy(['symbol' => $symbol]);
         $currentPrice = $stock ? ($stock->getPrice() ?? 100.0) : 100.0;
 
-        $chain    = $this->schwabService->getOptionChain($symbol, $currentPrice);
-        $analysis = $this->geminiService->analyzeOptionChain($symbol, $currentPrice, $chain);
+        $chain    = $this->brokerManager->getOptionChain($symbol, $currentPrice);
+        $analysis = $this->llmService->analyzeOptionChain($symbol, $currentPrice, $chain);
 
         return $this->json(['status' => 'success', 'data' => $analysis]);
     }
@@ -56,23 +56,23 @@ class AiController extends AbstractController
     public function verifyTrade(Request $request): JsonResponse
     {
         $trade  = json_decode($request->getContent(), true) ?? [];
-        $result = $this->geminiService->verifyTradePreExecution($trade);
+        $result = $this->llmService->verifyTradePreExecution($trade);
 
         return $this->json(['status' => 'success', 'data' => $result]);
     }
 
     /**
-     * Gemini-powered discover suggestions — replaces the old static hardcoded stock list.
-     * Falls back to curated defaults when Gemini API key is not configured.
+     * AI-powered discover suggestions — replaces the old static hardcoded stock list.
+     * Falls back to curated defaults when API key is not configured.
      */
     #[Route('/discover-suggestions', name: 'discover_suggestions', methods: ['GET'])]
     public function discoverSuggestions(): JsonResponse
     {
-        $portfolio = $this->schwabService->getAccountPortfolio();
+        $portfolio = $this->brokerManager->getAggregatedPortfolio();
         $stocks    = $this->stockRepository->findByFilters();
 
-        // Attempt live Gemini-powered suggestions
-        $aiResult = $this->geminiService->generateFlywheelIdeas($portfolio, $stocks);
+        // Attempt live AI-powered suggestions
+        $aiResult = $this->llmService->generateFlywheelIdeas($portfolio, $stocks);
 
         // If Gemini returned live ideas, reformat them as discover-style cards
         if (!empty($aiResult['ideas'])) {
@@ -93,12 +93,12 @@ class AiController extends AbstractController
                     'suggestedStrategy'=> $idea['strategyType'] ?? '',
                     'estimatedPremium'=> $idea['estimatedPremium'] ?? null,
                     'apy'             => $idea['APY'] ?? null,
-                    'source'          => $aiResult['source'] ?? 'Gemini AI',
+                    'source'          => $aiResult['source'] ?? 'AI Engine',
                     '_live'           => true,
                 ];
             }, $aiResult['ideas']);
 
-            return $this->json(['status' => 'success', 'source' => 'gemini_live', 'data' => $suggestions]);
+            return $this->json(['status' => 'success', 'source' => 'ai_live', 'data' => $suggestions]);
         }
 
         // Curated fallback when Gemini API key is not configured or call fails

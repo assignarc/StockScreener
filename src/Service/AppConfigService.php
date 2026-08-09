@@ -55,6 +55,12 @@ class AppConfigService
         'flywheel.signal.put_hedge_otm_pct'      => 0.05,   // 5% OTM put hedge
         'flywheel.signal.csp_discount_pct'       => 0.08,   // 8% discount Cash-Secured Put entry
         'flywheel.signal.call_otm_pct'           => 0.05,   // 5% OTM long call strike
+
+        // ── LLM behaviour defaults (no API keys – those have no safe default) ─
+        'llm.provider'   => 'gemini',               // overridden by user in Setup Wizard
+        'gemini.model'   => 'gemini-1.5-flash',
+        'openai.model'   => 'gpt-4o-mini',
+        'local_llm.url'  => 'http://localhost:11434/v1',
     ];
 
     /** Request-lifetime in-process cache; flushed on every mutation. */
@@ -67,6 +73,10 @@ class AppConfigService
 
     /**
      * Read a single config value.  Resolution order: cache → DB → DEFAULTS → $default argument.
+     *
+     * Transparently handles stale AES-GCM encrypted blobs left by a previous
+     * version of the application: when detected the row is nulled in the DB and
+     * $default is returned, so the Setup Wizard can re-collect the credential.
      */
     public function get(string $key, mixed $default = null): mixed
     {
@@ -76,6 +86,12 @@ class AppConfigService
 
         $entity = $this->repository->findByKey($key);
         $value = $entity !== null ? $entity->getValue() : (self::DEFAULTS[$key] ?? $default);
+
+        // Guard: stale encrypted blob – clear it so the wizard can re-collect the value.
+        if ($this->isEncryptedBlob($value)) {
+            $this->set($key, null);
+            return $default;
+        }
 
         self::$cache[$key] = $value;
         return $value;
@@ -111,10 +127,13 @@ class AppConfigService
         // Start from hardcoded defaults
         $result = self::DEFAULTS;
 
-        // Overlay with whatever is persisted in the DB
+        // Overlay with whatever is persisted in the DB.
+        // Apply the same encrypted-blob guard as get() so stale AES-GCM blobs
+        // (from a previous app version) are never forwarded to templates as arrays.
         $rows = $this->repository->findAll();
         foreach ($rows as $row) {
-            $result[$row->getConfigKey()] = $row->getValue();
+            $value = $row->getValue();
+            $result[$row->getConfigKey()] = $this->isEncryptedBlob($value) ? null : $value;
         }
 
         self::$cache = $result;
@@ -168,72 +187,61 @@ class AppConfigService
     }
 
     /**
-     * Helper accessors for API credentials and multi-broker configuration.
-     * Priority: flat DB key → broker_instances[0] (for Schwab) → $_ENV fallback.
+     * Returns the Finnhub API key stored in config.
+     *
+     * Finnhub is the application's fixed financial-data source (non-pluggable).
+     * This thin wrapper exists because callers need a named, intentional accessor
+     * rather than a magic string literal scattered across the codebase.
      */
     public function getFinnhubApiKey(): ?string
     {
         $dbVal = $this->get('finnhub.api_key');
-        return !empty($dbVal) ? (string) $dbVal : ($_ENV['FINNHUB_API_KEY'] ?? null);
+        return !empty($dbVal) ? (string) $dbVal : null;
     }
 
-    public function getSchwabAppKey(): ?string
+    /**
+     * Returns true when a stored value is a stale AES-GCM encrypted blob produced
+     * by a previous version of the application.  Such blobs are a JSON-decoded
+     * associative array ['__enc' => true, 'c' => '...', 'i' => '...', 't' => '...'].
+     *
+     * Called internally by get() which already auto-clears detected blobs;
+     * this method is kept private to enforce that all reads go through get().
+     */
+    private function isEncryptedBlob(mixed $value): bool
     {
-        // 1. Flat legacy key in DB
-        $dbVal = $this->get('schwab.app_key');
-        if (!empty($dbVal)) return (string) $dbVal;
-
-        // 2. First Schwab broker instance (new multi-broker storage)
-        foreach ($this->getBrokerInstances() as $inst) {
-            if (($inst['type'] ?? '') === 'schwab' && !empty($inst['app_key'])) {
-                return (string) $inst['app_key'];
-            }
-        }
-
-        // 3. Environment fallback
-        return $_ENV['SCHWAB_APP_KEY'] ?? null;
-    }
-
-    public function getSchwabAppSecret(): ?string
-    {
-        // 1. Flat legacy key in DB
-        $dbVal = $this->get('schwab.app_secret');
-        if (!empty($dbVal)) return (string) $dbVal;
-
-        // 2. First Schwab broker instance (new multi-broker storage)
-        foreach ($this->getBrokerInstances() as $inst) {
-            if (($inst['type'] ?? '') === 'schwab' && !empty($inst['app_secret'])) {
-                return (string) $inst['app_secret'];
-            }
-        }
-
-        // 3. Environment fallback
-        return $_ENV['SCHWAB_APP_SECRET'] ?? null;
-    }
-
-    public function getGeminiApiKey(): ?string
-    {
-        $dbVal = $this->get('gemini.api_key');
-        return !empty($dbVal) ? (string) $dbVal : ($_ENV['GEMINI_API_KEY'] ?? null);
-    }
-
-
-    public function getActiveBroker(): string
-    {
-        return (string) $this->get('broker.active_provider', 'schwab');
+        return is_array($value)
+            && isset($value['__enc'])
+            && $value['__enc'] === true;
     }
 
     public function getBrokerInstances(): array
     {
         $instances = $this->get('broker.instances');
+
+        // Guard: detect an encrypted blob that can no longer be decrypted.
+        // Such blobs are stored as ['__enc' => true, 'c' => '...', ...] which
+        // is an associative array, NOT a list of broker-instance arrays.
+        // Iterating over it in Twig causes "Impossible to access attribute 'type'
+        // on a bool" because the first value (__enc => true) is a boolean.
+        if (
+            is_array($instances) &&
+            isset($instances['__enc']) &&
+            $instances['__enc'] === true
+        ) {
+            // Stale encrypted row – wipe it so the user can re-enter credentials
+            // via the Setup Wizard without seeing a 500 error.
+            $this->set('broker.instances', null);
+            $instances = null;
+        }
+
         if (empty($instances) || !is_array($instances)) {
             $instances = [
                 [
-                    'id'         => 'broker_1',
+                    'id'         => 'b1',
                     'type'       => 'schwab',
                     'nickname'   => 'Schwab Main',
-                    'app_key'    => $this->getSchwabAppKey(),
-                    'app_secret' => $this->getSchwabAppSecret(),
+                    'app_key'    => '',
+                    'app_secret' => '',
                 ],
             ];
         }

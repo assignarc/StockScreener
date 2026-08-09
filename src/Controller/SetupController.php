@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Service\AppConfigService;
 use App\Service\DatabaseBootstrapService;
 use App\Service\FinnhubService;
-use App\Service\SchwabService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,7 +18,6 @@ class SetupController extends AbstractController
         private AppConfigService $appConfig,
         private DatabaseBootstrapService $bootstrap,
         private FinnhubService $finnhubService,
-        private SchwabService $schwabService,
         private HttpClientInterface $httpClient,
     ) {}
 
@@ -33,10 +31,7 @@ class SetupController extends AbstractController
             'schemaStatus'    => $status,
             'config'          => $this->appConfig->getAll(),
             'finnhubKey'      => $this->appConfig->getFinnhubApiKey(),
-            'schwabKey'       => $this->appConfig->getSchwabAppKey(),
-            'schwabSecret'    => $this->appConfig->getSchwabAppSecret(),
-            'geminiKey'       => $this->appConfig->getGeminiApiKey(),
-            'activeBroker'    => $this->appConfig->getActiveBroker(),
+            'geminiKey'       => $this->appConfig->get('gemini.api_key'),
             'brokerInstances' => $this->appConfig->getBrokerInstances(),
             'setupCompleted'  => $this->appConfig->isSetupCompleted(),
         ]);
@@ -95,17 +90,8 @@ class SetupController extends AbstractController
         if (isset($payload['finnhub_api_key'])) {
             $this->appConfig->set('finnhub.api_key', trim($payload['finnhub_api_key']));
         }
-        if (isset($payload['schwab_app_key'])) {
-            $this->appConfig->set('schwab.app_key', trim($payload['schwab_app_key']));
-        }
-        if (isset($payload['schwab_app_secret'])) {
-            $this->appConfig->set('schwab.app_secret', trim($payload['schwab_app_secret']));
-        }
         if (isset($payload['gemini_api_key'])) {
             $this->appConfig->set('gemini.api_key', trim($payload['gemini_api_key']));
-        }
-        if (isset($payload['broker_active_provider'])) {
-            $this->appConfig->set('broker.active_provider', trim($payload['broker_active_provider']));
         }
         if (isset($payload['broker_instances']) && is_array($payload['broker_instances'])) {
             $this->appConfig->saveBrokerInstances($payload['broker_instances']);
@@ -126,13 +112,21 @@ class SetupController extends AbstractController
     #[Route('/api/setup/status', name: 'api_setup_status', methods: ['GET'])]
     public function getStatus(): JsonResponse
     {
+        $instances = $this->appConfig->getBrokerInstances();
+        $isAnyConfigured = false;
+        foreach ($instances as $inst) {
+            if (!empty($inst['app_key'])) {
+                $isAnyConfigured = true;
+                break;
+            }
+        }
+
         return $this->json([
             'status' => 'success',
             'data'   => [
                 'schema'         => $this->bootstrap->getSchemaStatus(),
                 'finnhubConfig'  => !empty($this->appConfig->getFinnhubApiKey()),
-                'schwabConfig'   => $this->schwabService->isConfigured(),
-                'activeBroker'   => $this->appConfig->getActiveBroker(),
+                'schwabConfig'   => $isAnyConfigured,
                 'setupCompleted' => $this->appConfig->isSetupCompleted(),
             ],
         ]);

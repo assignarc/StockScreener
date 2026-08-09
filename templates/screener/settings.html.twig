@@ -333,15 +333,15 @@
             </div>
 
             <!-- Read-only broker connection status cards -->
-            <div style="display:flex; flex-direction:column; gap:10px; padding:18px 20px;" id="brokerReadonlyCards">
+            <div class="flex-col gap-sm" id="brokerReadonlyCards">
                 {% for inst in brokerInstances %}
-                <div style="display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--bg1); border:1px solid var(--border); border-radius:10px;">
-                    <span class="material-symbols-outlined" style="font-size:20px; color:var(--blue); flex-shrink:0;">account_balance</span>
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                            <span class="hbadge" style="background:var(--blue); color:#fff; font-size:10px; padding:2px 8px;">Connection {{ loop.index }}</span>
-                            <strong style="font-size:13px; color:var(--text); font-family:'Outfit',sans-serif;">{{ inst.nickname|default('Broker ' ~ loop.index) }}</strong>
-                            <span style="font-size:11px; color:var(--muted); font-family:monospace;">
+                <div class="broker-card">
+                    <span class="material-symbols-outlined broker-card-icon">account_balance</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex-align-center gap-sm flex-wrap">
+                            <span class="hbadge badge-blue">Connection {{ loop.index }}</span>
+                            <strong class="broker-card-title">{{ inst.nickname|default('Broker ' ~ loop.index) }}</strong>
+                            <span class="font-mono text-muted">
                                 {% if inst.type == 'schwab' %}Charles Schwab (OAuth 2.0)
                                 {% elseif inst.type == 'ibkr' %}Interactive Brokers (IBKR)
                                 {% elseif inst.type == 'alpaca' %}Alpaca Markets
@@ -350,24 +350,24 @@
                                 {% else %}{{ inst.type }}{% endif %}
                             </span>
                         </div>
-                        <div style="margin-top:4px; font-size:11px; color:var(--muted);">
+                        <div class="broker-card-subtitle">
                             {% if inst.app_key is not empty %}
-                                <span style="font-family:monospace;">Key: {{ inst.app_key|slice(0,8) }}••••••••</span>
+                                <span class="font-mono">Key: {{ inst.app_key|slice(0,8) }}••••••••</span>
                                 &nbsp;·&nbsp;
-                                <span style="color:var(--green);">
-                                    <span class="material-symbols-outlined" style="font-size:13px; vertical-align:middle;">check_circle</span>
+                                <span class="text-green">
+                                    <span class="material-symbols-outlined font-sm">check_circle</span>
                                     Credentials configured
                                 </span>
                             {% else %}
-                                <span style="color:var(--yellow);">
-                                    <span class="material-symbols-outlined" style="font-size:13px; vertical-align:middle;">warning</span>
+                                <span class="text-yellow">
+                                    <span class="material-symbols-outlined font-sm">warning</span>
                                     No credentials set — configure in Setup Wizard
                                 </span>
                             {% endif %}
                         </div>
                     </div>
                     {% if inst.type == 'schwab' or inst.type == 'etrade' %}
-                    <a href="/api/schwab/login" target="_blank" class="hbtn hbtn-blue" style="font-size:11px; padding:4px 10px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-weight:700; flex-shrink:0;">
+                    <a href="/api/broker/{{ inst.id }}/login" target="_blank" class="hbtn hbtn-blue">
                         <span class="material-symbols-outlined">link</span> OAuth
                     </a>
                     {% endif %}
@@ -404,6 +404,36 @@
                 <div class="cfg-row-wide">
                     <div class="cfg-row-wide-header">
                         <div>
+                            <div class="cfg-label">Active AI Engine / LLM Provider</div>
+                            <div class="cfg-desc">Choose between Gemini, OpenAI, or a self-hosted Local LLM.</div>
+                            <div class="cfg-key">llm.provider</div>
+                        </div>
+                    </div>
+                    <select class="styled-select-input" id="cfg_llm_provider" data-key="llm.provider" data-original="{{ config['llm.provider']|default('gemini') }}" onchange="onFieldChange(this)">
+                        <option value="gemini" {% if config['llm.provider']|default('gemini') == 'gemini' %}selected{% endif %}>Google Gemini API</option>
+                        <option value="openai" {% if config['llm.provider']|default('gemini') == 'openai' %}selected{% endif %}>OpenAI API</option>
+                        <option value="local" {% if config['llm.provider']|default('gemini') == 'local' %}selected{% endif %}>Self-Hosted Local LLM (OpenAI-compatible)</option>
+                    </select>
+                </div>
+
+                <div class="cfg-row-wide">
+                    <div class="cfg-row-wide-header">
+                        <div>
+                            <div class="cfg-label">Google Gemini Model Selection</div>
+                            <div class="cfg-desc">Choose between Gemini 1.5 Flash (Fast/Free tier) or Gemini 1.5 Pro (High Reasoning/Pro License).</div>
+                            <div class="cfg-key">gemini.model</div>
+                        </div>
+                    </div>
+                    <select class="styled-select-input" id="cfg_gemini_model" data-key="gemini.model" data-original="{{ config['gemini.model']|default('gemini-1.5-flash') }}" onchange="onFieldChange(this)">
+                        <option value="gemini-1.5-flash" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-1.5-flash' %}selected{% endif %}>Gemini 1.5 Flash (Fast & Efficient)</option>
+                        <option value="gemini-1.5-pro" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-1.5-pro' %}selected{% endif %}>Gemini 1.5 Pro (Deep Reasoning & Complex Analysis)</option>
+                        <option value="gemini-2.0-flash-exp" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-2.0-flash-exp' %}selected{% endif %}>Gemini 2.0 Flash (Experimental)</option>
+                    </select>
+                </div>
+
+                <div class="cfg-row-wide">
+                    <div class="cfg-row-wide-header">
+                        <div>
                             <div class="cfg-label">Google Gemini AI Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
                             <div class="cfg-desc">AI strategy generation and options risk commentary. (<a href="https://aistudio.google.com/" target="_blank" style="color:var(--yellow);">Get free key</a>)</div>
                             <div class="cfg-key">gemini.api_key</div>
@@ -415,6 +445,53 @@
                         </div>
                     </div>
                     <input class="large-key-input" type="password" id="cfg_gemini_api_key" data-key="gemini.api_key" data-original="{{ config['gemini.api_key']|default('') }}" value="{{ config['gemini.api_key']|default('') }}" placeholder="AIzaSy..." oninput="onFieldChange(this)">
+                </div>
+
+                <div class="cfg-row-wide">
+                    <div class="cfg-row-wide-header">
+                        <div>
+                            <div class="cfg-label">OpenAI Model Selection</div>
+                            <div class="cfg-desc">Choose target OpenAI model.</div>
+                            <div class="cfg-key">openai.model</div>
+                        </div>
+                    </div>
+                    <select class="styled-select-input" id="cfg_openai_model" data-key="openai.model" data-original="{{ config['openai.model']|default('gpt-4o-mini') }}" onchange="onFieldChange(this)">
+                        <option value="gpt-4o-mini" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o mini (Fast & Affordable)</option>
+                        <option value="gpt-4o" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4o' %}selected{% endif %}>GPT-4o (Omni High Performance)</option>
+                        <option value="gpt-4-turbo" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo</option>
+                        <option value="o1-mini" {% if config['openai.model']|default('gpt-4o-mini') == 'o1-mini' %}selected{% endif %}>o1-mini (Reasoning Model)</option>
+                    </select>
+                </div>
+
+                <div class="cfg-row-wide">
+                    <div class="cfg-row-wide-header">
+                        <div>
+                            <div class="cfg-label">OpenAI API Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
+                            <div class="cfg-desc">Required if using OpenAI engine. (<a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--blue);">Get key</a>)</div>
+                            <div class="cfg-key">openai.api_key</div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="slick-pill-btn" id="btnToggleOpenAi" onclick="toggleKeyVisibility('cfg_openai_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
+                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_openai_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_openai_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                        </div>
+                    </div>
+                    <input class="large-key-input" type="password" id="cfg_openai_api_key" data-key="openai.api_key" data-original="{{ config['openai.api_key']|default('') }}" value="{{ config['openai.api_key']|default('') }}" placeholder="sk-proj-..." oninput="onFieldChange(this)">
+                </div>
+
+                <div class="cfg-row-wide">
+                    <div class="cfg-row-wide-header">
+                        <div>
+                            <div class="cfg-label">Local LLM API Endpoint URL <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
+                            <div class="cfg-desc">Local API endpoint URL when using Local LLM provider (Ollama, vLLM, etc).</div>
+                            <div class="cfg-key">local_llm.url</div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_local_llm_url')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_local_llm_url', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                        </div>
+                    </div>
+                    <input class="large-key-input" type="text" id="cfg_local_llm_url" data-key="local_llm.url" data-original="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" value="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" placeholder="http://localhost:11434/v1" oninput="onFieldChange(this)">
                 </div>
             </div>
         </div>
