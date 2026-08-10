@@ -4,6 +4,7 @@ namespace App\Service;
 
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
+use App\Service\AppConfigService;
 
 /**
  * Centralized Just-In-Time (JIT) Database Provisioning & Auto-Seeding Service.
@@ -143,23 +144,7 @@ class DatabaseBootstrapService
         // NOTE: Secrets (api keys) are intentionally seeded as null.
         // The Setup Wizard (/setup) is the only supported path to enter credentials.
         // No critical information lives in .env or git.
-        $defaultConfigs = [
-            'app.setup_completed'                   => false,
-            'finnhub.api_key'                       => null,
-            'gemini.api_key'                        => null,
-            'openai.api_key'                        => null,
-            'llm.provider'                          => 'gemini',
-            'local_llm.url'                         => 'http://localhost:11434/v1',
-            'flywheel.covered_call.min_shares'      => 100,
-            'flywheel.covered_call.otm_pct'         => 0.06,
-            'flywheel.covered_call.cost_basis_buffer'=> 1.02,
-            'flywheel.covered_call.dte_target'      => 35,
-            'flywheel.covered_call.est_premium_pct' => 0.028,
-            'flywheel.early_exit.btc_profit_threshold'=> 50.0,
-            'calendar.months_back'                  => 1,
-            'calendar.months_forward'               => 6,
-            'screener.suggest.target_price_factor'  => 1.22,
-        ];
+        $defaultConfigs = AppConfigService::DEFAULTS;
 
         $now = date('Y-m-d H:i:s');
         foreach ($defaultConfigs as $key => $val) {

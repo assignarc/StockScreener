@@ -44,7 +44,7 @@
         <!-- FLYWHEEL CAPITAL ALLOCATOR WIDGET -->
         <div class="fw-panel">
             <div class="fw-title">
-                <span class="fw-icon">⚙ CAPITAL FLYWHEEL</span>
+                <span class="fw-icon"><span class="material-symbols-outlined">settings</span> CAPITAL FLYWHEEL</span>
                 <span>Portfolio Allocation Engine</span>
             </div>
             <div class="fw-inputs">
@@ -55,15 +55,15 @@
             </div>
             <div class="fw-stats">
                 <div class="fw-pill fw-pill-call">
-                    <span>🟢 CALLs (60%):</span>
+                    <span><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 2px;">arrow_circle_up</span> CALLs (60%):</span>
                     <span id="allocCallVal">$6,000</span>
                 </div>
                 <div class="fw-pill fw-pill-wheel">
-                    <span>🟡 WHEEL (25%):</span>
+                    <span><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 2px;">autorenew</span> WHEEL (25%):</span>
                     <span id="allocWheelVal">$2,500</span>
                 </div>
                 <div class="fw-pill fw-pill-put">
-                    <span>🔴 PUTs (15%):</span>
+                    <span><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 2px;">arrow_circle_down</span> PUTs (15%):</span>
                     <span id="allocPutVal">$1,500</span>
                 </div>
             </div>
@@ -72,15 +72,15 @@
         <!-- OPTIONS LEVEL 1 BASIC STRATEGY BANNER -->
         <div style="padding: 12px 24px; background: rgba(88,166,255,0.06); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <span class="rb rLOW" style="background: rgba(88,166,255,0.2); color: var(--blue);">🔒 OPTION LEVEL 1 BASIC (100% COVERED / RISK DEFINED)</span>
+                <span class="rb rLOW" style="background: rgba(88,166,255,0.2); color: var(--blue);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">lock</span> OPTION LEVEL 1 BASIC (100% COVERED / RISK DEFINED)</span>
                 <span style="font-size: 12px; color: var(--text);">
                     Allocating your <strong style="color:var(--green);" id="playbookCashText">$25,143 available cash</strong> into 100% Covered & Capped-Risk strategies:
                 </span>
             </div>
             <div style="display: flex; gap: 12px; font-size: 11px; font-weight: 600;">
-                <span style="color:var(--green);">🟢 Defined-Risk Long CALLS</span>
-                <span style="color:var(--yellow);">🟡 Cash-Secured PUTS</span>
-                <span style="color:var(--purple);">💼 Covered CALLS</span>
+                <span style="color:var(--green);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_up</span> Defined-Risk Long CALLS</span>
+                <span style="color:var(--yellow);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">autorenew</span> Cash-Secured PUTS</span>
+                <span style="color:var(--purple);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">work</span> Covered CALLS</span>
             </div>
         </div>
 
@@ -88,9 +88,9 @@
         <div class="controls">
             <!-- Signal Filter Group -->
             <button class="sig-btn active-all" onclick="filterSignal('ALL', this)">All Signals</button>
-            <button class="sig-btn" onclick="filterSignal('CALL', this)">🟢 CALLs (Growth)</button>
-            <button class="sig-btn" onclick="filterSignal('PUT', this)">🔴 PUTs (Hedge)</button>
-            <button class="sig-btn" onclick="filterSignal('WHEEL', this)">🟡 WHEEL (Income)</button>
+            <button class="sig-btn" onclick="filterSignal('CALL', this)"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_up</span> CALLs (Growth)</button>
+            <button class="sig-btn" onclick="filterSignal('PUT', this)"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_down</span> PUTs (Hedge)</button>
+            <button class="sig-btn" onclick="filterSignal('WHEEL', this)"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">autorenew</span> WHEEL (Income)</button>
 
             <span style="border-left: 1px solid var(--border); height: 20px; margin: 0 6px;"></span>
 
@@ -120,9 +120,9 @@
         <!-- STATS OVERVIEW -->
         <div class="sbar">
             <div class="sc"><div class="v" id="statCount">{{ totalStocks }}</div><div class="l">Tracked Stocks</div></div>
-            <div class="sc"><div class="v" id="statCallsCount">—</div><div class="l">🟢 CALL Signals</div></div>
-            <div class="sc"><div class="v" id="statPutsCount">—</div><div class="l">🔴 PUT Signals</div></div>
-            <div class="sc"><div class="v" id="statWheelCount">—</div><div class="l">🟡 WHEEL Signals</div></div>
+            <div class="sc"><div class="v" id="statCallsCount">—</div><div class="l"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_up</span> CALL Signals</div></div>
+            <div class="sc"><div class="v" id="statPutsCount">—</div><div class="l"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_down</span> PUT Signals</div></div>
+            <div class="sc"><div class="v" id="statWheelCount">—</div><div class="l"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">autorenew</span> WHEEL Signals</div></div>
         </div>
 
         <!-- TABLE WRAPPER -->
@@ -132,90 +132,90 @@
                     <tr>
                         <th onclick="sortTable('symbol')">
                             <span>Ticker</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">📌 Stock Ticker Symbol</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">label</span> Stock Ticker Symbol</div>
                                     Queried from local SQLite/Doctrine database (<code>Stock::$symbol</code>), cross-referenced against Finnhub API and connected Schwab account holdings.
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('name')">
                             <span>Company</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">🏢 Company Name</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">business</span> Company Name</div>
                                     Fetched live from Finnhub API company profile endpoint (<code>/api/v1/stock/profile2</code>).
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('signal')">
                             <span>Flywheel Signal</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">⚙ Option Signal</div>
-                                    Evaluated real-time by <code>FlywheelService</code>. Evaluates fundamental score (&ge;70, &lt;45), upside %, and risk to classify Level 1 Basic option strategies (🟢 CALL, 🟡 WHEEL, 🔴 PUT).
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">tune</span> Option Signal</div>
+                                    Evaluated real-time by <code>FlywheelService</code>. Evaluates fundamental score (&ge;70, &lt;45), upside %, and risk to classify Level 1 Basic option strategies (CALL, WHEEL, PUT).
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('sector')">
                             <span>Sector</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">🌐 Industry Sector</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">public</span> Industry Sector</div>
                                     Retrieved from Finnhub API industry classification field (<code>finnhubIndustry</code>).
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('price')">
                             <span>Price</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">💲 Current Market Price</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">payments</span> Current Market Price</div>
                                     Live current market quote (<code>c</code>) streamed from Finnhub API (<code>/api/v1/quote</code>) or Schwab Developer API market data.
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('targetPrice')">
                             <span>Target</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">🎯 12M Analyst Target</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">track_changes</span> 12M Analyst Target</div>
                                     Aggregated 12-month Wall Street consensus analyst price target from Finnhub consensus endpoint & database baseline.
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('upside')">
                             <span>Upside</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">📈 Implied Upside %</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">trending_up</span> Implied Upside %</div>
                                     Calculated dynamically in frontend JS: <code>((TargetPrice - Price) / Price) * 100</code>.
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('revGrowth')">
                             <span>Rev Growth</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">📊 Revenue Growth Rate</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">bar_chart</span> Revenue Growth Rate</div>
                                     Pulled from quarterly SEC earnings filings & Finnhub fundamentals data (<code>revGrowth</code> field).
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('risk')">
                             <span>Risk</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">⚡ Volatility Risk Level</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">bolt</span> Volatility Risk Level</div>
                                     Assigned based on 30-day historical beta, market capitalization tier, and price volatility range (<code>LOW</code>, <code>MED</code>, <code>HIGH</code>).
                                 </span>
                             </span>
                         </th>
                         <th onclick="sortTable('score')">
                             <span>Score</span>
-                            <span class="col-popover-trigger" tabindex="0">ℹ
+                            <span class="col-popover-trigger" tabindex="0"><span class="material-symbols-outlined" style="font-size: 14px; margin: 0;">info</span>
                                 <span class="col-popover">
-                                    <div class="col-popover-title">⭐ Fundamental Score (0-100)</div>
+                                    <div class="col-popover-title"><span class="material-symbols-outlined" style="font-size:14px;">grade</span> Fundamental Score (0-100)</div>
                                     Proprietary 0-100 score calculated by evaluating revenue growth rate, gross margin %, cash runway months, and analyst ratings.
                                 </span>
                             </span>
@@ -234,14 +234,14 @@
 <div id="rp">
     <div class="rph">
         <h3 id="rpTitle">Stock Research & Analysis</h3>
-        <button class="rpx" onclick="closeResearchPanel()">✕</button>
+        <button class="rpx" onclick="closeResearchPanel()"><span class="material-symbols-outlined" style="font-size:18px;">close</span></button>
     </div>
     <div class="rpb">
         <!-- FLYWHEEL OPTIONS MATRIX CARD -->
         <div class="tb" style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border-color: rgba(88,166,255,0.4); margin-bottom: 18px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                <h4 style="color:var(--blue); font-size: 12px;">⚙ Capital Flywheel Options Recommendation</h4>
-                <span id="rpSignalBadge" class="badge-sig badge-CALL">🟢 CALL</span>
+                <h4 style="color:var(--blue); font-size: 12px;"><span class="material-symbols-outlined" style="font-size:14px;">settings</span> Capital Flywheel Options Recommendation</h4>
+                <span id="rpSignalBadge" class="badge-sig badge-CALL">CALL</span>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 12px;">
                 <div><span class="m">Strategy: </span><strong id="rpStrategy" style="color:#e6edf3;">-</strong></div>
@@ -255,7 +255,7 @@
         <!-- SCHWAB LIVE OPTION CHAIN MATRIX -->
         <div class="tb" style="background: var(--bg3); border-color: var(--border); margin-bottom: 18px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                <h4 style="color:var(--purple); font-size: 11px;">🏦 Schwab Developer API — Live Option Chain & Gemini AI Target Selection</h4>
+                <h4 style="color:var(--purple); font-size: 11px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">account_balance</span> Schwab Developer API — Live Option Chain & Gemini AI Target Selection</h4>
                 <span id="schwabSourceBadge" class="rb rLOW">Schwab API Connected</span>
             </div>
 
@@ -263,7 +263,7 @@
             <div id="geminiOptionAnalysisBox" style="background: linear-gradient(135deg, rgba(188,140,255,0.12), rgba(31,38,55,0.95)); border: 1px solid rgba(188,140,255,0.4); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none;">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
                     <strong style="font-size:12px; color:var(--purple); display:flex; align-items:center; gap:6px;">
-                        <span>🤖 Gemini AI Options Target Determination</span>
+                        <span><span class="material-symbols-outlined" style="font-size:14px;">smart_toy</span> Gemini AI Options Target Determination</span>
                     </strong>
                     <span class="rb" style="background:rgba(188,140,255,0.2); color:var(--purple);">Option Level 1 Basic</span>
                 </div>

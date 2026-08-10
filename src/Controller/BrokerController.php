@@ -143,6 +143,42 @@ class BrokerController extends AbstractController
         ]);
     }
 
+    #[Route('/history/aggregated', name: 'history_aggregated', methods: ['GET'])]
+    public function aggregatedHistory(Request $request): JsonResponse
+    {
+        $days = max(1, min(180, (int) $request->query->get('days', 30)));
+        $force = $request->query->getBoolean('force') || $request->query->getBoolean('forceRefresh');
+        $history = $this->brokerManager->getAggregatedHistory($days, $force);
+
+        $totalDividends = 0.0;
+        $totalPremiums = 0.0;
+        $netCashImpact = 0.0;
+
+        foreach ($history as $tx) {
+            $amt = (float) ($tx['amount'] ?? 0.0);
+            $type = strtoupper($tx['type'] ?? '');
+            if ($type === 'DIVIDEND') {
+                $totalDividends += $amt;
+            } elseif (in_array($type, ['OPTION', 'OPTION_PREMIUM', 'PREMIUM'])) {
+                $totalPremiums += $amt;
+            }
+            $netCashImpact += $amt;
+        }
+
+        return $this->json([
+            'status' => 'success',
+            'data'   => [
+                'summary' => [
+                    'totalDividends'    => $totalDividends,
+                    'totalPremiums'     => $totalPremiums,
+                    'netCashImpact'     => $netCashImpact,
+                    'totalTransactions' => count($history),
+                ],
+                'transactions' => $history,
+            ],
+        ]);
+    }
+
     #[Route('/{id}/history', name: 'history', methods: ['GET'])]
     public function history(string $id, Request $request): JsonResponse
     {
@@ -152,9 +188,34 @@ class BrokerController extends AbstractController
         }
 
         $days = max(1, min(180, (int) $request->query->get('days', 30)));
+        $history = $broker->getAccountHistory($days);
+
+        $totalDividends = 0.0;
+        $totalPremiums = 0.0;
+        $netCashImpact = 0.0;
+
+        foreach ($history as $tx) {
+            $amt = (float) ($tx['amount'] ?? 0.0);
+            $type = strtoupper($tx['type'] ?? '');
+            if ($type === 'DIVIDEND') {
+                $totalDividends += $amt;
+            } elseif (in_array($type, ['OPTION', 'OPTION_PREMIUM', 'PREMIUM'])) {
+                $totalPremiums += $amt;
+            }
+            $netCashImpact += $amt;
+        }
+
         return $this->json([
             'status' => 'success',
-            'data'   => $broker->getAccountHistory($days),
+            'data'   => [
+                'summary' => [
+                    'totalDividends'    => $totalDividends,
+                    'totalPremiums'     => $totalPremiums,
+                    'netCashImpact'     => $netCashImpact,
+                    'totalTransactions' => count($history),
+                ],
+                'transactions' => $history,
+            ],
         ]);
     }
 

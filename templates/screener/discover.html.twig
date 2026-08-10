@@ -155,7 +155,7 @@ function renderTrackedTable() {
             <td style="padding:10px 12px; text-align:right;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '—'}</td>
             <td style="padding:10px 12px; text-align:center;"><strong class="g">${s.score}</strong></td>
             <td style="padding:10px 12px; text-align:center;">
-                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4);" onclick="deleteTrackedStock(${s.id})">🗑 Delete</button>
+                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4); display:inline-flex; align-items:center; gap:4px;" onclick="deleteTrackedStock(${s.id})"><span class="material-symbols-outlined" style="font-size:14px;">delete</span> Delete</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -165,7 +165,10 @@ function renderTrackedTable() {
 async function fetchDiscoverSuggestions() {
     const grid = document.getElementById('suggestionsGrid');
     try {
-        const res = await fetch('/api/stocks/discover-suggestions');
+        const res = await fetch('/api/ai/discover-suggestions');
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
         const result = await res.json();
 
         if (result.status === 'success' && result.data) {
@@ -243,7 +246,7 @@ async function addSuggestionToTracked(obj) {
         const result = await res.json();
 
         if (result.status === 'success') {
-            alert(`✅ ${obj.symbol} added to your tracked screener!`);
+            alert(`${obj.symbol} added to your tracked screener!`);
             await loadTrackedStocks();
             fetchDiscoverSuggestions();
         }
@@ -262,7 +265,7 @@ async function scanStockTab3() {
     }
 
     resBox.style.display = 'block';
-    resBox.innerHTML = '<span class="m">⚡ Scanning Finnhub & Schwab market data for ' + symbol + '...</span>';
+    resBox.innerHTML = '<span class="m" style="display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">bolt</span> Scanning Finnhub & broker market data for ' + symbol + '...</span>';
 
     try {
         const res = await fetch(`/api/stocks/suggest/${symbol}`);
@@ -278,7 +281,7 @@ async function scanStockTab3() {
                         <strong style="font-size:15px; color:var(--purple);">${d.symbol}</strong> — ${d.name}
                         <span class="hbadge" style="margin-left:8px;">${d.sector}</span>
                     </div>
-                    <span class="badge-sig badge-${fw.signal}">${fw.signalBadge || '🟢 CALL'}</span>
+                    <span class="badge-sig badge-${fw.signal}">${fw.signalBadge || 'CALL'}</span>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; font-size:12px; margin-bottom:12px;">
                     <div>Price: <strong>$${d.price.toFixed(2)}</strong></div>
@@ -287,11 +290,11 @@ async function scanStockTab3() {
                     <div>Risk: <strong>${d.risk}</strong></div>
                 </div>
                 <div class="tb" style="background:rgba(188,140,255,0.05); border-color:rgba(188,140,255,0.3); margin-bottom:10px; padding:10px;">
-                    <h4 style="color:var(--purple); font-size:10px; margin-bottom:4px;">💡 WHY TRACK THIS STOCK:</h4>
+                    <h4 style="color:var(--purple); font-size:10px; margin-bottom:4px; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">lightbulb</span> WHY TRACK THIS STOCK:</h4>
                     <p style="font-size:12px; margin:0; line-height:1.4;">${d.thesis}</p>
                 </div>
-                <button class="btn btn-pri" style="width:100%; text-align:center;" onclick="addSuggestionToTracked(${JSON.stringify(d).replace(/"/g, '&quot;')})">
-                    ➕ Add ${d.symbol} to Screener & Tracked List
+                <button class="btn btn-pri" style="width:100%; text-align:center; display:inline-flex; align-items:center; justify-content:center; gap:6px;" onclick="addSuggestionToTracked(${JSON.stringify(d).replace(/"/g, '&quot;')})">
+                    <span class="material-symbols-outlined" style="font-size:16px;">add</span> Add ${d.symbol} to Screener & Tracked List
                 </button>
             `;
         }

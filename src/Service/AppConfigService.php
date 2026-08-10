@@ -21,6 +21,11 @@ class AppConfigService
      * Edit these to change the factory defaults shipped with the application.
      */
     public const DEFAULTS = [
+        'app.setup_completed'                    => false,
+        'finnhub.api_key'                        => null,
+        'gemini.api_key'                         => null,
+        'openai.api_key'                         => null,
+
         // ── Flywheel signal thresholds ────────────────────────────────────────
         'flywheel.signal.call_score_threshold'   => 70,
         'flywheel.signal.call_upside_threshold'  => 15.0,
@@ -61,6 +66,20 @@ class AppConfigService
         'gemini.model'   => 'gemini-1.5-flash',
         'openai.model'   => 'gpt-4o-mini',
         'local_llm.url'  => 'http://localhost:11434/v1',
+
+        // ── Cache TTL configurations (seconds) ───────────────────────────────
+        'cache.ttl.finnhub.quote'                => 300,    // 5 minutes
+        'cache.ttl.finnhub.earnings'             => 604800, // 7 days (long configurable TTL for earnings)
+        'cache.ttl.finnhub.dividends'            => 604800, // 7 days (long configurable TTL for dividends)
+        'cache.ttl.broker.portfolio'             => 60,     // 1 minute
+        'cache.ttl.broker.history'               => 604800, // 7 days (long configurable TTL for transaction history)
+        'cache.ttl.broker.chain'                 => 120,    // 2 minutes
+
+        // ── API settings (timeouts, limits) ───────────────────────────────
+        'api.timeout.broker.default'             => 8.0,
+        'api.timeout.broker.transactions'        => 10.0,
+        'api.timeout.finnhub.default'            => 3.0,
+        'broker.option_chain.strike_count'       => 12,
     ];
 
     /** Request-lifetime in-process cache; flushed on every mutation. */

@@ -225,10 +225,34 @@ class SchwabBroker implements BrokerInterface
         }
 
         try {
+            // 1. Query Schwab User Preferences API for live user-configured account nicknames
+            $nicknameMap = [];
+            try {
+                $prefResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/userPreference', [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $token,
+                        'Accept' => 'application/json',
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.broker.default', 8.0),
+                ]);
+                if ($prefResponse->getStatusCode() === 200) {
+                    $prefData = $prefResponse->toArray();
+                    $prefAccounts = $prefData['accounts'] ?? [];
+                    foreach ($prefAccounts as $pa) {
+                        $accNo = (string) ($pa['accountNumber'] ?? '');
+                        if ($accNo !== '') {
+                            $nicknameMap[$accNo] = $pa['nickName'] ?? $pa['nickname'] ?? null;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('Schwab /userPreference API error: ' . $e->getMessage());
+            }
+
             $response = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/accounts', [
                 'headers' => ['Authorization' => 'Bearer ' . $token],
                 'query'   => ['fields' => 'positions'],
-                'timeout' => 8.0,
+                'timeout' => (float) $this->appConfig->get('api.timeout.broker.default', 8.0),
             ]);
 
             if ($response->getStatusCode() !== 200) {
@@ -236,8 +260,8 @@ class SchwabBroker implements BrokerInterface
             }
 
             $accounts = $response->toArray();
-            $portfolio = $this->sanitizePortfolioData($accounts);
-            $this->cache->set($cacheKey, $portfolio, 60, true);
+            $portfolio = $this->sanitizePortfolioData($accounts, $nicknameMap);
+            $this->cache->set($cacheKey, $portfolio, (int) $this->appConfig->get('cache.ttl.broker.portfolio', 60), true);
             return $portfolio;
         } catch (\Throwable $e) {
             $this->logger->error('Schwab Portfolio Fetch Error (' . $this->id . '): ' . $e->getMessage());
@@ -245,12 +269,16 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
-    public function getAccountHistory(int $days = 30): array
+    public function getAccountHistory(int $days = 30, bool $forceRefresh = false): array
     {
-        $cacheKey = 'b' . $this->id . '.' . str_replace(' ', '_', strtolower($this->getNickname())) . '.history.' . $days;
-        $cached = $this->cache->get($cacheKey);
-        if ($cached !== null) {
-            return $cached;
+        $cacheTtl = (int) $this->appConfig->get('cache.ttl.broker.history', 604800);
+        $overallCacheKey = 'b' . $this->id . '.history.' . $days;
+        
+        if (!$forceRefresh) {
+            $cachedOverall = $this->cache->get($overallCacheKey);
+            if ($cachedOverall !== null) {
+                return $cachedOverall;
+            }
         }
 
         $token = $this->getAccessToken();
@@ -258,10 +286,61 @@ class SchwabBroker implements BrokerInterface
             return [];
         }
 
+        $lastFetchKey = 'b' . $this->id . '.tx_last_fetched';
+        $lastFetchDate = $this->cache->get($lastFetchKey);
+        $todayStr = date('Y-m-d');
+        $shouldFetchFromApi = $forceRefresh || ($lastFetchDate !== $todayStr);
+
+        // Fetch user preferences for nickname mapping (only if querying API)
+        $nicknameMap = [];
+        if ($shouldFetchFromApi) {
+            try {
+                $prefResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/userPreference', [
+                    'headers' => [
+                        'Authorization' => 'Bearer ' . $token,
+                        'Accept'        => 'application/json',
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.broker.default', 8.0),
+                ]);
+                if ($prefResponse->getStatusCode() === 200) {
+                    $prefData = $prefResponse->toArray();
+                    foreach ($prefData['accounts'] ?? [] as $pa) {
+                        $accNo = (string) ($pa['accountNumber'] ?? '');
+                        if ($accNo !== '') {
+                            $nicknameMap[$accNo] = $pa['nickName'] ?? $pa['nickname'] ?? null;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('Schwab /userPreference API error in history: ' . $e->getMessage());
+            }
+        }
+
+        // Fetch account hash values map for transactions endpoint (only if querying API)
+        $hashMap = [];
+        if ($shouldFetchFromApi) {
+            try {
+                $hashResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/accounts/accountNumbers', [
+                    'headers' => ['Authorization' => 'Bearer ' . $token],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.broker.default', 8.0),
+                ]);
+                if ($hashResponse->getStatusCode() === 200) {
+                    foreach ($hashResponse->toArray() as $h) {
+                        $accNo = (string) ($h['accountNumber'] ?? '');
+                        if ($accNo !== '' && !empty($h['hashValue'])) {
+                            $hashMap[$accNo] = $h['hashValue'];
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('Schwab /accounts/accountNumbers error in history: ' . $e->getMessage());
+            }
+        }
+
         try {
             $response = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/accounts', [
                 'headers' => ['Authorization' => 'Bearer ' . $token],
-                'timeout' => 8.0,
+                'timeout' => (float) $this->appConfig->get('api.timeout.broker.default', 8.0),
             ]);
 
             if ($response->getStatusCode() !== 200) {
@@ -269,28 +348,95 @@ class SchwabBroker implements BrokerInterface
             }
 
             $accounts = $response->toArray();
-            $accountNumber = $accounts[0]['securitiesAccount']['accountNumber'] ?? null;
-            if (!$accountNumber) {
+            if (empty($accounts)) {
                 return [];
             }
 
             $startDate = (new \DateTimeImmutable("-{$days} days"))->format('Y-m-d\TH:i:s.000\Z');
             $endDate   = (new \DateTimeImmutable())->format('Y-m-d\TH:i:s.000\Z');
+            $timeout   = (float) $this->appConfig->get('api.timeout.broker.transactions', 10.0);
+            $txTypes   = 'TRADE,DIVIDEND_OR_INTEREST,JOURNAL';
 
-            $txResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . "/accounts/{$accountNumber}/transactions", [
-                'headers' => ['Authorization' => 'Bearer ' . $token],
-                'query'   => ['startDate' => $startDate, 'endDate' => $endDate],
-                'timeout' => 10.0,
-            ]);
+            $allHistory = [];
+            foreach ($accounts as $accountItem) {
+                $acc = $accountItem['securitiesAccount'] ?? [];
+                $accountNumber = (string) ($acc['accountNumber'] ?? '');
+                if (!$accountNumber) {
+                    continue;
+                }
 
-            if ($txResponse->getStatusCode() !== 200) {
-                return [];
+                $hashVal = $hashMap[$accountNumber] ?? $accountNumber;
+                $nick = $nicknameMap[$accountNumber] ?? null;
+                
+                // Load master list of all known transactions for this account (indefinite storage)
+                $masterCacheKey = 'b' . $this->id . '.tx_master.' . $accountNumber;
+                $masterList = $this->cache->get($masterCacheKey) ?: [];
+                $masterMap = [];
+                foreach ($masterList as $txItem) {
+                    if (isset($txItem['id'])) {
+                        $masterMap[$txItem['id']] = $txItem;
+                    }
+                }
+
+                // Query Schwab only if we have not fetched today, or it is a force pull
+                if ($shouldFetchFromApi) {
+                    try {
+                        $txResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . "/accounts/{$hashVal}/transactions", [
+                            'headers' => ['Authorization' => 'Bearer ' . $token],
+                            'query'   => [
+                                'startDate' => $startDate,
+                                'endDate'   => $endDate,
+                                'types'     => $txTypes,
+                            ],
+                            'timeout' => $timeout,
+                        ]);
+
+                        if ($txResponse->getStatusCode() === 200) {
+                            $transactions = $txResponse->toArray();
+                            $freshTxs = $this->sanitizeHistoryData($transactions, $accountNumber, $nick);
+                            
+                            // Merge fresh transactions into master list using activity ID deduplication
+                            $hasNew = false;
+                            foreach ($freshTxs as $txItem) {
+                                $txId = $txItem['id'];
+                                if (!isset($masterMap[$txId])) {
+                                    $masterMap[$txId] = $txItem;
+                                    $hasNew = true;
+                                }
+                            }
+                            
+                            if ($hasNew || empty($masterList)) {
+                                $masterList = array_values($masterMap);
+                                // Persist master transaction list indefinitely (1 year)
+                                $this->cache->set($masterCacheKey, $masterList, 31536000, true);
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        $this->logger->error("Schwab Tx Error ({$this->id} / {$accountNumber}): " . $e->getMessage());
+                    }
+                }
+
+                // Filter master list to get transactions matching the requested date range
+                $limitDate = (new \DateTimeImmutable("-{$days} days"))->format('Y-m-d');
+                foreach ($masterMap as $txItem) {
+                    if (($txItem['date'] ?? '') >= $limitDate) {
+                        $allHistory[] = $txItem;
+                    }
+                }
             }
 
-            $transactions = $txResponse->toArray();
-            $history = $this->sanitizeHistoryData($transactions);
-            $this->cache->set($cacheKey, $history, 300, true);
-            return $history;
+            // Update last fetched date mark if we queried Schwab
+            if ($shouldFetchFromApi) {
+                $this->cache->set($lastFetchKey, $todayStr, 86400);
+            }
+
+            // Sort all transactions descending by date
+            usort($allHistory, function ($a, $b) {
+                return strcmp($b['date'] ?? '', $a['date'] ?? '');
+            });
+
+            $this->cache->set($overallCacheKey, $allHistory, $cacheTtl, true);
+            return $allHistory;
         } catch (\Throwable $e) {
             $this->logger->error('Schwab History Fetch Error (' . $this->id . '): ' . $e->getMessage());
             return [];
@@ -317,11 +463,11 @@ class SchwabBroker implements BrokerInterface
                 'query'   => [
                     'symbol'        => $symbol,
                     'contractType'  => 'ALL',
-                    'strikeCount'   => 12,
+                    'strikeCount'   => (int) $this->appConfig->get('broker.option_chain.strike_count', 12),
                     'includeUnderlyingQuote' => 'true',
                     'strategy'      => 'SINGLE',
                 ],
-                'timeout' => 8.0,
+                'timeout' => (float) $this->appConfig->get('api.timeout.broker.default', 8.0),
             ]);
 
             if ($response->getStatusCode() !== 200) {
@@ -330,7 +476,7 @@ class SchwabBroker implements BrokerInterface
 
             $data = $response->toArray();
             $chain = $this->parseOptionChainResponse($data, $symbol, $currentPrice);
-            $this->cache->set($cacheKey, $chain, 120, false);
+            $this->cache->set($cacheKey, $chain, (int) $this->appConfig->get('cache.ttl.broker.chain', 120), false);
             return $chain;
         } catch (\Throwable $e) {
             $this->logger->error('Schwab Option Chain Error (' . $this->id . '): ' . $e->getMessage());
@@ -338,7 +484,7 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
-    private function sanitizePortfolioData(array $accounts): array
+    private function sanitizePortfolioData(array $accounts, array $nicknameMap = []): array
     {
         if (empty($accounts)) {
             return [
@@ -410,9 +556,33 @@ class SchwabBroker implements BrokerInterface
                 $allPositions[] = $posItem;
             }
 
+            $prefNickname = $nicknameMap[$rawAccountNum] ?? null;
+            $rawNickname = $prefNickname 
+                ?? $acc['nickname'] 
+                ?? $acc['nickName'] 
+                ?? $acc['accountNickname'] 
+                ?? $acc['accountName'] 
+                ?? $acc['name'] 
+                ?? $acc['description'] 
+                ?? $acc['accountTitle'] 
+                ?? $accountItem['nickname'] 
+                ?? $accountItem['nickName'] 
+                ?? $accountItem['accountNickname'] 
+                ?? $accountItem['accountName'] 
+                ?? $accountItem['name'] 
+                ?? $accountItem['description'] 
+                ?? null;
+
+            $typeStr = !empty($acc['type']) ? ucfirst(strtolower($acc['type'])) : 'Account';
+            if (!empty($rawNickname) && trim($rawNickname) !== '') {
+                $nickname = trim($rawNickname);
+            } else {
+                $nickname = $this->getNickname() . ' ' . $typeStr . ' (' . $maskedNum . ')';
+            }
+
             $accountList[] = [
                 'accountNumber'          => $maskedNum,
-                'nickname'               => $this->getNickname() . ' (' . $maskedNum . ')',
+                'nickname'               => $nickname,
                 'type'                   => $acc['type'] ?? 'MARGIN',
                 'liquidationValue'       => $liquidationValue,
                 'cashAvailable'          => $cash,
@@ -435,18 +605,56 @@ class SchwabBroker implements BrokerInterface
         ];
     }
 
-    private function sanitizeHistoryData(array $transactions): array
+    private function sanitizeHistoryData(array $transactions, string $accountNumber = '', ?string $accountNickname = null): array
     {
         $sanitized = [];
+        $maskedNum = $accountNumber !== '' ? ('***' . substr($accountNumber, -4)) : '';
         foreach ($transactions as $tx) {
+            $rawDate = $tx['tradeDate'] ?? $tx['settlementDate'] ?? date('Y-m-d');
+            
+            // Extract transfer items details and calculate total fees
+            $items = [];
+            $totalFees = 0.0;
+            foreach ($tx['transferItems'] ?? [] as $item) {
+                $inst = $item['instrument'] ?? [];
+                $feeType = $item['feeType'] ?? null;
+                $itemAmt = (float) ($item['amount'] ?? 0.0);
+                
+                if ($feeType) {
+                    $totalFees += abs($itemAmt);
+                }
+                
+                $items[] = [
+                    'asset_type'      => $inst['assetType'] ?? null,
+                    'symbol'          => $inst['symbol'] ?? null,
+                    'description'     => $inst['description'] ?? null,
+                    'amount'          => $itemAmt,
+                    'cost'            => (float) ($item['cost'] ?? 0.0),
+                    'price'           => (float) ($item['price'] ?? 0.0),
+                    'position_effect' => $item['positionEffect'] ?? null,
+                    'fee_type'        => $feeType,
+                ];
+            }
+
             $sanitized[] = [
-                'broker_id'   => $this->id,
-                'id'          => $tx['activityId'] ?? bin2hex(random_bytes(6)),
-                'date'        => $tx['tradeDate'] ?? $tx['settlementDate'] ?? date('Y-m-d'),
-                'type'        => $tx['type'] ?? 'TRADE',
-                'description' => $tx['description'] ?? '',
-                'amount'      => (float) ($tx['netAmount'] ?? 0.0),
-                'symbol'      => $tx['transferItems'][0]['instrument']['symbol'] ?? null,
+                'broker_id'       => $this->id,
+                'broker_nickname' => $this->getNickname(),
+                'account_number'  => $maskedNum,
+                'account_nickname'=> $accountNickname ?: ($maskedNum ? $this->getNickname() . ' (' . $maskedNum . ')' : $this->getNickname()),
+                'id'              => $tx['activityId'] ?? bin2hex(random_bytes(6)),
+                'time'            => $tx['time'] ?? null,
+                'date'            => substr(trim((string)$rawDate), 0, 10),
+                'settlement_date' => isset($tx['settlementDate']) ? substr(trim($tx['settlementDate']), 0, 10) : null,
+                'type'            => $tx['type'] ?? 'TRADE',
+                'status'          => $tx['status'] ?? null,
+                'sub_account'     => $tx['subAccount'] ?? null,
+                'description'     => $tx['description'] ?? '',
+                'amount'          => (float) ($tx['netAmount'] ?? 0.0),
+                'position_id'     => $tx['positionId'] ?? null,
+                'order_id'        => $tx['orderId'] ?? null,
+                'fees'            => $totalFees,
+                'transfer_items'  => $items,
+                'symbol'          => $tx['transferItems'][0]['instrument']['symbol'] ?? null,
             ];
         }
         return $sanitized;

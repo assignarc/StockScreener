@@ -108,7 +108,15 @@ class BrokerManagerService
 
     public function getBroker(string $id): ?BrokerInterface
     {
-        return $this->brokers[$id] ?? null;
+        if (isset($this->brokers[$id])) {
+            return $this->brokers[$id];
+        }
+        foreach ($this->brokers as $bId => $broker) {
+            if (strtolower($bId) === strtolower($id) || strtolower($broker->getType()) === strtolower($id)) {
+                return $broker;
+            }
+        }
+        return !empty($this->brokers) ? reset($this->brokers) : null;
     }
 
     /**
@@ -158,7 +166,7 @@ class BrokerManagerService
             if (!empty($brokerAccounts)) {
                 foreach ($brokerAccounts as $accIndex => $accItem) {
                     $accNum = $accItem['accountNumber'] ?? 'N/A';
-                    $accNickname = $accItem['nickname'] ?? ($broker->getNickname() . ' (' . $accNum . ')');
+                    $accNickname = !empty($accItem['nickname']) ? $accItem['nickname'] : $broker->getNickname();
                     $accType = $accItem['type'] ?? 'MARGIN';
                     $accVal = (float) ($accItem['liquidationValue'] ?? 0.0);
                     $accCash = (float) ($accItem['cashAvailable'] ?? 0.0);
@@ -464,15 +472,13 @@ class BrokerManagerService
     /**
      * Aggregates history across all active brokers.
      */
-    public function getAggregatedHistory(int $days = 30): array
+    public function getAggregatedHistory(int $days = 30, bool $forceRefresh = false): array
     {
         $allHistory = [];
         foreach ($this->brokers as $broker) {
-            if ($broker->isAuthorized()) {
-                $h = $broker->getAccountHistory($days);
-                foreach ($h as $item) {
-                    $allHistory[] = $item;
-                }
+            $h = $broker->getAccountHistory($days, $forceRefresh);
+            foreach ($h as $item) {
+                $allHistory[] = $item;
             }
         }
 

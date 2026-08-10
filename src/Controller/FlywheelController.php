@@ -335,6 +335,47 @@ class FlywheelController extends AbstractController
             }
         }
 
+        // 4. Inject Configurable Aggregated Account Transaction History directly into calendar timeline
+        try {
+            $daysBack = max(30, $monthsBack * 30);
+            $historyTx = $this->brokerManager->getAggregatedHistory($daysBack);
+            foreach ($historyTx as $tx) {
+                $rawDate = $tx['date'] ?? date('Y-m-d');
+                $txDate  = substr(trim($rawDate), 0, 10);
+                $amt = (float) ($tx['amount'] ?? 0.0);
+                $isCredit = $tx['isCredit'] ?? ($amt >= 0);
+                $amtSign = $isCredit ? '+' : '';
+                $formattedAmt = $amtSign . '$' . number_format(abs($amt), 2);
+                $type = strtoupper($tx['type'] ?? 'TRADE');
+                $badge = strtoupper($tx['badge'] ?? $type);
+                $symbol = strtoupper($tx['symbol'] ?? 'ACCOUNT');
+                if ($symbol === 'CURRENCY_USD') {
+                    $symbol = 'USD';
+                }
+
+                $accName = $tx['account_nickname'] ?? $tx['nickname'] ?? $tx['account_number'] ?? 'Broker';
+
+                $calendarEvents[] = [
+                    'title'          => "{$formattedAmt} {$symbol} {$badge}",
+                    'date'           => $txDate,
+                    'category'       => 'HISTORY',
+                    'symbol'         => $symbol,
+                    'isPast'         => true,
+                    'marketValue'    => $formattedAmt,
+                    'amount'         => $amt,
+                    'isCredit'       => $isCredit,
+                    'details'        => ($tx['description'] ?? 'Account Activity') . " | Account: " . $accName,
+                    'badge'          => "RECORDED TRANSACTION ({$badge})",
+                    'accountNumber'  => $tx['account_number'] ?? $tx['accountNumber'] ?? null,
+                    'accountNickname'=> $accName,
+                    'description'    => $tx['description'] ?? '',
+                    'realSymbol'     => $tx['symbol'] ?? 'USD',
+                ];
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('History calendar injection error: ' . $e->getMessage());
+        }
+
         // Running projected portfolio cash timeline sorted by date
         ksort($cashProjectionsByDate);
         $runningProjectedCash = $currentCash;

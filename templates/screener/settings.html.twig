@@ -303,14 +303,14 @@
 
     <!-- UNIFIED BRAND HEADER & NAVIGATION -->
     {% include 'screener/partials/_header.html.twig' with {
-        headerTitle: '⚙️ System <span>Settings & Rules</span>',
+        headerTitle: '<span class="material-symbols-outlined" style="vertical-align:middle; font-size:22px; color:var(--blue);">settings</span> System <span>Settings & Rules</span>',
         headerBadge: 'SQLite data.db Config Engine'
     } %}
     {% include 'screener/partials/_nav.html.twig' %}
 
     <!-- Hero -->
     <div class="settings-hero">
-        <h2>⚙️ Quantitative Strategy Rules & Parameters</h2>
+        <h2><span class="material-symbols-outlined" style="vertical-align:middle; font-size:24px; color:var(--blue); margin-right:4px;">tune</span> Quantitative Strategy Rules & Parameters</h2>
         <p>All values are persisted to <code>data.db</code> and take effect immediately across all Flywheel algorithms. Defaults are restored if a field is cleared.</p>
     </div>
 
@@ -477,29 +477,10 @@
                         </div>
                     </div>
                     <input class="large-key-input" type="password" id="cfg_openai_api_key" data-key="openai.api_key" data-original="{{ config['openai.api_key']|default('') }}" value="{{ config['openai.api_key']|default('') }}" placeholder="sk-proj-..." oninput="onFieldChange(this)">
-                </div>
-
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
-                        <div>
-                            <div class="cfg-label">Local LLM API Endpoint URL <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
-                            <div class="cfg-desc">Local API endpoint URL when using Local LLM provider (Ollama, vLLM, etc).</div>
-                            <div class="cfg-key">local_llm.url</div>
-                        </div>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_local_llm_url')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
-                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_local_llm_url', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
-                        </div>
-                    </div>
-                    <input class="large-key-input" type="text" id="cfg_local_llm_url" data-key="local_llm.url" data-original="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" value="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" placeholder="http://localhost:11434/v1" oninput="onFieldChange(this)">
-                </div>
-            </div>
-        </div>
-
-        <!-- ── Flywheel Signal Thresholds ───────────────────────────── -->
+                       <!-- ── Flywheel Signal Thresholds ────────────────────────── -->
         <div class="cfg-section">
             <div class="cfg-section-header">
-                <span class="sec-icon">📊</span>
+                <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">analytics</span>
                 <div>
                     <h2>Flywheel Signal Thresholds</h2>
                     <p>Controls when stocks are classified as CALL / PUT / WHEEL signals</p>
@@ -518,7 +499,7 @@
         <!-- ── Capital Allocation Weights ──────────────────────────── -->
         <div class="cfg-section">
             <div class="cfg-section-header">
-                <span class="sec-icon">⚖️</span>
+                <span class="material-symbols-outlined" style="font-size:22px; color:var(--purple);">balance</span>
                 <div>
                     <h2>Capital Allocation Weights</h2>
                     <p>How available risk capital is split between CALL / WHEEL / PUT strategies. Must sum to 1.0.</p>
@@ -535,7 +516,7 @@
         <!-- ── Covered Call Parameters ─────────────────────────────── -->
         <div class="cfg-section">
             <div class="cfg-section-header">
-                <span class="sec-icon">📞</span>
+                <span class="material-symbols-outlined" style="font-size:22px; color:var(--green);">call</span>
                 <div>
                     <h2>Covered Call Parameters</h2>
                     <p>Strike selection, premium estimation, and DTE target for covered call suggestions</p>
@@ -553,7 +534,7 @@
         <!-- ── Early Exit Parameters ───────────────────────────────── -->
         <div class="cfg-section">
             <div class="cfg-section-header">
-                <span class="sec-icon">🏃</span>
+                <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">directions_run</span>
                 <div>
                     <h2>Early Exit / Buy-To-Close</h2>
                     <p>When to suggest closing a position early to lock in premium decay profits</p>
@@ -567,7 +548,7 @@
         <!-- ── Calendar Bounds ─────────────────────────────────────── -->
         <div class="cfg-section">
             <div class="cfg-section-header">
-                <span class="sec-icon">📅</span>
+                <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">calendar_month</span>
                 <div>
                     <h2>Calendar Navigation Bounds</h2>
                     <p>How far back and forward the portfolio calendar can be browsed</p>
@@ -579,13 +560,48 @@
             </div>
         </div>
 
+        <!-- ── Cache TTL configurations ─────────────────────────────── -->
+        <div class="cfg-section">
+            <div class="cfg-section-header">
+                <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">hourglass_top</span>
+                <div>
+                    <h2>Cache Time-To-Live (TTL) Settings</h2>
+                    <p>Configure persistent cache intervals (seconds) for market, historical and account data</p>
+                </div>
+            </div>
+            <div class="cfg-rows">
+                {{ _self.cfgRow('cache.ttl.finnhub.quote', 'Finnhub Quote TTL', 'Time-To-Live in seconds for Finnhub real-time asset price quotes.', config['cache.ttl.finnhub.quote'], 'integer') }}
+                {{ _self.cfgRow('cache.ttl.finnhub.earnings', 'Finnhub Earnings TTL', 'Time-To-Live in seconds for Finnhub earnings calendar events.', config['cache.ttl.finnhub.earnings'], 'integer') }}
+                {{ _self.cfgRow('cache.ttl.finnhub.dividends', 'Finnhub Dividends TTL', 'Time-To-Live in seconds for Finnhub stock dividend schedules.', config['cache.ttl.finnhub.dividends'], 'integer') }}
+                {{ _self.cfgRow('cache.ttl.broker.portfolio', 'Broker Portfolio TTL', 'Time-To-Live in seconds for aggregated broker account portfolios & balances.', config['cache.ttl.broker.portfolio'], 'integer') }}
+                {{ _self.cfgRow('cache.ttl.broker.history', 'Broker Account History TTL', 'Time-To-Live in seconds for 30-day broker account transaction activity log.', config['cache.ttl.broker.history'], 'integer') }}
+                {{ _self.cfgRow('cache.ttl.broker.chain', 'Broker Option Chain TTL', 'Time-To-Live in seconds for broker option chains queries.', config['cache.ttl.broker.chain'], 'integer') }}
+        </div>
+
+        <!-- ── API Connection Settings ─────────────────────────────── -->
+        <div class="cfg-section">
+            <div class="cfg-section-header">
+                <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">settings_ethernet</span>
+                <div>
+                    <h2>API Connection Settings</h2>
+                    <p>Configure request timeouts and parameters for external brokerage and data APIs</p>
+                </div>
+            </div>
+            <div class="cfg-rows">
+                {{ _self.cfgRow('api.timeout.broker.default', 'Broker Default Timeout', 'Timeout in seconds for standard broker API connections (e.g. portfolio queries).', config['api.timeout.broker.default'], 'float') }}
+                {{ _self.cfgRow('api.timeout.broker.transactions', 'Broker History Timeout', 'Timeout in seconds for historical transaction log queries.', config['api.timeout.broker.transactions'], 'float') }}
+                {{ _self.cfgRow('api.timeout.finnhub.default', 'Finnhub Default Timeout', 'Timeout in seconds for Finnhub quote and dividend API connections.', config['api.timeout.finnhub.default'], 'float') }}
+                {{ _self.cfgRow('broker.option_chain.strike_count', 'Option Strike Count Limit', 'Number of option contract strike prices returned above/below the money.', config['broker.option_chain.strike_count'], 'integer') }}
+            </div>
+        </div>
+
         <!-- ── Persistent Cache & Storage Management ───────────────────── -->
         <div class="cfg-section" id="cfgCacheSection">
             <div class="cfg-section-header">
-                <span class="sec-icon">⚡</span>
+                <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">bolt</span>
                 <div>
                     <h2>Persistent Cache & Storage Management</h2>
-                    <p>Persists Finnhub market data and sanitized non-PII Schwab aggregates in SQLite (<code>var/data.db</code>)</p>
+                    <p>Persists Finnhub market data and sanitized non-PII broker aggregates in SQLite (<code>var/data.db</code>)</p>
                 </div>
             </div>
 
@@ -599,7 +615,7 @@
                     <div style="font-size:20px; font-weight:800; color:var(--green);" id="cacheFinnhubCount">{{ cacheStats.finnhubEntries|default(0) }} Items</div>
                 </div>
                 <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
-                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Sanitized Schwab Data</div>
+                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Sanitized Broker Data</div>
                     <div style="font-size:20px; font-weight:800; color:var(--purple);" id="cacheSchwabCount">{{ cacheStats.schwabEntries|default(0) }} Masked</div>
                 </div>
                 <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
@@ -609,18 +625,18 @@
             </div>
 
             <div style="background:rgba(21,128,61,0.08); border:1px solid rgba(63,185,80,0.25); border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:12px; color:var(--text); line-height:1.5;">
-                🔒 <strong>Privacy & Security Enforcement:</strong> All Schwab account numbers are strictly masked to the last 4 digits (e.g. <code>***3261</code>). Personal names, tax IDs, routing numbers, and OAuth access tokens are never persisted in the cache table.
+                <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; color:var(--green);">lock</span> <strong>Privacy & Security Enforcement:</strong> All broker account numbers are strictly masked to the last 4 digits (e.g. <code>***3261</code>). Personal names, tax IDs, routing numbers, and OAuth access tokens are never persisted in the cache table.
             </div>
 
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button type="button" class="hbtn hbtn-green" style="font-size:11px; padding:8px 16px;" onclick="purgeCache('finnhub')">
-                    ⚡ Purge Finnhub Market Cache
+                <button type="button" class="hbtn hbtn-green" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('finnhub')">
+                    <span class="material-symbols-outlined" style="font-size:14px;">bolt</span> Purge Finnhub Market Cache
                 </button>
-                <button type="button" class="hbtn hbtn-purple" style="font-size:11px; padding:8px 16px;" onclick="purgeCache('schwab')">
-                    🔒 Purge Sanitized Schwab Cache
+                <button type="button" class="hbtn hbtn-purple" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('schwab')">
+                    <span class="material-symbols-outlined" style="font-size:14px;">lock</span> Purge Sanitized Broker Cache
                 </button>
-                <button type="button" class="hbtn hbtn-red" style="font-size:11px; padding:8px 16px;" onclick="purgeCache('all')">
-                    🗑 Flush All Persistent Cache
+                <button type="button" class="hbtn hbtn-red" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('all')">
+                    <span class="material-symbols-outlined" style="font-size:14px;">delete_forever</span> Flush All Persistent Cache
                 </button>
                 <span id="cachePurgeMsg" style="font-size:12px; align-self:center; margin-left:8px; font-weight:600; color:var(--green);"></span>
             </div>
@@ -631,8 +647,8 @@
     <!-- Save Bar -->
     <div class="save-bar">
         <span class="save-status" id="saveStatus">No unsaved changes.</span>
-        <button class="btn-reset" onclick="resetToDefaults()" id="btnReset">↩ Reset to Defaults</button>
-        <button class="btn-save" onclick="saveSettings()" id="btnSave" disabled>💾 Save All Changes</button>
+        <button class="btn-reset" onclick="resetToDefaults()" id="btnReset" style="display:inline-flex; align-items:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:14px;">undo</span> Reset to Defaults</button>
+        <button class="btn-save" onclick="saveSettings()" id="btnSave" disabled style="display:inline-flex; align-items:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:14px;">save</span> Save All Changes</button>
     </div>
 
     {% include 'screener/partials/_footer.html.twig' %}

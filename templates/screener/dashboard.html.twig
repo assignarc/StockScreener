@@ -6,7 +6,7 @@
 <div id="app">
     <!-- UNIFIED BRAND HEADER & NAVIGATION -->
     {% include 'screener/partials/_header.html.twig' with {
-        headerTitle: '📊 Executive <span>Dashboard</span>',
+        headerTitle: '<span class="material-symbols-outlined">dashboard</span> Executive <span>Dashboard</span>',
         headerBadge: 'Capital Flywheel Command Center'
     } %}
     {% include 'screener/partials/_nav.html.twig' %}
@@ -15,7 +15,7 @@
     <!-- FLYWHEEL CONFIGURABLE RISK BANNER -->
     <div class="fw-banner">
         <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:18px">⚙️</span>
+            <span class="material-symbols-outlined" style="font-size:24px; color:var(--blue);">settings</span>
             <div>
                 <div style="font-weight:700;font-size:13px;color:var(--text)">Flywheel Monthly Risk Guardrail: <span id="fwRiskCapText" style="color:var(--blue);cursor:pointer;font-weight:800;" onclick="changeRiskConfig()" title="Click to adjust monthly risk cap">$10,000</span> <span style="font-size:10px;color:var(--muted);">(Click to change)</span></div>
                 <div style="font-size:11px;color:var(--muted)">Enforces 100% Covered & Cash-Collateralized Option Trades (Zero Margin Traps)</div>
@@ -33,7 +33,7 @@
                 <div id="fwBarFree" class="fw-bar-free" style="width:37%" title="Available Risk Remaining"></div>
             </div>
         </div>
-        <button class="hbtn hbtn-fw" style="padding:6px 14px;font-size:12px;" onclick="openFlywheelPlanner()">⚡ View Morning Trade Package</button>
+        <button class="hbtn hbtn-fw" style="padding:6px 14px;font-size:12px; display:inline-flex; align-items:center; justify-content:center;" onclick="openFlywheelPlanner()"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">wb_twilight</span> View Morning Trade Package</button>
     </div>
 
 
@@ -67,7 +67,7 @@
         <div class="fw-panel">
             <div>
                 <div class="fw-title">
-                    <span class="fw-icon">⚙ CAPITAL FLYWHEEL ALLOCATOR</span>
+                    <span class="fw-icon"><span class="material-symbols-outlined">settings</span> CAPITAL FLYWHEEL ALLOCATOR</span>
                     <span>Live Cash Allocation (${{ cashVal|number_format(0) }})</span>
                 </div>
                 <div style="font-size:12px; color:var(--muted); margin-top:4px;">
@@ -76,15 +76,15 @@
             </div>
             <div class="fw-stats">
                 <div class="fw-pill fw-pill-call">
-                    <span>🟢 CALLs (60%):</span>
+                    <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_up</span> CALLs (60%):</span>
                     <span>${{ (cashVal * 0.60)|number_format(0) }}</span>
                 </div>
                 <div class="fw-pill fw-pill-wheel">
-                    <span>🟡 WHEEL (25%):</span>
+                    <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">autorenew</span> WHEEL (25%):</span>
                     <span>${{ (cashVal * 0.25)|number_format(0) }}</span>
                 </div>
                 <div class="fw-pill fw-pill-put">
-                    <span>🔴 PUTs (15%):</span>
+                    <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_down</span> PUTs (15%):</span>
                     <span>${{ (cashVal * 0.15)|number_format(0) }}</span>
                 </div>
             </div>
@@ -94,7 +94,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
                 <div>
                     <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--green); display:flex; align-items:center; gap:8px;">
-                        <span>🔥 Capital Flywheel — Actionable Covered Call Trades</span>
+                        <span><span class="material-symbols-outlined">auto_awesome</span> Capital Flywheel — Actionable Covered Call Trades</span>
                         <span class="hbadge" style="background:rgba(21,128,61,0.15); color:var(--green); border-color:rgba(21,128,61,0.3);">Schwab Portfolio Live</span>
                     </h3>
                     <div style="font-size:12px; color:var(--muted);">
@@ -102,12 +102,12 @@
                     </div>
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <a href="/portfolio" class="hbtn hbtn-green">💼 View Portfolio & Accounts</a>
+                    <a href="/portfolio" class="hbtn hbtn-green"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> View Portfolio & Accounts</a>
                 </div>
             </div>
 
             <div id="coveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
-                <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">⚡ Loading Schwab unencumbered stock positions...</div>
+                <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">Scanning unencumbered stock positions...</div>
             </div>
         </div>
 
@@ -116,7 +116,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
                 <div>
                     <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--purple); display:flex; align-items:center; gap:8px;">
-                        <span>🤖 Gemini AI Capital Flywheel Assistant</span>
+                        <span><span class="material-symbols-outlined">smart_toy</span> Gemini AI Capital Flywheel Assistant</span>
                         <span class="hbadge" id="geminiSourceBadge">Google Gemini 1.5 Flash</span>
                     </h3>
                     <div style="font-size:12px; color:var(--muted);">
@@ -125,14 +125,14 @@
                 </div>
                 <div>
                     <button class="hbtn hbtn-purple" onclick="loadGeminiAiIdeas(true)">
-                        ✨ Refresh Gemini AI Analysis
+                        <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">auto_awesome</span> Refresh Gemini AI Analysis
                     </button>
                 </div>
             </div>
 
 
             <div id="geminiAiCardsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
-                <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">🤖 Querying Gemini AI for portfolio trade ideas...</div>
+                <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">Querying Gemini AI for portfolio trade ideas...</div>
             </div>
         </div>
 
@@ -142,8 +142,8 @@
         <!-- TOP PORTFOLIO HOLDINGS OVERVIEW TABLE -->
         <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:0;">
-                    📈 Top Portfolio Holdings (Live Schwab Brokerage)
+                <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:0; display:flex; align-items:center; gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:18px; color:var(--green);">trending_up</span> Top Portfolio Holdings (Live Brokerage Accounts)
                 </h4>
                 <a href="/portfolio" class="hbtn" style="background:var(--bg3); border:1px solid var(--border); color:var(--blue);">View All Accounts →</a>
             </div>
@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadGeminiAiIdeas(isRefresh = false) {
     const grid = document.getElementById('geminiAiCardsGrid');
     if (isRefresh) {
-        grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">✨ Asking Gemini AI to analyze market data & generate trade ideas...</div>';
+        grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:15px; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:18px; color:var(--purple);">auto_awesome</span> Asking AI to analyze market data & generate trade ideas...</div>';
     }
 
     try {
@@ -233,16 +233,18 @@ async function loadGeminiAiIdeas(isRefresh = false) {
                             <div>Return APY: <strong class="g">${item.annualizedYield}</strong></div>
                         </div>
 
-                        <div style="font-size:11px; line-height:1.45; color:var(--text); margin-bottom:10px;">
-                            <strong>💡 AI Reasoning:</strong> ${item.reasoning}
+                        <div style="font-size:11px; line-height:1.45; color:var(--text); margin-bottom:10px; display:flex; gap:4px; align-items:flex-start;">
+                            <span class="material-symbols-outlined" style="font-size:16px; color:var(--yellow); flex-shrink:0;">lightbulb</span>
+                            <div><strong>AI Reasoning:</strong> ${item.reasoning}</div>
                         </div>
-                        <div style="font-size:11px; line-height:1.45; color:var(--muted); margin-bottom:12px; background:rgba(248,81,73,0.05); padding:6px 8px; border-radius:6px; border:1px solid rgba(248,81,73,0.2);">
-                            <strong>🔒 Level 1 Safety:</strong> ${item.riskGuardrail}
+                        <div style="font-size:11px; line-height:1.45; color:var(--muted); margin-bottom:12px; background:rgba(248,81,73,0.05); padding:6px 8px; border-radius:6px; border:1px solid rgba(248,81,73,0.2); display:flex; gap:4px; align-items:flex-start;">
+                            <span class="material-symbols-outlined" style="font-size:16px; color:var(--red); flex-shrink:0;">security</span>
+                            <div><strong>Level 1 Safety:</strong> ${item.riskGuardrail}</div>
                         </div>
                     </div>
 
-                    <a href="/screener" class="hbtn hbtn-purple" style="width:100%; justify-content:center; text-align:center; text-decoration:none; display:flex; padding:8px 0;">
-                        ⚡ Inspect ${item.ticker} Option Chain
+                    <a href="/screener" class="hbtn hbtn-purple" style="width:100%; justify-content:center; text-align:center; text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:8px 0;">
+                        <span class="material-symbols-outlined" style="font-size:16px;">bolt</span> Inspect ${item.ticker} Option Chain
                     </a>
                 `;
                 grid.appendChild(card);
@@ -290,8 +292,8 @@ async function loadCoveredCallSuggestions() {
                             <span class="g" style="font-size:15px; font-weight:800;">+$${s.estTotalIncome} Income</span>
                         </div>
 
-                        <div style="background:rgba(21,128,61,0.08); border:1px solid rgba(21,128,61,0.25); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700;">
-                            ⚡ ${s.tradeActionText}
+                        <div style="background:rgba(21,128,61,0.08); border:1px solid rgba(21,128,61,0.25); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700; display:flex; align-items:center; gap:6px;">
+                            <span class="material-symbols-outlined" style="font-size:16px;">bolt</span> ${s.tradeActionText}
                         </div>
 
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--bg2); padding:8px; border-radius:6px; border:1px solid var(--border);">
@@ -306,8 +308,8 @@ async function loadCoveredCallSuggestions() {
                         </p>
                     </div>
 
-                    <a href="/screener?symbol=${s.symbol}" class="hbtn hbtn-blue" style="width:100%; justify-content:center; text-align:center; text-decoration:none; display:flex; padding:8px 0;">
-                        🔍 Inspect ${s.symbol} Option Chain & Gemini AI Signals
+                    <a href="/screener?symbol=${s.symbol}" class="hbtn hbtn-blue" style="width:100%; justify-content:center; text-align:center; text-decoration:none; display:inline-flex; align-items:center; gap:6px; padding:8px 0;">
+                        <span class="material-symbols-outlined" style="font-size:16px;">search</span> Inspect ${s.symbol} Option Chain & AI Signals
                     </a>
 
                 `;

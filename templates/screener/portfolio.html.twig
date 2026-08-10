@@ -6,7 +6,7 @@
 <div id="app">
     <!-- UNIFIED BRAND HEADER & NAVIGATION -->
     {% include 'screener/partials/_header.html.twig' with {
-        headerTitle: '💼 Brokerage <span>Portfolio</span>',
+        headerTitle: '<span class="material-symbols-outlined">work</span> Brokerage <span>Portfolio</span>',
         headerBadge: 'Live Brokerage API'
     } %}
     {% include 'screener/partials/_nav.html.twig' %}
@@ -17,10 +17,10 @@
         <div class="data-source-widget" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:10px 16px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; font-size:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <span style="font-weight:700; color:var(--text); display:flex; align-items:center; gap:6px; font-family:'Outfit',sans-serif;">
-                    <span style="font-size:14px;">📡</span> Data Origin & Compliance:
+                    <span class="material-symbols-outlined" style="font-size:16px;">sensors</span> Data Origin & Compliance:
                 </span>
                 <span class="hbadge" style="background:rgba(56,189,248,0.15); color:var(--blue); border-color:rgba(56,189,248,0.3); font-weight:700;">
-                    🏦 {{ portfolio.dataSource.provider|default('Connected Brokerage API') }}
+                    <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">account_balance</span> {{ portfolio.dataSource.provider|default('Connected Brokerage API') }}
                 </span>
                 <span style="font-family:'SFMono-Regular',Consolas,monospace; font-size:11px; color:var(--purple); background:var(--bg3); padding:3px 8px; border-radius:6px; border:1px solid rgba(188,140,255,0.2);">
                     {{ portfolio.dataSource.endpoint|default('/trader/v1/accounts?fields=positions') }}
@@ -41,11 +41,11 @@
                 {% endif %}
 
                 <span style="color:var(--muted); border-left:1px solid var(--border); padding-left:10px;">
-                    🕒 Last Synced: <strong style="color:var(--text);">{{ portfolio.dataSource.timestamp|default("now"|date("H:i T")) }}</strong>
+                    Last Synced: <strong style="color:var(--text);">{{ portfolio.dataSource.timestamp|default("now"|date("H:i T")) }}</strong>
                 </span>
 
                 <span style="color:var(--muted); border-left:1px solid var(--border); padding-left:10px;" title="Strict PII Sanitization Enforced">
-                    🔒 <span style="color:var(--green); font-weight:600;">Non-PII Encrypted</span>
+                    <span class="material-symbols-outlined" style="font-size:14px; margin-right:2px; color:var(--green);">lock</span> <span style="color:var(--green); font-weight:600;">Non-PII Encrypted</span>
                 </span>
             </div>
         </div>
@@ -71,81 +71,86 @@
 
         <!-- VIEW MODE SELECTOR SUBTABS -->
         <div class="view-subtabs">
-            <button class="vtab-btn active" id="vtabCalendar" onclick="switchPortSubView('calendar')">📅 Options & Equities Calendar</button>
-            <button class="vtab-btn" id="vtabFlywheel" onclick="switchPortSubView('flywheel')">🔥 Suggested Covered Call Trades</button>
-            <button class="vtab-btn" id="vtabAccounts" onclick="switchPortSubView('holdings')">💼 Portfolio Holdings & Accounts</button>
+            <button class="vtab-btn active" id="vtabCalendar" onclick="switchPortSubView('calendar')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">calendar_month</span> Options & Equities Calendar</button>
+            <button class="vtab-btn" id="vtabFlywheel" onclick="switchPortSubView('flywheel')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">auto_awesome</span> Suggested Covered Call Trades</button>
+            <button class="vtab-btn" id="vtabAccounts" onclick="switchPortSubView('holdings')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> Portfolio Holdings & Accounts</button>
+            <button class="vtab-btn" id="vtabHistory" onclick="switchPortSubView('history')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">history</span> Activity & Cash History</button>
             <div style="margin-left:auto; display:flex; gap:8px;">
                 <button type="button" class="hbtn" style="background:var(--bg3); font-size:11px; padding:6px 12px;" onclick="forceRefreshPortfolioData()" title="Bypass persistent cache and query live brokerage APIs">
-                    🔄 Refresh Live Data
+                    <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">sync</span> Refresh Live Data
                 </button>
-                <a href="/screener" class="hbtn hbtn-green">⚡ Load Cash into Options Allocator</a>
+                <a href="/screener" class="hbtn hbtn-green"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">bolt</span> Load Cash into Options Allocator</a>
             </div>
         </div>
 
         <!-- SUBVIEW: 30-DAY ACCOUNT ACTIVITY & REALIZED CASH HISTORY -->
-        <div id="subViewHistory" style="display:none;">
-            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:24px;">
+        <div id="subViewHistory" style="display:none; margin-bottom:24px;">
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
                     <div>
                         <h3 style="font-family:'Outfit',sans-serif; font-size:18px; margin:0 0 4px 0; color:var(--text); display:flex; align-items:center; gap:8px;">
-                            <span>⏮ 30-Day Account Activity & Realized Cash Flow</span>
-                            <span class="hbadge" style="background:rgba(188,140,255,0.18); color:var(--purple); border-color:rgba(188,140,255,0.35);">Live Brokerage History</span>
+                            <span class="material-symbols-outlined" style="font-size:20px; color:var(--purple);">history</span>
+                            <span>Brokerage Account Activity & Cash Flow Log</span>
+                            <span class="hbadge" style="background:rgba(188,140,255,0.15); color:var(--purple); border-color:rgba(188,140,255,0.3);">Live History</span>
                         </h3>
                         <div style="font-size:12px; color:var(--muted);">
-                            Realized dividends, option premiums harvested, early profit locks (BTC), and collateral releases over the last 30 days.
+                            Realized dividends, option premiums harvested, and account activities cached from your Schwab accounts.
                         </div>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center;">
                         <button class="hbtn" style="padding:6px 12px; font-size:11px; background:var(--bg3);" onclick="loadPortfolioHistory(15)">15 Days</button>
-                        <button class="hbtn active" style="padding:6px 12px; font-size:11px; background:var(--blue); color:#fff;" id="btnHist30" onclick="loadPortfolioHistory(30)">30 Days</button>
+                        <button class="hbtn active" style="padding:6px 12px; font-size:11px; background:var(--bg3);" id="btnHist30" onclick="loadPortfolioHistory(30)">30 Days</button>
                         <button class="hbtn" style="padding:6px 12px; font-size:11px; background:var(--bg3);" onclick="loadPortfolioHistory(60)">60 Days</button>
+                        <button class="hbtn hbtn-green" style="padding:6px 12px; font-size:11px; font-weight:700;" onclick="loadPortfolioHistory(30, true)">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px; vertical-align:middle;">sync</span> Force Pull Latest
+                        </button>
                     </div>
                 </div>
 
                 <!-- 30-DAY STAT CARDS -->
-                <div class="hist-grid" id="histStatCards">
-                    <div class="hist-card">
-                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Realized Cash Dividends</div>
-                        <div class="val g" id="histTotalDivs">$0.00</div>
+                <div class="hist-grid" id="histStatCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:20px;">
+                    <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Realized Cash Dividends</div>
+                        <div class="val g" id="histTotalDivs" style="font-size:20px; font-weight:800;">$0.00</div>
                     </div>
-                    <div class="hist-card">
-                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Option Premiums Harvested</div>
-                        <div class="val" style="color:var(--yellow);" id="histTotalPremiums">$0.00</div>
+                    <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Option Premiums Harvested</div>
+                        <div class="val" style="color:var(--yellow); font-size:20px; font-weight:800;" id="histTotalPremiums">$0.00</div>
                     </div>
-                    <div class="hist-card">
-                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Net Realized Cash Impact</div>
-                        <div class="val" style="color:var(--blue);" id="histNetCash">$0.00</div>
+                    <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Net Realized Cash Impact</div>
+                        <div class="val" style="color:var(--blue); font-size:20px; font-weight:800;" id="histNetCash">$0.00</div>
                     </div>
-                    <div class="hist-card">
-                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Completed Activities</div>
-                        <div class="val" style="color:var(--purple);" id="histTxCount">0 Transactions</div>
+                    <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Completed Activities</div>
+                        <div class="val" style="color:var(--purple); font-size:20px; font-weight:800;" id="histTxCount">0 Transactions</div>
                     </div>
                 </div>
 
                 <!-- TRANSACTION ACTIVITY TABLE -->
-                <div class="hist-table-wrap">
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid var(--border); background:var(--bg3); flex-wrap:wrap; gap:10px;">
+                <div class="hist-table-wrap" style="background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid var(--border); background:var(--bg2); flex-wrap:wrap; gap:10px;">
                         <span style="font-weight:700; font-size:12px; color:var(--text); text-transform:uppercase; letter-spacing:.5px;">📜 Brokerage Activity Log</span>
                         <div style="display:flex; gap:6px;">
                             <button class="hbtn active" style="padding:4px 8px; font-size:10px;" id="histFilterAll" onclick="filterHistoryRows('ALL')">All</button>
                             <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterDiv" onclick="filterHistoryRows('DIVIDEND')">💵 Dividends</button>
-                            <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterOpt" onclick="filterHistoryRows('OPTION')">💰 Options</button>
+                            <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterOpt" onclick="filterHistoryRows('OPTION')">Option Deals</button>
                             <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterTrade" onclick="filterHistoryRows('TRADE')">📈 Trades</button>
                         </div>
                     </div>
-                    <table class="hist-table" id="histTable">
+                    <table class="hist-table" id="histTable" style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
                         <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Account</th>
-                                <th>Activity Type</th>
-                                <th>Symbol</th>
-                                <th>Description / Rationale</th>
-                                <th style="text-align:right;">Cash Flow Impact</th>
+                            <tr style="border-bottom:1px solid var(--border); background:var(--bg2); color:var(--muted);">
+                                <th style="padding:12px 16px;">Date</th>
+                                <th style="padding:12px 16px;">Account</th>
+                                <th style="padding:12px 16px;">Activity Type</th>
+                                <th style="padding:12px 16px;">Symbol</th>
+                                <th style="padding:12px 16px;">Description / Rationale</th>
+                                <th style="padding:12px 16px; text-align:right;">Cash Flow Impact</th>
                             </tr>
                         </thead>
                         <tbody id="histTableBody">
-                            <tr><td colspan="6" style="text-align:center; padding:20px;" class="m">Loading 30-day account history...</td></tr>
+                            <tr><td colspan="6" style="text-align:center; padding:20px;" class="m">Loading account history...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -158,7 +163,8 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
                     <div>
                         <h3 style="font-family:'Outfit',sans-serif; font-size:18px; margin:0 0 4px 0; color:var(--text); display:flex; align-items:center; gap:8px;">
-                            <span>🔥 Capital Flywheel — Suggested Covered Call Trades</span>
+                            <span class="material-symbols-outlined" style="font-size:20px; color:var(--yellow);">local_fire_department</span>
+                            <span>Capital Flywheel — Suggested Covered Call Trades</span>
                             <span class="hbadge" style="background:rgba(63,185,80,0.2); color:var(--green); border-color:rgba(63,185,80,0.4);">Option Level 1 Basic</span>
                         </h3>
                         <div style="font-size:12px; color:var(--muted);">
@@ -179,7 +185,8 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
                     <div>
                         <h3 style="font-family:'Outfit',sans-serif; font-size:18px; color:var(--text); margin:0 0 4px 0; display:flex; align-items:center; gap:8px;">
-                            <span>📅 Options & Equities Forward Calendar</span>
+                            <span class="material-symbols-outlined" style="font-size:20px; color:var(--blue);">calendar_month</span>
+                            <span>Options & Equities Forward Calendar</span>
                         </h3>
                         <div style="font-size:12px; color:var(--muted);">
                             Browse forward up to 6 months to view future option expirations, projected cash releases, and earnings announcements.
@@ -219,16 +226,16 @@
 
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; background:var(--bg2); padding:12px 18px; border-radius:12px; border:1px solid var(--border);">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:16px;">💼</span>
+                    <span class="material-symbols-outlined" style="font-size:20px; color:var(--purple);">account_balance_wallet</span>
                     <strong style="font-size:14px; color:var(--text);">Portfolio Holdings & Accounts</strong>
                     <span class="hbadge" style="font-size:11px;">{% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities</span>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">View Mode:</span>
                     <div style="display:flex; background:var(--bg3); padding:3px; border-radius:8px; border:1px solid var(--border);">
-                        <button id="accViewModeGrid" onclick="setAccountViewLayout('grid')" style="border:none; background:var(--bg2); color:var(--text); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease;">🎴 Cards (1-6 / Row)</button>
-                        <button id="accViewModeList" onclick="setAccountViewLayout('list')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease;">☰ Compact List</button>
-                        <button id="accViewModeSec" onclick="setAccountViewLayout('security')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease;">📈 Security Aggregated</button>
+                        <button id="accViewModeGrid" onclick="setAccountViewLayout('grid')" style="border:none; background:var(--bg2); color:var(--text); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">grid_view</span> Cards (1-6 / Row)</button>
+                        <button id="accViewModeList" onclick="setAccountViewLayout('list')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">view_list</span> Compact List</button>
+                        <button id="accViewModeSec" onclick="setAccountViewLayout('security')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">layers</span> Security Aggregated</button>
                     </div>
                 </div>
             </div>
@@ -245,8 +252,8 @@
                                 <div onclick="toggleAccCard('{{ cardId }}')" style="display:flex; justify-content:space-between; align-items:flex-start; padding:16px 18px; cursor:pointer; background:var(--bg2); user-select:none; border-bottom:1px solid var(--border);">
                                     <div>
                                         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-                                            <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0; color:var(--text);">
-                                                🏦 {% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}
+                                            <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0; color:var(--text); display:flex; align-items:center; gap:6px;">
+                                                <span class="material-symbols-outlined" style="font-size:18px; color:var(--purple);">account_balance</span> {% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}
                                             </h3>
                                             <span id="{{ cardId }}_chevron" style="font-size:12px; color:var(--muted); transition:transform 0.2s ease; transform:rotate(0deg);">▼</span>
                                         </div>
@@ -581,12 +588,26 @@ async function forceRefreshPortfolioData() {
 
 let historyRawTransactions = [];
 
-async function loadPortfolioHistory(days = 30) {
+async function loadPortfolioHistory(days = 30, force = false) {
     const tbody = document.getElementById('histTableBody');
     if (!tbody) return;
 
+    // Toggle active state on day selector buttons
+    const btn30 = document.getElementById('btnHist30');
+    if (btn30) {
+        document.querySelectorAll('#subViewHistory .hbtn').forEach(b => {
+            if (b.textContent.includes('Days') || b.textContent.includes('Days')) {
+                b.classList.remove('active');
+            }
+        });
+    }
+
     try {
-        const res = await fetch(`/api/schwab/history?days=${days}`);
+        const url = force ? `/api/broker/history/aggregated?days=${days}&force=1` : `/api/broker/history/aggregated?days=${days}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status} (${res.statusText || 'Server Error'})`);
+        }
         const json = await res.json();
 
         if (json.status === 'success' && json.data) {
@@ -790,9 +811,6 @@ function renderCalendarForSelectedMonth() {
                         <strong style="color:var(--blue); font-size:14px; margin-left:4px;">${events.length} Records</strong>
                     </div>
                 </div>
-                <button onclick="switchPortSubView('history')" class="hbtn hbtn-purple" style="padding:5px 12px; font-size:11px;">
-                    ⏮ View 30-Day Activity History
-                </button>
             </div>
         `;
     }
@@ -833,29 +851,35 @@ function renderCalendarForSelectedMonth() {
                     <div style="display:flex; flex-direction:column; gap:4px;">
                         ${dayEvents.map(e => {
                             const encData = encodeURIComponent(JSON.stringify(e));
+                            const isHist  = e.category === 'HISTORY';
                             const isEarn  = e.category && e.category.startsWith('EARNINGS');
                             const isDiv   = e.category && e.category.startsWith('DIVIDEND');
                             const isPast  = !!e.isPast;
 
                             let bg, fg, border, label;
-                            if (isDiv) {
+                            if (isHist) {
+                                bg     = 'rgba(56,189,248,0.15)';
+                                fg     = 'var(--blue)';
+                                border = 'rgba(56,189,248,0.4)';
+                                label  = `${e.isCredit !== false ? '+' : ''}$${Math.abs(e.amount || 0)} ${e.symbol || ''}`;
+                            } else if (isDiv) {
                                 bg     = isPast ? 'rgba(34,197,94,0.12)' : 'rgba(34,197,94,0.22)';
                                 fg     = 'var(--green)';
                                 border = isPast ? 'rgba(34,197,94,0.25)' : 'rgba(34,197,94,0.5)';
-                                label  = isPast ? `✓ ${e.symbol} Div +$${e.totalPayout}` : `💵 ${e.symbol} Div +$${e.totalPayout}`;
+                                label  = isPast ? `${e.symbol} Div +$${e.totalPayout || ''}` : `${e.symbol} Div +$${e.totalPayout || ''}`;
                             } else if (isEarn) {
                                 bg     = isPast ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.22)';
                                 fg     = 'var(--purple)';
                                 border = isPast ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.5)';
-                                label  = isPast ? `📢 ${e.symbol} Q Report` : `📢 ${e.symbol} Earnings`;
+                                label  = isPast ? `${e.symbol} Q Report` : `${e.symbol} Earnings`;
                             } else {
                                 bg     = isPast ? 'rgba(210,153,34,0.12)' : 'rgba(210,153,34,0.22)';
                                 fg     = 'var(--yellow)';
                                 border = isPast ? 'rgba(210,153,34,0.25)' : 'rgba(210,153,34,0.5)';
-                                label  = isPast ? `✓ ${e.symbol} $${e.strike}` : `🔒 ${e.symbol} $${e.strike}`;
+                                label  = isPast ? `${e.symbol} $${e.strike}` : `${e.symbol} $${e.strike}`;
                             }
                             
-                            const catStr = isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION');
+                            const catStr = isHist ? 'HISTORY' : (isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION'));
                             return `
                                 <div class="tip cal-event-bubble" data-category="${catStr}" data-is-past="${isPast ? '1' : '0'}" style="width:100%; border-bottom:none;">
                                     <div onclick="openCalEventCard('${encData}')" style="font-size:10px; font-weight:700; padding:3px 6px; border-radius:4px; background:${bg}; color:${fg}; border:1px solid ${border}; cursor:pointer; display:flex; justify-content:space-between; align-items:center; opacity:${isPast ? '0.85' : '1'};">
@@ -904,6 +928,7 @@ function renderCalendarForSelectedMonth() {
         if (filterBarContainer) filterBarContainer.innerHTML = '';
     } else {
         // Quick Category Filter Bar
+        const histCount = sortedEvents.filter(e => e.category === 'HISTORY').length;
         const divCount  = sortedEvents.filter(e => e.category && e.category.startsWith('DIVIDEND')).length;
         const optCount  = sortedEvents.filter(e => e.category && e.category.startsWith('OPTION')).length;
         const earnCount = sortedEvents.filter(e => e.category && e.category.startsWith('EARNINGS')).length;
@@ -913,10 +938,11 @@ function renderCalendarForSelectedMonth() {
         if (filterBarContainer) {
             filterBarContainer.innerHTML = `
                 <button class="fbtn active" id="calFilterAll" onclick="filterCalTimeline('ALL')">All Events (${sortedEvents.length})</button>
-                <button class="fbtn" id="calFilterDiv" onclick="filterCalTimeline('DIVIDEND')">💵 Dividends (${divCount})</button>
-                <button class="fbtn" id="calFilterOpt" onclick="filterCalTimeline('OPTION')">🔒 Options (${optCount})</button>
-                <button class="fbtn" id="calFilterEarn" onclick="filterCalTimeline('EARNINGS')">📢 Earnings (${earnCount})</button>
-                <button class="fbtn" id="calFilterPast" onclick="filterCalTimeline('PAST')">⏮ Past 30 Days (${pastCount})</button>
+                <button class="fbtn" id="calFilterHist" onclick="filterCalTimeline('HISTORY')"><span class="material-symbols-outlined" style="font-size:12px; margin-right:2px;">history</span> Activity (${histCount})</button>
+                <button class="fbtn" id="calFilterDiv" onclick="filterCalTimeline('DIVIDEND')">Dividends (${divCount})</button>
+                <button class="fbtn" id="calFilterOpt" onclick="filterCalTimeline('OPTION')">Options (${optCount})</button>
+                <button class="fbtn" id="calFilterEarn" onclick="filterCalTimeline('EARNINGS')">Earnings (${earnCount})</button>
+                <button class="fbtn" id="calFilterPast" onclick="filterCalTimeline('PAST')">Past 30 Days (${pastCount})</button>
             `;
         }
 
@@ -954,11 +980,16 @@ function renderCalendarForSelectedMonth() {
             const isOpt  = ev.category && ev.category.startsWith('OPTION');
             const isPast = !!ev.isPast;
 
+            const isHist = ev.category === 'HISTORY';
             let badgeBg = 'rgba(88,166,255,0.15)';
             let badgeFg = 'var(--blue)';
             let dotColor = 'var(--blue)';
 
-            if (isDiv) {
+            if (isHist) {
+                dotColor = ev.isCredit !== false ? 'var(--green)' : 'var(--yellow)';
+                badgeBg  = 'rgba(56,189,248,0.18)';
+                badgeFg  = 'var(--blue)';
+            } else if (isDiv) {
                 badgeBg  = isPast ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.25)';
                 badgeFg  = 'var(--green)';
                 dotColor = 'var(--green)';
@@ -977,7 +1008,7 @@ function renderCalendarForSelectedMonth() {
 
             const item = document.createElement('div');
             item.className = 'timeline-item';
-            item.dataset.category = isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION');
+            item.dataset.category = isHist ? 'HISTORY' : (isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION'));
             item.dataset.isPast = isPast ? '1' : '0';
             item.style.position = 'relative';
             item.style.cursor = 'pointer';
@@ -1044,6 +1075,7 @@ function filterCalTimeline(filter) {
     document.querySelectorAll('#calendarEventsList .fbtn').forEach(btn => btn.classList.remove('active'));
     const btnMap = {
         'ALL': 'calFilterAll',
+        'HISTORY': 'calFilterHist',
         'DIVIDEND': 'calFilterDiv',
         'OPTION': 'calFilterOpt',
         'EARNINGS': 'calFilterEarn',
@@ -1079,13 +1111,25 @@ function openCalEventCard(encodedJson) {
     if (!modal || !cnt) return;
 
     const isOption = ev.category && ev.category.startsWith('OPTION');
+    const isHistory = ev.category === 'HISTORY';
+    const isDividend = ev.category && ev.category.startsWith('DIVIDEND');
+    const isEarnings = ev.category && ev.category.startsWith('EARNINGS');
 
-    title.innerHTML = isOption 
-        ? `🔒 Option Expiration Card: ${ev.symbol} ${ev.strike || ''}` 
-        : `📈 Equity Holding Details: ${ev.symbol}`;
+    if (isOption) {
+        title.innerHTML = `🔒 Option Expiration Card: ${ev.symbol} ${ev.strike || ''}`;
+    } else if (isHistory) {
+        const symbolText = ev.realSymbol && ev.realSymbol !== 'CURRENCY_USD' && ev.realSymbol !== 'USD' ? ` (${ev.realSymbol})` : '';
+        title.innerHTML = `📜 Transaction: ${ev.accountNickname || 'Broker'}${symbolText}`;
+    } else if (isDividend) {
+        title.innerHTML = `💵 Dividend Details: ${ev.symbol}`;
+    } else if (isEarnings) {
+        title.innerHTML = `📢 Earnings Release: ${ev.symbol}`;
+    } else {
+        title.innerHTML = `📈 Event Details: ${ev.symbol}`;
+    }
 
     let accountRowsHtml = '';
-    if (ev.accountBreakdown && ev.accountBreakdown.length > 0) {
+    if (isOption && ev.accountBreakdown && ev.accountBreakdown.length > 0) {
         accountRowsHtml = `
             <div style="margin-top:14px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px;">
                 <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
@@ -1120,25 +1164,49 @@ function openCalEventCard(encodedJson) {
         `;
     }
 
+    let detailGridHtml = '';
+    if (isOption) {
+        detailGridHtml = `
+            <div>Option Market Value: <strong style="color:var(--yellow);">${ev.marketValue || 'N/A'}</strong></div>
+            <div>Pledged Collateral: <strong class="g">${ev.pledgedShares || '0'} Shares (${ev.symbol})</strong></div>
+        `;
+    } else if (isHistory) {
+        detailGridHtml = `
+            <div>Net Cash Impact: <strong class="${ev.amount >= 0 ? 'g' : 'r'}">${ev.marketValue || ev.amount}</strong></div>
+            <div>Details: <strong>${ev.details || 'N/A'}</strong></div>
+        `;
+    } else if (isDividend) {
+        detailGridHtml = `
+            <div>Dividend Payout: <strong class="g">${ev.marketValue || ev.totalPayout || 'N/A'}</strong></div>
+            <div>Rate per Share: <strong>$${ev.amountPerShare || '0.00'}</strong></div>
+            <div>Shares Held: <strong>${ev.sharesHeld || '0'} sh</strong></div>
+        `;
+    } else if (isEarnings) {
+        detailGridHtml = `
+            <div style="grid-column: span 2;">Details: <strong>${ev.details || 'N/A'}</strong></div>
+        `;
+    }
+
     cnt.innerHTML = `
         <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border); margin-bottom:14px;">
             <h4 style="font-size:16px; font-weight:800; color:var(--text); margin:0 0 6px 0;">${ev.title}</h4>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px; margin-top:10px;">
                 <div>Event Date: <strong style="color:var(--blue);">${ev.date}</strong></div>
                 <div>Category: <strong style="color:var(--purple);">${ev.category}</strong></div>
-                <div>Option Market Value: <strong style="color:var(--yellow);">${ev.marketValue}</strong></div>
-                <div>Pledged Collateral: <strong class="g">${ev.pledgedShares} Shares (${ev.symbol})</strong></div>
+                ${detailGridHtml}
             </div>
         </div>
 
         ${accountRowsHtml}
 
         <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.25); border-radius:8px; padding:12px; margin-top:14px; margin-bottom:16px;">
-            <h5 style="font-size:13px; font-weight:700; color:var(--blue); margin:0 0 6px 0;">💡 Cash Projection Explanation</h5>
+            <h5 style="font-size:13px; font-weight:700; color:var(--blue); margin:0 0 6px 0;">💡 Event Details</h5>
             <p style="margin:0; font-size:12px; color:var(--text); line-height:1.5;">
                 ${isOption 
                     ? `On <strong>${ev.date}</strong>, this <strong>${ev.symbol} $${ev.strike} Call</strong> expires. If exercised (assigned), selling your <strong>${ev.pledgedShares} shares</strong> at the <strong>$${ev.strike} strike price</strong> releases <strong class="g">+$${ev.assignedCashIfExercised ? ev.assignedCashIfExercised.toLocaleString() : '0'} in cash liquidity</strong> back into your brokerage account!`
-                    : `This represents your active <strong>${ev.symbol} equity holding</strong> in your connected brokerage portfolio.`}
+                    : (isHistory ? `Recorded transaction activity in your connected brokerage account: <strong>${ev.details}</strong>.` : `This is a recorded <strong>${ev.symbol}</strong> event on your portfolio calendar.`)}
+            </p>
+        </div>
         <div style="display:flex; justify-content:flex-end;">
             <a href="/screener?symbol=${ev.symbol}" class="hbtn hbtn-blue" style="text-decoration:none;">⚡ Inspect ${ev.symbol} Option Chain</a>
         </div>
@@ -1304,7 +1372,7 @@ function setAccountViewLayout(mode) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    switchPortSubView('holdings');
+    switchPortSubView('calendar');
     loadPortCoveredCallSuggestions();
 });
 

@@ -207,9 +207,9 @@
                         Google Gemini API Key (Optional)
                     </label>
                     <div style="display:flex; gap:6px;">
-                        <button type="button" class="slick-pill-btn" onclick="pasteToField('wizGeminiKey')">📋 Paste</button>
-                        <button type="button" class="slick-pill-btn" onclick="copyFromField('wizGeminiKey', this)">📋 Copy</button>
-                        <button type="button" class="slick-pill-btn" onclick="clearField('wizGeminiKey')">✕ Clear</button>
+                        <button type="button" class="slick-pill-btn" onclick="pasteToField('wizGeminiKey')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                        <button type="button" class="slick-pill-btn" onclick="copyFromField('wizGeminiKey', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                        <button type="button" class="slick-pill-btn" onclick="clearField('wizGeminiKey')"><span class="material-symbols-outlined">close</span> Clear</button>
                     </div>
                 </div>
                 <div class="key-field-wrap">
@@ -229,8 +229,8 @@
     <!-- WIZARD STEP 5: REVIEW & LAUNCH -->
     <div class="wiz-panel" id="wizStep5" style="display:none;">
         <div class="card" style="padding:32px; border-radius:16px; text-align:center;">
-            <div style="width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg, rgba(63,185,80,0.3), rgba(2,132,199,0.3)); color:var(--green); display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px auto; border:2px solid var(--green);">
-                🚀
+            <div style="width:64px; height:64px; border-radius:50%; background:linear-gradient(135deg, rgba(63,185,80,0.3), rgba(2,132,199,0.3)); color:var(--green); display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; border:2px solid var(--green);">
+                <span class="material-symbols-outlined" style="font-size:32px;">rocket_launch</span>
             </div>
             <h2 style="font-size:24px; font-weight:800; margin:0 0 8px 0; color:var(--text); font-family:'Outfit',sans-serif;">
                 You're Ready to Launch!
@@ -256,8 +256,8 @@
 
             <div style="display:flex; justify-content:center; gap:12px;">
                 <button type="button" class="hbtn" style="background:var(--bg3); padding:10px 24px;" onclick="showWizardStep(4)">← Back</button>
-                <button type="button" class="hbtn hbtn-green" id="btnSaveAndLaunch" style="padding:12px 32px; font-size:14px; font-weight:800;" onclick="completeSetupAndLaunch()">
-                    💾 Save Configurations & Launch Portfolio →
+                <button type="button" class="hbtn hbtn-green" id="btnSaveAndLaunch" style="padding:12px 32px; font-size:14px; font-weight:800; display:inline-flex; align-items:center; gap:8px;" onclick="completeSetupAndLaunch()">
+                    <span class="material-symbols-outlined">save</span> Save Configurations & Launch Portfolio →
                 </button>
             </div>
             <div id="saveLaunchMsg" style="margin-top:14px; font-size:13px; font-weight:700;"></div>
@@ -725,10 +725,10 @@ function toggleSecretVisibility(fieldId, btn) {
     if (!el) return;
     if (el.type === 'password') {
         el.type = 'text';
-        if (btn) btn.innerHTML = '🔒 Hide';
+        if (btn) btn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span> Hide';
     } else {
         el.type = 'password';
-        if (btn) btn.innerHTML = '👁 Show';
+        if (btn) btn.innerHTML = '<span class="material-symbols-outlined">visibility</span> Show';
     }
 }
 
@@ -751,12 +751,12 @@ async function testFinnhubKey() {
         const json = await res.json();
 
         if (json.status === 'success') {
-            resDiv.innerHTML = `<span style="color:var(--green);">✅ ${json.message}</span>`;
+            resDiv.innerHTML = `<span style="color:var(--green); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> ${json.message}</span>`;
         } else {
-            resDiv.innerHTML = `<span style="color:var(--red);">❌ ${json.message}</span>`;
+            resDiv.innerHTML = `<span style="color:var(--red); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">error</span> ${json.message}</span>`;
         }
     } catch (e) {
-        resDiv.innerHTML = `<span style="color:var(--red);">❌ Connection error: ${e.message}</span>`;
+        resDiv.innerHTML = `<span style="color:var(--red); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">error</span> Connection error: ${e.message}</span>`;
     }
 }
 
@@ -782,7 +782,7 @@ async function completeSetupAndLaunch() {
         const json = await res.json();
 
         if (json.status === 'success') {
-            msg.innerHTML = '<span style="color:var(--green);">✅ Setup Complete! Redirecting to your portfolio…</span>';
+            msg.innerHTML = '<span style="color:var(--green); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">check_circle</span> Setup Complete! Redirecting to your portfolio…</span>';
             setTimeout(() => {
                 window.location.href = '/portfolio';
             }, 1000);
@@ -791,8 +791,8 @@ async function completeSetupAndLaunch() {
         }
     } catch (e) {
         btn.disabled = false;
-        btn.textContent = '💾 Save Configurations & Launch Portfolio →';
-        msg.innerHTML = `<span style="color:var(--red);">❌ ${e.message}</span>`;
+        btn.innerHTML = '<span class="material-symbols-outlined">save</span> Save Configurations & Launch Portfolio →';
+        msg.innerHTML = `<span style="color:var(--red); display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">error</span> ${e.message}</span>`;
     }
 }
 </script>

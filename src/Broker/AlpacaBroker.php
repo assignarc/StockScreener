@@ -99,7 +99,7 @@ class AlpacaBroker implements BrokerInterface
         return $portfolio;
     }
 
-    public function getAccountHistory(int $days = 30): array
+    public function getAccountHistory(int $days = 30, bool $forceRefresh = false): array
     {
         return [];
     }

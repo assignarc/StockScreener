@@ -98,8 +98,8 @@ class OpenAiLlmService implements LlmServiceInterface
 
     public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = []): array
     {
-        $cashAvailable = $portfolio['cashBalance'] ?? 25143.09;
-        $netLiquidation = $portfolio['netLiquidationValue'] ?? 410506.47;
+        $cashAvailable = $portfolio['cashBalance'] ?? 0.0;
+        $netLiquidation = $portfolio['netLiquidationValue'] ?? 0.0;
         $equities = $portfolio['aggregatedEquities'] ?? [];
 
         $equitySummary = [];

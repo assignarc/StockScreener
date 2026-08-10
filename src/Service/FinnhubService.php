@@ -40,8 +40,8 @@ class FinnhubService
                         'symbol' => $symbol,
                         'token'  => $key,
                     ],
-                    'timeout' => 2.5,
-                    'max_duration' => 5.0,
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                    'max_duration' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0) * 2.0,
                 ]);
 
                 if ($response->getStatusCode() === 200) {
@@ -63,7 +63,7 @@ class FinnhubService
             }
 
             return null;
-        }, 300); // 5 minutes TTL
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.quote', 300)); // configurable TTL
     }
 
     /**
@@ -197,8 +197,8 @@ class FinnhubService
 
                 $response = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/calendar/earnings', [
                     'query' => $query,
-                    'timeout' => 3.5,
-                    'max_duration' => 7.0,
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0) + 0.5,
+                    'max_duration' => ((float) $this->appConfig->get('api.timeout.finnhub.default', 3.0) + 0.5) * 2.0,
                 ]);
 
                 if ($response->getStatusCode() === 200) {
@@ -210,7 +210,7 @@ class FinnhubService
             }
 
             return [];
-        }, 86400) ?? []; // 24 hours TTL
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.earnings', 86400)) ?? []; // configurable TTL
     }
 
     /**
@@ -227,7 +227,7 @@ class FinnhubService
 
         return $this->cache->get($cacheKey, function() use ($symbol, $key) {
             if (!$key) {
-                return $this->getFallbackDividends($symbol);
+                return [];
             }
 
             try {
@@ -236,8 +236,8 @@ class FinnhubService
                         'symbol' => $symbol,
                         'token'  => $key,
                     ],
-                    'timeout' => 3.0,
-                    'max_duration' => 6.0,
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                    'max_duration' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0) * 2.0,
                 ]);
 
                 if ($response->getStatusCode() === 200) {
@@ -251,68 +251,7 @@ class FinnhubService
                 $this->logger->warning("Finnhub Dividends API error for {$symbol}: " . $e->getMessage());
             }
 
-            return $this->getFallbackDividends($symbol);
-        }, 86400) ?? []; // 24 hours TTL
-    }
-
-    /**
-     * Quantitative dividend schedule fallback for common equities when external API is silent or rate limited
-     */
-    public function getFallbackDividends(string $symbol): array
-    {
-        $symbol = strtoupper($symbol);
-        $schedules = [
-            'AAPL' => ['amount' => 0.25, 'months' => [2, 5, 8, 11], 'day' => 15, 'payDay' => 28],
-            'MSFT' => ['amount' => 0.75, 'months' => [2, 5, 8, 11], 'day' => 20, 'payDay' => 12],
-            'NVDA' => ['amount' => 0.04, 'months' => [3, 6, 9, 12], 'day' => 10, 'payDay' => 28],
-            'AVGO' => ['amount' => 5.25, 'months' => [3, 6, 9, 12], 'day' => 18, 'payDay' => 30],
-            'AMD'  => ['amount' => 0.00, 'months' => [], 'day' => 0, 'payDay' => 0],
-            'AMZN' => ['amount' => 0.00, 'months' => [], 'day' => 0, 'payDay' => 0],
-            'META' => ['amount' => 0.50, 'months' => [3, 6, 9, 12], 'day' => 22, 'payDay' => 26],
-            'GOOGL'=> ['amount' => 0.20, 'months' => [3, 6, 9, 12], 'day' => 10, 'payDay' => 17],
-            'JPM'  => ['amount' => 1.15, 'months' => [1, 4, 7, 10], 'day' => 5,  'payDay' => 30],
-            'JNJ'  => ['amount' => 1.24, 'months' => [2, 5, 8, 11], 'day' => 24, 'payDay' => 10],
-            'PG'   => ['amount' => 1.01, 'months' => [1, 4, 7, 10], 'day' => 18, 'payDay' => 15],
-            'CSCO' => ['amount' => 0.40, 'months' => [1, 4, 7, 10], 'day' => 4,  'payDay' => 24],
-            'INTC' => ['amount' => 0.125,'months' => [2, 5, 8, 11], 'day' => 6,  'payDay' => 1],
-            'KO'   => ['amount' => 0.485,'months' => [3, 6, 9, 12], 'day' => 14, 'payDay' => 1],
-            'SPY'  => ['amount' => 1.78, 'months' => [3, 6, 9, 12], 'day' => 20, 'payDay' => 30],
-            'QQQ'  => ['amount' => 0.72, 'months' => [3, 6, 9, 12], 'day' => 20, 'payDay' => 30],
-        ];
-
-        if (!isset($schedules[$symbol]) || $schedules[$symbol]['amount'] <= 0) {
             return [];
-        }
-
-        $sch = $schedules[$symbol];
-        $currentYear = (int) date('Y');
-        $dividends = [];
-
-        // Generate past 30 days and forward 6 months dividend dates
-        for ($y = $currentYear - 1; $y <= $currentYear + 1; $y++) {
-            foreach ($sch['months'] as $m) {
-                $exDate   = sprintf('%04d-%02d-%02d', $y, $m, $sch['day']);
-                $payMonth = ($sch['payDay'] < $sch['day']) ? ($m + 1) : $m;
-                $payYear  = $y;
-                if ($payMonth > 12) {
-                    $payMonth = 1;
-                    $payYear++;
-                }
-                $payDate = sprintf('%04d-%02d-%02d', $payYear, $payMonth, $sch['payDay']);
-
-                $dividends[] = [
-                    'symbol'      => $symbol,
-                    'amount'      => $sch['amount'],
-                    'date'        => $exDate,
-                    'paymentDate' => $payDate,
-                    'recordDate'  => date('Y-m-d', strtotime($exDate . ' +1 day')),
-                    'currency'    => 'USD',
-                ];
-            }
-        }
-
-        return $dividends;
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.dividends', 86400)) ?? []; // configurable TTL
     }
 }
-
-
