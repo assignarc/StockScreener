@@ -32,7 +32,7 @@ This application connects to **live brokerage account balances and positions**, 
 Follow these steps to run the application locally on macOS or Linux:
 
 ### 1. Prerequisites
-- **PHP 8.4+** with the following extensions: `sqlite3`, `pdo_sqlite`, `curl`, `mbstring`, `openssl`, `xml`.
+- **PHP 8.4+** with the following extensions: `sqlite3`, $\text{pdo\_sqlite}$, `curl`, `mbstring`, `openssl`, `xml`.
 - **Composer** (PHP dependency manager).
 - **Symfony CLI** (recommended for local web server).
 
@@ -57,7 +57,7 @@ composer install
 cp .env.local .env.local
 ```
 
-Open `.env.local` and review operational runtime configurations (e.g. `TRADING_ENABLED=false` kill switch). 
+Open `.env.local` and review operational runtime configurations (e.g. $\text{TRADING\_ENABLED}=\text{false}$ kill switch). 
 
 > [!NOTE]
 > All API credentials (Schwab Developer App Key/Secret, Finnhub API Key, Gemini API Key) are **not** stored in `.env.local`. They are configured securely via the Web Setup Wizard page (`/setup`) or the Settings page (`/settings`) during first-run and stored directly in the local SQLite database (`var/data.db`).
@@ -147,7 +147,7 @@ The application leverages Google's Gemini models to act as an automated option s
 
 To protect capital and comply with self-directed account safety rules, this project enforces **strict read-only guardrails**:
 
-1. **Write-Action Block:** By default, all code paths capable of placing trades or executing assignments are hard-blocked at the system layer unless `TRADING_ENABLED=true` is set in the environment variables.
+1. **Write-Action Block:** By default, all code paths capable of placing trades or executing assignments are hard-blocked at the system layer unless $\text{TRADING\_ENABLED}=\text{true}$ is set in the environment variables.
 2. **Access Token Encapsulation:** Access tokens and refresh tokens are stored locally inside the sqlite cache. The frontend client never has direct access to the raw OAuth tokens; it communicates strictly via sanitized JSON APIs (`/api/broker/history/aggregated`, `/api/flywheel/calendar`).
 3. **Non-PII Masking:** Account numbers are masked on-the-fly (`***3261`) before being returned by the controller.
 
@@ -173,11 +173,11 @@ The **Capital Flywheel Engine** evaluates signals and calculates covered call ta
 System configurations are managed in [AppConfigService.php](src/Service/AppConfigService.php) and stored in SQLite. Here is what each setting controls:
 
 ### Flywheel & Trade Parameters
-- **`flywheel.covered_call.otm_pct` (default `0.06`):** Selects option strikes that are 6% out-of-the-money, balancing yield vs. upside assignment risk.
-- **`flywheel.covered_call.cost_basis_buffer` (default `1.02`):** Demands a 2% buffer above stock purchase price, protecting your principal capital from being called away at a loss.
-- **`flywheel.covered_call.dte_target` (default `35`):** Targets contracts expiring in 35 days, capturing optimal theta decay acceleration.
-- **`flywheel.covered_call.min_shares` (default `100`):** Enforces a strict minimum of 100 shares for Covered Call writes (Option Level 1 compliance).
-- **`flywheel.early_exit.btc_profit_threshold` (default `50.0`):** Recommends a **Buy-To-Close (BTC)** order once 50% of the sold premium has decayed, locking in profits and freeing up collateral early.
+- **$\text{flywheel.covered\_call.otm\_pct}$ (default `0.06`):** Selects option strikes that are 6% out-of-the-money, balancing yield vs. upside assignment risk.
+- **$\text{flywheel.covered\_call.cost\_basis\_buffer}$ (default `1.02`):** Demands a 2% buffer above stock purchase price, protecting your principal capital from being called away at a loss.
+- **$\text{flywheel.covered\_call.dte\_target}$ (default `35`):** Targets contracts expiring in 35 days, capturing optimal theta decay acceleration.
+- **$\text{flywheel.covered\_call.min\_shares}$ (default `100`):** Enforces a strict minimum of 100 shares for Covered Call writes (Option Level 1 compliance).
+- **$\text{flywheel.early\_exit.btc\_profit\_threshold}$ (default `50.0`):** Recommends a **Buy-To-Close (BTC)** order once 50% of the sold premium has decayed, locking in profits and freeing up collateral early.
 
 ### Caching Layers & API Gating
 - **`cache.ttl.broker.portfolio` (default `60`):** Caches live portfolio balances for 1 minute to keep numbers active without hammering Schwab APIs.
@@ -191,7 +191,7 @@ System configurations are managed in [AppConfigService.php](src/Service/AppConfi
 
 - **Database Cryptography:** Sensitive keys and OAuth tokens are stored in the SQLite database (`var/data.db`) rather than plain-text `.env` configuration files. Access tokens, refresh tokens, and API keys are encrypted at-rest using **AES-256-GCM** (authenticated symmetric encryption) with a unique system key.
 - **Token Isolation:** The frontend browser has zero access to OAuth tokens. Authentication refreshes are handled exclusively by backend services. The UI interacts with sanitized API payloads (`/api/broker/history/aggregated`) where account numbers are masked (`***3261`).
-- **Read-Only Kill Switch (`TRADING_ENABLED=false`):** Hardcoded safeguard that prevents any trade placement logic or cash movement from executing, locking the hub into a read-only portfolio analysis platform.
+- **Read-Only Kill Switch ($\text{TRADING\_ENABLED}=\text{false}$):** Hardcoded safeguard that prevents any trade placement logic or cash movement from executing, locking the hub into a read-only portfolio analysis platform.
 
 ---
 
