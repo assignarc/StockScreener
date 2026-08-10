@@ -222,4 +222,4 @@ System configurations are managed in [AppConfigService.php](src/Service/AppConfi
 ### ⚠️ Simulated & Mocked Components
 
 - **Non-Schwab Broker APIs:** Alpaca, Robinhood, IBKR, and Tastytrade adapters return placeholder states (they implement [BrokerInterface](src/Broker/BrokerInterface.php) but do not execute live API requests).
-- **Order Execution:** Order routing is mocked; the application advises on covered call parameters but does not route orders back to Schwab.
+- **Order Execution:** Order routing and trade placement are entirely non-existent. The application is strictly a read-only advisor/screener and does not contain any code pathways or API connections to place trades or route orders.
