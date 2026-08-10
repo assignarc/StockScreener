@@ -5,13 +5,14 @@ An options analysis, compounding flywheel, and live multi-account portfolio trac
 ---
 
 ## 📖 Table of Contents
-1. [Overview & Industry Context](#-overview--industry-context)
+
+1. [Overview &amp; Industry Context](#-overview--industry-context)
 2. [Getting Started (Local Setup)](#-getting-started-local-setup)
-3. [System Architecture & Multi-Broker Interface](#-system-architecture--multi-broker-interface)
-4. [Data Provenance & Integration Flow](#-data-provenance--integration-flow)
+3. [System Architecture &amp; Multi-Broker Interface](#-system-architecture--multi-broker-interface)
+4. [Data Provenance &amp; Integration Flow](#-data-provenance--integration-flow)
 5. [Capital Flywheel Compounding Engine](#-capital-flywheel-compounding-engine)
-6. [Gemini AI Analysis & Option Signals](#-gemini-ai-analysis--option-signals)
-7. [Security & Strict Read-Only Guardrails](#-security--strict-read-only-guardrails)
+6. [Gemini AI Analysis &amp; Option Signals](#-gemini-ai-analysis--option-signals)
+7. [Security &amp; Strict Read-Only Guardrails](#-security--strict-read-only-guardrails)
 8. [Implementation Status (Completed vs. Mocked)](#-implementation-status-completed-vs-mocked)
 
 ---
@@ -32,11 +33,13 @@ This application connects to **live brokerage account balances and positions**, 
 Follow these steps to run the application locally on macOS or Linux:
 
 ### 1. Prerequisites
-- **PHP 8.4+** with the following extensions: `sqlite3`, $\text{pdo\_sqlite}$, `curl`, `mbstring`, `openssl`, `xml`.
+
+- **PHP 8.4+** with the following extensions: `sqlite3`, $\text{pdo}\_\text{sqlite}$, `curl`, `mbstring`, `openssl`, `xml`.
 - **Composer** (PHP dependency manager).
 - **Symfony CLI** (recommended for local web server).
 
 ### 🛠 Technology Stack
+
 - **Backend Framework:** Symfony 8.1
 - **Language Runtime:** PHP 8.4+
 - **Database Engine:** SQLite (Local storage file `var/data.db`)
@@ -47,6 +50,7 @@ Follow these steps to run the application locally on macOS or Linux:
 - **Typography & Assets:** Google Fonts (Outfit, Inter) and Google Material Symbols Outlined icons
 
 ### 2. Installation Steps
+
 Clone the repository and navigate to the project root directory:
 
 ```bash
@@ -57,12 +61,13 @@ composer install
 cp .env.local .env.local
 ```
 
-Open `.env.local` and review operational runtime configurations (e.g. $\text{TRADING\_ENABLED}=\text{false}$ kill switch). 
+Open `.env.local` and review operational runtime configurations (e.g. $\text{TRADING}\_\text{ENABLED}=\text{false}$ kill switch).
 
 > [!NOTE]
 > All API credentials (Schwab Developer App Key/Secret, Finnhub API Key, Gemini API Key) are **not** stored in `.env.local`. They are configured securely via the Web Setup Wizard page (`/setup`) or the Settings page (`/settings`) during first-run and stored directly in the local SQLite database (`var/data.db`).
 
 ### 3. Initialize Local Database
+
 The application uses a lightweight local SQLite database to store user configurations, tokens, and persistent caches:
 
 ```bash
@@ -74,11 +79,13 @@ php bin/console app:bootstrap-db
 ```
 
 ### 4. Start Local Development Server
+
 Start the local web server using the Symfony CLI:
 
 ```bash
 symfony server:start -d
 ```
+
 Your local application will be available at **`https://127.0.0.1:8000`** with local TLS certificates.
 
 ---
@@ -100,6 +107,7 @@ The application utilizes a polymorphic, decoupled **Multi-Broker Interface** str
 ```
 
 All broker adapters implement the same interface signature, ensuring the application core remains broker-agnostic:
+
 - **`getAccountPortfolio()`**: Fetches account balances, buying power, and active positions.
 - **`getAccountHistory(int $days, bool $forceRefresh)`**: Fetches settlement records and cash flow impacts.
 - **`getOptionChain(string $symbol, float $currentPrice)`**: Queries option strikes, bid/ask spreads, and open interest.
@@ -110,15 +118,15 @@ All broker adapters implement the same interface signature, ensuring the applica
 
 The application pulls structural, market, and intelligence data from three distinct integration layers:
 
-| Data Layer | Integration Endpoint | Provider / Origin | Details |
-| :--- | :--- | :--- | :--- |
-| **Brokerage Balance & Positions** | `GET /trader/v1/accounts` | **Schwab API** | Returns live balances, margins, positions, and average cost basis. |
-| **Account Custom Nicknames** | `GET /trader/v1/userPreference` | **Schwab API** | Queries nickname preferences to replace raw account numbers with labels (e.g. `V-Brokerage`, `V-HSA`). |
-| **Brokerage Account History** | `GET /accounts/{hash}/transactions` | **Schwab API** | Gathers trade execution logs, cash inflows, and fees. |
-| **Equity Price Quotes** | `GET /api/v1/quote` | **Finnhub API** | Fetches active real-time ticker prices. |
-| **Company Payout Calendars** | `GET /api/v1/stock/dividend2` | **Finnhub API** | Retrieves historical and upcoming cash dividend pay dates. |
-| **Corporate Earnings** | `GET /api/v1/calendar/earnings` | **Finnhub API** | Resolves corporate earnings announcement calendars. |
-| **AI Trade Reasoning** | `POST /v1beta/models/gemini...` | **Google Gemini** | Analyzes option chains to generate probability calculations and strike suggestions. |
+| Data Layer                              | Integration Endpoint                  | Provider / Origin       | Details                                                                                                   |
+| :-------------------------------------- | :------------------------------------ | :---------------------- | :-------------------------------------------------------------------------------------------------------- |
+| **Brokerage Balance & Positions** | `GET /trader/v1/accounts`           | **Schwab API**    | Returns live balances, margins, positions, and average cost basis.                                        |
+| **Account Custom Nicknames**      | `GET /trader/v1/userPreference`     | **Schwab API**    | Queries nickname preferences to replace raw account numbers with labels (e.g.`V-Brokerage`, `V-HSA`). |
+| **Brokerage Account History**     | `GET /accounts/{hash}/transactions` | **Schwab API**    | Gathers trade execution logs, cash inflows, and fees.                                                     |
+| **Equity Price Quotes**           | `GET /api/v1/quote`                 | **Finnhub API**   | Fetches active real-time ticker prices.                                                                   |
+| **Company Payout Calendars**      | `GET /api/v1/stock/dividend2`       | **Finnhub API**   | Retrieves historical and upcoming cash dividend pay dates.                                                |
+| **Corporate Earnings**            | `GET /api/v1/calendar/earnings`     | **Finnhub API**   | Resolves corporate earnings announcement calendars.                                                       |
+| **AI Trade Reasoning**            | `POST /v1beta/models/gemini...`     | **Google Gemini** | Analyzes option chains to generate probability calculations and strike suggestions.                       |
 
 ---
 
@@ -147,7 +155,7 @@ The application leverages Google's Gemini models to act as an automated option s
 
 To protect capital and comply with self-directed account safety rules, this project enforces **strict read-only guardrails**:
 
-1. **Write-Action Block:** By default, all code paths capable of placing trades or executing assignments are hard-blocked at the system layer unless $\text{TRADING\_ENABLED}=\text{true}$ is set in the environment variables.
+1. **Write-Action Block:** By default, all code paths capable of placing trades or executing assignments are hard-blocked at the system layer unless $\text{TRADING}\_\text{ENABLED}=\text{true}$ is set in the environment variables.
 2. **Access Token Encapsulation:** Access tokens and refresh tokens are stored locally inside the sqlite cache. The frontend client never has direct access to the raw OAuth tokens; it communicates strictly via sanitized JSON APIs (`/api/broker/history/aggregated`, `/api/flywheel/calendar`).
 3. **Non-PII Masking:** Account numbers are masked on-the-fly (`***3261`) before being returned by the controller.
 
@@ -158,9 +166,13 @@ To protect capital and comply with self-directed account safety rules, this proj
 The **Capital Flywheel Engine** evaluates signals and calculates covered call targets using quantitative rules defined in [FlywheelService.php](src/Service/FlywheelService.php):
 
 1. **Covered Call Strike Target:** Matches stock positions against option chains. The recommended strike is selected using the target out-of-the-money percentage:
-   $$\text{Target Strike} \ge \text{Current Price} \times (1 + \text{flywheel.covered\_call.otm\_pct})$$
+   $$
+   \text{Target Strike} \ge \text{Current Price} \times (1 + \text{flywheel.covered}\_\text{call.otm}\_\text{pct})
+   $$
 2. **Cost Basis Buffer:** To prevent selling calls below your cost basis (which locks in a capital loss), strikes must satisfy:
-   $$\text{Target Strike} \ge \text{Average Cost Basis} \times \text{flywheel.covered\_call.cost\_basis\_buffer}$$
+   $$
+   \text{Target Strike} \ge \text{Average Cost Basis} \times \text{flywheel.covered}\_\text{call.cost}\_\text{basis}\_\text{buffer}
+   $$
 3. **Signal Classification:**
    - **🟢 CALL:** Triggered when the AI conviction score is high ($\ge 70$) and projected target price upside is high ($>15.0\%$). Indicates long-term bullish holding.
    - **🔴 PUT:** Triggered when stock score drops ($<45$) or upside is negative. Advises buying protective puts for hedging.
@@ -173,13 +185,15 @@ The **Capital Flywheel Engine** evaluates signals and calculates covered call ta
 System configurations are managed in [AppConfigService.php](src/Service/AppConfigService.php) and stored in SQLite. Here is what each setting controls:
 
 ### Flywheel & Trade Parameters
-- **$\text{flywheel.covered\_call.otm\_pct}$ (default `0.06`):** Selects option strikes that are 6% out-of-the-money, balancing yield vs. upside assignment risk.
-- **$\text{flywheel.covered\_call.cost\_basis\_buffer}$ (default `1.02`):** Demands a 2% buffer above stock purchase price, protecting your principal capital from being called away at a loss.
-- **$\text{flywheel.covered\_call.dte\_target}$ (default `35`):** Targets contracts expiring in 35 days, capturing optimal theta decay acceleration.
-- **$\text{flywheel.covered\_call.min\_shares}$ (default `100`):** Enforces a strict minimum of 100 shares for Covered Call writes (Option Level 1 compliance).
-- **$\text{flywheel.early\_exit.btc\_profit\_threshold}$ (default `50.0`):** Recommends a **Buy-To-Close (BTC)** order once 50% of the sold premium has decayed, locking in profits and freeing up collateral early.
+
+- **$\text{flywheel.covered}\_\text{call.otm}\_\text{pct}$ (default `0.06`):** Selects option strikes that are 6% out-of-the-money, balancing yield vs. upside assignment risk.
+- **$\text{flywheel.covered}\_\text{call.cost}\_\text{basis}\_\text{buffer}$ (default `1.02`):** Demands a 2% buffer above stock purchase price, protecting your principal capital from being called away at a loss.
+- **$\text{flywheel.covered}\_\text{call.dte}\_\text{target}$ (default `35`):** Targets contracts expiring in 35 days, capturing optimal theta decay acceleration.
+- **$\text{flywheel.covered}\_\text{call.min}\_\text{shares}$ (default `100`):** Enforces a strict minimum of 100 shares for Covered Call writes (Option Level 1 compliance).
+- **$\text{flywheel.early}\_\text{exit.btc}\_\text{profit}\_\text{threshold}$ (default `50.0`):** Recommends a **Buy-To-Close (BTC)** order once 50% of the sold premium has decayed, locking in profits and freeing up collateral early.
 
 ### Caching Layers & API Gating
+
 - **`cache.ttl.broker.portfolio` (default `60`):** Caches live portfolio balances for 1 minute to keep numbers active without hammering Schwab APIs.
 - **`cache.ttl.broker.history` (default `604800`):** Caches transaction aggregates for 7 days.
 - **`cache.ttl.finnhub.dividends` & `cache.ttl.finnhub.earnings` (default `604800`):** Caches corporate payout events and calendar releases for 7 days to avoid Finnhub rate-limiting errors.
@@ -191,13 +205,14 @@ System configurations are managed in [AppConfigService.php](src/Service/AppConfi
 
 - **Database Cryptography:** Sensitive keys and OAuth tokens are stored in the SQLite database (`var/data.db`) rather than plain-text `.env` configuration files. Access tokens, refresh tokens, and API keys are encrypted at-rest using **AES-256-GCM** (authenticated symmetric encryption) with a unique system key.
 - **Token Isolation:** The frontend browser has zero access to OAuth tokens. Authentication refreshes are handled exclusively by backend services. The UI interacts with sanitized API payloads (`/api/broker/history/aggregated`) where account numbers are masked (`***3261`).
-- **Read-Only Kill Switch ($\text{TRADING\_ENABLED}=\text{false}$):** Hardcoded safeguard that prevents any trade placement logic or cash movement from executing, locking the hub into a read-only portfolio analysis platform.
+- **Read-Only Kill Switch ($\text{TRADING}\_\text{ENABLED}=\text{false}$):** Hardcoded safeguard that prevents any trade placement logic or cash movement from executing, locking the hub into a read-only portfolio analysis platform.
 
 ---
 
 ## 📋 Implementation Status (Completed vs. Mocked)
 
 ### ✅ Completed & Live Features
+
 - **Schwab OAuth 2.0 Integration:** Full authentication flow, secure token refreshes, and `/accounts` fetching.
 - **Schwab Nicknames Resolution:** Dynamic lookup of nicknames from Schwab's `/userPreference` API.
 - **Persistent Transactions Cache:** Incremental merging of transactions into a local sqlite cache with an indefinite **1-year TTL** to bypass Schwab rate-limits.
@@ -205,5 +220,6 @@ System configurations are managed in [AppConfigService.php](src/Service/AppConfi
 - **Dynamic Chronological Calendar:** Filters option expirations, projected dividend cash flows, and transaction logs.
 
 ### ⚠️ Simulated & Mocked Components
+
 - **Non-Schwab Broker APIs:** Alpaca, Robinhood, IBKR, and Tastytrade adapters return placeholder states (they implement [BrokerInterface](src/Broker/BrokerInterface.php) but do not execute live API requests).
 - **Order Execution:** Order routing is mocked; the application advises on covered call parameters but does not route orders back to Schwab.
