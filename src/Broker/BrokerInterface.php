@@ -12,6 +12,7 @@ interface BrokerInterface
     public function isTradingEnabled(): bool;
     public function getAccountPortfolio(): array;
     public function getAccountHistory(int $days = 30, bool $forceRefresh = false): array;
+    public function getOpenOrders(bool $forceRefresh = false): array;
     public function getOptionChain(string $symbol, float $currentPrice): array;
     public function purgeTokens(): bool;
     public function refreshAccessToken(): ?string;

@@ -90,8 +90,35 @@ class SetupController extends AbstractController
         if (isset($payload['finnhub_api_key'])) {
             $this->appConfig->set('finnhub.api_key', trim($payload['finnhub_api_key']));
         }
+        if (isset($payload['llm_provider'])) {
+            $this->appConfig->set('llm.provider', trim($payload['llm_provider']));
+        }
         if (isset($payload['gemini_api_key'])) {
             $this->appConfig->set('gemini.api_key', trim($payload['gemini_api_key']));
+        }
+        if (isset($payload['gemini_model'])) {
+            $this->appConfig->set('gemini.model', trim($payload['gemini_model']));
+        }
+        if (isset($payload['openai_api_key'])) {
+            $this->appConfig->set('openai.api_key', trim($payload['openai_api_key']));
+        }
+        if (isset($payload['openai_model'])) {
+            $this->appConfig->set('openai.model', trim($payload['openai_model']));
+        }
+        if (isset($payload['claude_api_key'])) {
+            $this->appConfig->set('claude.api_key', trim($payload['claude_api_key']));
+        }
+        if (isset($payload['claude_model'])) {
+            $this->appConfig->set('claude.model', trim($payload['claude_model']));
+        }
+        if (isset($payload['local_llm_url'])) {
+            $this->appConfig->set('local_llm.url', trim($payload['local_llm_url']));
+        }
+        if (isset($payload['local_llm_api_key'])) {
+            $this->appConfig->set('local_llm.api_key', trim($payload['local_llm_api_key']));
+        }
+        if (isset($payload['local_llm_model'])) {
+            $this->appConfig->set('local_llm.model', trim($payload['local_llm_model']));
         }
         if (isset($payload['broker_instances']) && is_array($payload['broker_instances'])) {
             $this->appConfig->saveBrokerInstances($payload['broker_instances']);

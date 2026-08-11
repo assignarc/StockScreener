@@ -75,11 +75,52 @@
             <button class="vtab-btn" id="vtabFlywheel" onclick="switchPortSubView('flywheel')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">auto_awesome</span> Suggested Covered Call Trades</button>
             <button class="vtab-btn" id="vtabAccounts" onclick="switchPortSubView('holdings')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> Portfolio Holdings & Accounts</button>
             <button class="vtab-btn" id="vtabHistory" onclick="switchPortSubView('history')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">history</span> Activity & Cash History</button>
+            <button class="vtab-btn" id="vtabOrders" onclick="switchPortSubView('orders')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">pending_actions</span> Working & Open Orders</button>
             <div style="margin-left:auto; display:flex; gap:8px;">
                 <button type="button" class="hbtn" style="background:var(--bg3); font-size:11px; padding:6px 12px;" onclick="forceRefreshPortfolioData()" title="Bypass persistent cache and query live brokerage APIs">
                     <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">sync</span> Refresh Live Data
                 </button>
                 <a href="/screener" class="hbtn hbtn-green"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">bolt</span> Load Cash into Options Allocator</a>
+            </div>
+        </div>
+
+        <!-- SUBVIEW: WORKING & OPEN ORDERS -->
+        <div id="subViewOrders" class="orders-view-container" style="display:none;">
+            <div class="orders-view-card">
+                <div class="orders-header-wrap">
+                    <div class="orders-title-block">
+                        <h3 class="orders-title">
+                            <span class="material-symbols-outlined">pending_actions</span>
+                            <span>Working & Pending Orders</span>
+                            <span class="orders-badge-count">Open Orders</span>
+                        </h3>
+                        <div class="orders-desc">
+                            Active, working, and pending options/equity orders retrieved across your brokerage accounts.
+                        </div>
+                    </div>
+                    <button class="hbtn hbtn-blue" onclick="loadOpenOrders(true)">
+                        <span class="material-symbols-outlined">sync</span> Refresh Orders
+                    </button>
+                </div>
+
+                <div class="orders-table-wrap">
+                    <table class="orders-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Account</th>
+                                <th>Details</th>
+                                <th>Instruction</th>
+                                <th>Limit Price</th>
+                                <th>Quantity (Filled/Total)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody">
+                            <tr><td colspan="7" class="orders-table-loader">Loading open orders...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -280,10 +321,10 @@
                                 <!-- COLLAPSIBLE DETAILS BODY -->
                                 <div id="{{ cardId }}_body" style="display:none; padding:14px 18px; background:var(--bg2); border-top:1px solid var(--border);">
                                     <!-- POSITIONS LIST -->
-                                    <div style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 8px;">Top Holdings (Sorted by Value)</div>
-                                    <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:14px;">
+                                    <div class="cache-stat-label">Top Holdings (Sorted by Value)</div>
+                                    <div class="positions-list">
                                         {% for p in acc.positions|default([]) %}
-                                            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:var(--bg3); border-radius:6px; border:1px solid var(--border); font-size:12px;">
+                                            <div class="position-item">
                                                 <div>
                                                     <strong style="color:var(--text);">{{ p.symbol }}</strong>
                                                     <span style="font-size:10px; color:var(--muted);">({{ p.quantity }})</span>
@@ -296,7 +337,31 @@
                                                 </div>
                                             </div>
                                         {% else %}
-                                            <div class="m" style="font-size:11px; text-align:center; padding:8px;">No positions</div>
+                                            <div class="orders-table-loader">No positions</div>
+                                        {% endfor %}
+                                    </div>
+
+                                    <!-- ACTIVE OPEN ORDERS -->
+                                    <div class="cache-stat-label">Working & Pending Orders</div>
+                                    <div class="order-legs-list">
+                                        {% for o in acc.openOrders|default([]) %}
+                                            <div class="order-leg-item">
+                                                <div class="order-leg-header">
+                                                    <span class="order-leg-id">#{{ o.order_id }}</span>
+                                                    <span class="order-leg-badge">{{ o.status }}</span>
+                                                </div>
+                                                <div class="order-leg-desc">
+                                                    {% for l in o.legs|default([]) %}
+                                                        {{ l.instruction }} <strong>{{ l.symbol }}</strong> x{{ l.quantity }}<br>
+                                                    {% endfor %}
+                                                </div>
+                                                <div class="order-leg-meta">
+                                                    <span>Price: <strong>${{ o.price|number_format(2) }}</strong></span>
+                                                    <span>Filled: <strong>{{ o.filled_quantity }}/{{ o.quantity }}</strong></span>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <div class="orders-table-loader">No working orders</div>
                                         {% endfor %}
                                     </div>
                                 </div>
@@ -548,11 +613,13 @@ function switchPortSubView(mode) {
     const subCal = document.getElementById('subViewCalendar');
     const subFly = document.getElementById('subViewFlywheel');
     const subHis = document.getElementById('subViewHistory');
+    const subOrd = document.getElementById('subViewOrders');
 
     const btnAcc = document.getElementById('vtabAccounts');
     const btnCal = document.getElementById('vtabCalendar');
     const btnFly = document.getElementById('vtabFlywheel');
     const btnHis = document.getElementById('vtabHistory');
+    const btnOrd = document.getElementById('vtabOrders');
 
     const isHoldings = mode === 'holdings' || mode === 'accounts';
 
@@ -560,11 +627,13 @@ function switchPortSubView(mode) {
     if (subCal) subCal.style.display = mode === 'calendar' ? 'block' : 'none';
     if (subFly) subFly.style.display = mode === 'flywheel' ? 'block' : 'none';
     if (subHis) subHis.style.display = mode === 'history' ? 'block' : 'none';
+    if (subOrd) subOrd.style.display = mode === 'orders' ? 'block' : 'none';
 
     if (btnAcc) btnAcc.classList.toggle('active', isHoldings);
     if (btnCal) btnCal.classList.toggle('active', mode === 'calendar');
     if (btnFly) btnFly.classList.toggle('active', mode === 'flywheel');
     if (btnHis) btnHis.classList.toggle('active', mode === 'history');
+    if (btnOrd) btnOrd.classList.toggle('active', mode === 'orders');
 
     if (mode === 'calendar') {
         loadPortfolioCalendarEvents();
@@ -572,6 +641,8 @@ function switchPortSubView(mode) {
         loadPortCoveredCallSuggestions();
     } else if (mode === 'history') {
         loadPortfolioHistory(30);
+    } else if (mode === 'orders') {
+        loadOpenOrders();
     }
 }
 
@@ -633,6 +704,54 @@ async function loadPortfolioHistory(days = 30, force = false) {
     }
 }
 
+async function loadOpenOrders(force = false) {
+    const tbody = document.getElementById('ordersTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="7" class="orders-table-loader">⏳ Fetching open orders...</td></tr>';
+
+    try {
+        const url = force ? '/api/broker/orders/aggregated?force=true' : '/api/broker/orders/aggregated';
+        const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+        const json = await res.json();
+        if (json.status === 'success' && Array.isArray(json.data)) {
+            const orders = json.data;
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="orders-table-empty">No active working orders found across your accounts.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = orders.map(o => {
+                const legDetails = (o.legs || []).map(l => {
+                    return `<strong>${l.symbol}</strong> (${l.instruction} x${l.quantity})`;
+                }).join('<br>');
+
+                const instruction = o.legs && o.legs[0] ? o.legs[0].instruction : 'TRADE';
+
+                return `
+                    <tr>
+                        <td class="order-leg-id">${o.order_id || '—'}</td>
+                        <td>${o.broker_nickname || 'Schwab'}</td>
+                        <td>${legDetails}</td>
+                        <td class="order-leg-badge">${instruction}</td>
+                        <td class="order-leg-id">$${(o.price || 0).toFixed(2)}</td>
+                        <td>${o.filled_quantity} / ${o.quantity}</td>
+                        <td><span class="orders-status-badge">${o.status}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            throw new Error(json.message || 'Invalid response');
+        }
+    } catch(e) {
+        console.error('Failed to load open orders:', e);
+        tbody.innerHTML = `<tr><td colspan="7" class="orders-table-loader">⚠️ Failed to load open orders: ${e.message}</td></tr>`;
+    }
+}
+
 function renderHistoryRows(txList) {
     const tbody = document.getElementById('histTableBody');
     if (!tbody) return;
@@ -654,8 +773,8 @@ function renderHistoryRows(txList) {
             <tr class="hist-row" data-type="${tx.type}">
                 <td style="font-weight:700; color:var(--text); white-space:nowrap;">${tx.date}</td>
                 <td>
-                    <strong style="color:var(--text);">${tx.nickname || tx.accountNumber}</strong>
-                    <div style="font-size:10px; color:var(--muted);">(***${String(tx.accountNumber).slice(-4)})</div>
+                    <strong style="color:var(--text);">${tx.account_nickname || tx.account_number || '—'}</strong>
+                    <div style="font-size:10px; color:var(--muted);">${tx.account_number || ''}</div>
                 </td>
                 <td>
                     <span class="hbadge" style="background:${badgeBg}; color:${badgeColor}; font-size:10px; font-weight:700;">
@@ -1043,9 +1162,25 @@ function renderCalendarForSelectedMonth() {
             card.onmouseenter = () => { card.style.borderColor = dotColor; card.style.transform = 'translateX(4px)'; };
             card.onmouseleave = () => { card.style.borderColor = 'var(--border)'; card.style.transform = 'translateX(0)'; };
 
+            let iconName = ev.icon;
+            if (!iconName) {
+                if (isHist) {
+                    iconName = 'receipt_long';
+                } else if (isDiv) {
+                    iconName = 'payments';
+                } else if (isEarn) {
+                    iconName = 'campaign';
+                } else if (isOpt) {
+                    iconName = 'pending_actions';
+                } else {
+                    iconName = 'event';
+                }
+            }
+
             card.innerHTML = `
                 <div onclick="openCalEventCard('${encData}')" style="flex:1;">
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+                        <span class="material-symbols-outlined" style="font-size:18px; color:${badgeFg};">${iconName}</span>
                         <strong style="font-size:15px; font-family:'Outfit',sans-serif; color:var(--text);">${ev.title}</strong>
                         <span class="hbadge" style="background:${badgeBg}; color:${badgeFg}; font-size:10px; font-weight:700;">${ev.badge || dteLabel}</span>
                         ${isPast ? '<span class="hbadge" style="background:rgba(255,255,255,0.06); color:var(--muted); font-size:9px;">✓ LAST 30 DAYS</span>' : ''}

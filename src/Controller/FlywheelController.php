@@ -23,6 +23,7 @@ class FlywheelController extends AbstractController
         private StockRepository $stockRepository,
         private AppConfigService $appConfig,
         private LoggerInterface $logger,
+        private \App\Llm\LlmServiceRouter $llmRouter,
     ) {}
 
     #[Route('/allocate', name: 'allocate', methods: ['POST'])]
@@ -81,13 +82,9 @@ class FlywheelController extends AbstractController
     #[Route('/confirm-trade', name: 'confirm_trade', methods: ['POST'])]
     public function confirmTrade(Request $request): JsonResponse
     {
-        // Delegate to GeminiService via AiController would also work,
-        // but confirm-trade is a flywheel action so it lives here.
-        // We re-use the Symfony service container to avoid coupling.
         $trade  = json_decode($request->getContent(), true) ?? [];
-        // GeminiService injected via AiController path to avoid circular deps
-        // Temporarily delegated — move to AiController if it grows.
-        return $this->json(['status' => 'success', 'data' => ['message' => 'Trade queued for verification', 'trade' => $trade]]);
+        $result = $this->llmRouter->verifyTradePreExecution($trade);
+        return $this->json(['status' => 'success', 'data' => $result]);
     }
 
     #[Route('/scenario/{symbol}', name: 'scenario', methods: ['GET'])]
@@ -175,6 +172,18 @@ class FlywheelController extends AbstractController
         $todayStr      = date('Y-m-d');
         $heldSymbols   = array_column($equities, 'symbol');
 
+        $stockNames = [];
+        foreach ($this->stockRepository->findAll() as $s) {
+            $stockNames[strtoupper($s->getSymbol())] = $s->getName();
+        }
+        $getName = function(string $sym) use ($stockNames): string {
+            $sUpper = strtoupper($sym);
+            if (isset($stockNames[$sUpper])) {
+                return "{$stockNames[$sUpper]} ({$sUpper})";
+            }
+            return $sUpper;
+        };
+
         // 1. Inject Earnings Calendar Events (both past 30 days and upcoming)
         try {
             $rawEarnings = $this->finnhubService->getEarningsCalendar($startDate, $endDate);
@@ -185,15 +194,21 @@ class FlywheelController extends AbstractController
                 }
                 $earnDate = $earn['date'] ?? date('Y-m-d');
                 $isPast   = ($earnDate < $todayStr);
-                $hour     = strtoupper($earn['hour'] ?? 'AMC');
+                $hour = strtoupper($earn['hour'] ?? 'AMC');
                 $hourText = match ($hour) {
-                    'BMO'   => '🌅 Before Open',
-                    'AMC'   => '🌙 After Close',
-                    default => '⏰ Market Hours',
+                    'BMO'   => 'Before Open',
+                    'AMC'   => 'After Close',
+                    default => 'Market Hours',
+                };
+                $hourIcon = match ($hour) {
+                    'BMO'   => 'light_mode',
+                    'AMC'   => 'dark_mode',
+                    default => 'schedule',
                 };
 
+                $displayName = $getName($earnSymbol);
                 $calendarEvents[] = [
-                    'title'       => $isPast ? "📢 {$earnSymbol} Past Earnings Q" . ($earn['quarter'] ?? '') : "📢 {$earnSymbol} Earnings Release",
+                    'title'       => $isPast ? "{$displayName} Past Earnings Q" . ($earn['quarter'] ?? '') : "{$displayName} Earnings Release",
                     'date'        => $earnDate,
                     'category'    => $isPast ? 'EARNINGS_PAST' : 'EARNINGS',
                     'symbol'      => $earnSymbol,
@@ -204,6 +219,8 @@ class FlywheelController extends AbstractController
                             ? number_format($earn['revenueEstimate'] / 1_000_000, 1) . 'M'
                             : 'N/A'),
                     'badge'       => $isPast ? 'HISTORICAL EARNINGS REPORT' : 'UPCOMING EARNINGS ANNOUNCEMENT',
+                    'icon'        => 'campaign',
+                    'hourIcon'    => $hourIcon,
                 ];
             }
         } catch (\Throwable $e) {
@@ -233,10 +250,11 @@ class FlywheelController extends AbstractController
                     }
 
                     $isPastDiv = ($payDate < $todayStr);
+                    $displayName = $getName($sym);
                     $calendarEvents[] = [
                         'title'          => $isPastDiv
-                            ? "💵 {$sym} Dividend Paid (+\${$totalDividend})"
-                            : "💵 {$sym} Expected Dividend (+\${$totalDividend})",
+                            ? "💵 {$displayName} Dividend Paid (+\${$totalDividend})"
+                            : "💵 {$displayName} Expected Dividend (+\${$totalDividend})",
                         'date'           => $payDate,
                         'category'       => $isPastDiv ? 'DIVIDEND_PAID' : 'DIVIDEND',
                         'symbol'         => $sym,
@@ -349,14 +367,12 @@ class FlywheelController extends AbstractController
                 $type = strtoupper($tx['type'] ?? 'TRADE');
                 $badge = strtoupper($tx['badge'] ?? $type);
                 $symbol = strtoupper($tx['symbol'] ?? 'ACCOUNT');
-                if ($symbol === 'CURRENCY_USD') {
-                    $symbol = 'USD';
-                }
 
                 $accName = $tx['account_nickname'] ?? $tx['nickname'] ?? $tx['account_number'] ?? 'Broker';
+                $displayName = ($symbol !== 'ACCOUNT' && $symbol !== 'USD' && $symbol !== '') ? $getName($symbol) : $symbol;
 
                 $calendarEvents[] = [
-                    'title'          => "{$formattedAmt} {$symbol} {$badge}",
+                    'title'          => "{$formattedAmt} {$displayName} {$badge}",
                     'date'           => $txDate,
                     'category'       => 'HISTORY',
                     'symbol'         => $symbol,

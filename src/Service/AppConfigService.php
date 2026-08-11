@@ -25,6 +25,8 @@ class AppConfigService
         'finnhub.api_key'                        => null,
         'gemini.api_key'                         => null,
         'openai.api_key'                         => null,
+        'claude.api_key'                         => null,
+        'claude.model'                           => 'claude-3-5-sonnet-latest',
 
         // ── Flywheel signal thresholds ────────────────────────────────────────
         'flywheel.signal.call_score_threshold'   => 70,
@@ -62,10 +64,12 @@ class AppConfigService
         'flywheel.signal.call_otm_pct'           => 0.05,   // 5% OTM long call strike
 
         // ── LLM behaviour defaults (no API keys – those have no safe default) ─
-        'llm.provider'   => 'gemini',               // overridden by user in Setup Wizard
-        'gemini.model'   => 'gemini-1.5-flash',
-        'openai.model'   => 'gpt-4o-mini',
-        'local_llm.url'  => 'http://localhost:11434/v1',
+        'llm.provider'      => 'gemini',               // overridden by user in Setup Wizard
+        'gemini.model'      => 'gemini-1.5-flash',
+        'openai.model'      => 'gpt-4o-mini',
+        'local_llm.url'     => 'http://localhost:11434/v1',
+        'local_llm.api_key' => null,
+        'local_llm.model'   => 'local-model',
 
         // ── Cache TTL configurations (seconds) ───────────────────────────────
         'cache.ttl.finnhub.quote'                => 300,    // 5 minutes

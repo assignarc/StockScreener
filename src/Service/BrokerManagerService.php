@@ -163,6 +163,7 @@ class BrokerManagerService
 
             // Process each individual account
             $brokerAccounts = $portfolio['accounts'] ?? [];
+            $orders = $broker->getOpenOrders();
             if (!empty($brokerAccounts)) {
                 foreach ($brokerAccounts as $accIndex => $accItem) {
                     $accNum = $accItem['accountNumber'] ?? 'N/A';
@@ -171,6 +172,14 @@ class BrokerManagerService
                     $accVal = (float) ($accItem['liquidationValue'] ?? 0.0);
                     $accCash = (float) ($accItem['cashAvailable'] ?? 0.0);
                     $accPositions = $accItem['positions'] ?? [];
+
+                    $accMasked = $accNum !== 'N/A' ? ('***' . substr($accNum, -4)) : '';
+                    $matchedOrders = [];
+                    foreach ($orders as $o) {
+                        if (($o['account_number'] ?? '') === $accMasked) {
+                            $matchedOrders[] = $o;
+                        }
+                    }
 
                     foreach ($accPositions as $posItem) {
                         $symbol = $posItem['symbol'] ?? 'UNKNOWN';
@@ -241,6 +250,7 @@ class BrokerManagerService
                         'liquidationValue'   => $accVal,
                         'positionsCount'     => count($accPositions),
                         'positions'          => $accPositions,
+                        'openOrders'         => $matchedOrders,
                     ];
                 }
             } else {
@@ -515,5 +525,26 @@ class BrokerManagerService
             'calls'           => [],
             'puts'            => [],
         ];
+    }
+
+    public function getAggregatedOpenOrders(bool $forceRefresh = false): array
+    {
+        $allOrders = [];
+        foreach ($this->brokers as $id => $broker) {
+            if (!$broker->isConfigured()) {
+                continue;
+            }
+            try {
+                $orders = $broker->getOpenOrders($forceRefresh);
+                foreach ($orders as $o) {
+                    $o['broker_id'] = $id;
+                    $o['broker_nickname'] = $broker->getNickname();
+                    $allOrders[] = $o;
+                }
+            } catch (\Throwable $e) {
+                $this->logger->error("Error fetching open orders from broker {$id}: " . $e->getMessage());
+            }
+        }
+        return $allOrders;
     }
 }

@@ -40,6 +40,16 @@ class BrokerController extends AbstractController
         return $this->json($this->brokerManager->getAggregatedPortfolio());
     }
 
+    #[Route('/orders/aggregated', name: 'orders_aggregated', methods: ['GET'])]
+    public function aggregatedOpenOrders(Request $request): JsonResponse
+    {
+        $force = filter_var($request->query->get('force'), FILTER_VALIDATE_BOOLEAN);
+        return $this->json([
+            'status' => 'success',
+            'data' => $this->brokerManager->getAggregatedOpenOrders($force),
+        ]);
+    }
+
     #[Route('/{id}/status', name: 'status', methods: ['GET'])]
     public function status(string $id): JsonResponse
     {

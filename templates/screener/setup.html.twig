@@ -181,43 +181,146 @@
         </div>
     </div>
 
-    <!-- WIZARD STEP 4: AI STRATEGY ENGINE (GEMINI) -->
+    <!-- WIZARD STEP 4: AI STRATEGY ENGINE -->
     <div class="wiz-panel" id="wizStep4" style="display:none;">
         <div class="card" style="padding:28px; border-radius:16px;">
             <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-                <div style="background:rgba(210,153,34,0.18); color:var(--yellow); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                <div style="background:rgba(2,132,199,0.15); color:var(--blue); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
                     <span class="material-symbols-outlined" style="font-size:22px;">smart_toy</span>
                 </div>
                 <div>
-                    <h2 style="font-size:20px; margin:0 0 4px 0; color:var(--text); font-family:'Outfit',sans-serif;">Step 4: AI Strategy Engine (Google Gemini)</h2>
+                    <h2 style="font-size:20px; margin:0 0 4px 0; color:var(--text); font-family:'Outfit',sans-serif;">Step 4: AI Strategy Engine</h2>
                     <div style="font-size:12px; color:var(--muted);">Provides generative market commentary, flywheel option trade rationales, and risk summaries.</div>
                 </div>
             </div>
 
-            <div style="background:rgba(210,153,34,0.08); border:1px solid rgba(210,153,34,0.25); border-radius:12px; padding:18px; margin-bottom:24px;">
-                <h4 style="margin:0 0 8px 0; font-size:13px; color:var(--yellow); font-weight:700;">Google AI Studio Key:</h4>
-                <p style="margin:0; font-size:12px; color:var(--text); line-height:1.6;">
-                    You can generate a free API key at <a href="https://aistudio.google.com/" target="_blank" style="color:var(--yellow); font-weight:700; text-decoration:underline;">https://aistudio.google.com/</a>. If left blank, the app will operate using quantitative algorithmic scoring and local heuristic models.
-                </p>
-            </div>
-
+            <!-- Active Provider Selector -->
             <div style="margin-bottom:24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px;">
-                        Google Gemini API Key (Optional)
-                    </label>
-                    <div style="display:flex; gap:6px;">
-                        <button type="button" class="slick-pill-btn" onclick="pasteToField('wizGeminiKey')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
-                        <button type="button" class="slick-pill-btn" onclick="copyFromField('wizGeminiKey', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
-                        <button type="button" class="slick-pill-btn" onclick="clearField('wizGeminiKey')"><span class="material-symbols-outlined">close</span> Clear</button>
-                    </div>
+                <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+                    Select Active AI Engine
+                </label>
+                <select class="styled-select-input" id="wizLlmProvider" onchange="toggleWizLlmProvider()">
+                    <option value="gemini" {% if config['llm.provider']|default('gemini') == 'gemini' %}selected{% endif %}>Google Gemini API</option>
+                    <option value="openai" {% if config['llm.provider']|default('gemini') == 'openai' %}selected{% endif %}>OpenAI API</option>
+                    <option value="claude" {% if config['llm.provider']|default('gemini') == 'claude' %}selected{% endif %}>Anthropic Claude API</option>
+                    <option value="local" {% if config['llm.provider']|default('gemini') == 'local' %}selected{% endif %}>Self-Hosted / Local LLM (OpenAI-compatible)</option>
+                </select>
+            </div>
+
+            <!-- GOOGLE GEMINI PANEL -->
+            <div id="wizPanelGemini" class="llm-provider-subpanel" style="display:block;">
+                <div style="background:rgba(210,153,34,0.08); border:1px solid rgba(210,153,34,0.25); border-radius:12px; padding:16px; margin-bottom:20px;">
+                    <h4 style="margin:0 0 6px 0; font-size:13px; color:var(--yellow); font-weight:700;">Google AI Studio Key:</h4>
+                    <p style="margin:0; font-size:12px; color:var(--text); line-height:1.5;">
+                        Get a free API key at <a href="https://aistudio.google.com/" target="_blank" style="color:var(--yellow); font-weight:700; text-decoration:underline;">https://aistudio.google.com/</a>.
+                    </p>
                 </div>
-                <div class="key-field-wrap">
-                    <input type="text" id="wizGeminiKey" class="large-key-input" placeholder="Paste your Gemini AI key here (e.g. AIzaSy...)" value="{{ geminiKey|default('') }}" spellcheck="false">
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px;">Google Gemini API Key (Optional)</label>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="slick-pill-btn" onclick="pasteToField('wizGeminiKey')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                            <button type="button" class="slick-pill-btn" onclick="clearField('wizGeminiKey')"><span class="material-symbols-outlined">close</span> Clear</button>
+                        </div>
+                    </div>
+                    <input type="password" id="wizGeminiKey" class="large-key-input" placeholder="AIzaSy..." value="{{ config['gemini.api_key']|default('') }}" spellcheck="false">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Gemini Model Selection</label>
+                    <select class="styled-select-input" id="wizGeminiModel">
+                        <option value="gemini-1.5-flash" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-1.5-flash' %}selected{% endif %}>Gemini 1.5 Flash (Fast & Efficient)</option>
+                        <option value="gemini-1.5-pro" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-1.5-pro' %}selected{% endif %}>Gemini 1.5 Pro (Deep Reasoning)</option>
+                        <option value="gemini-2.0-flash-exp" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-2.0-flash-exp' %}selected{% endif %}>Gemini 2.0 Flash (Experimental)</option>
+                    </select>
                 </div>
             </div>
 
-            <div style="display:flex; justify-content:space-between;">
+            <!-- OPENAI PANEL -->
+            <div id="wizPanelOpenai" class="llm-provider-subpanel" style="display:none;">
+                <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.25); border-radius:12px; padding:16px; margin-bottom:20px;">
+                    <h4 style="margin:0 0 6px 0; font-size:13px; color:var(--blue); font-weight:700;">OpenAI API Key:</h4>
+                    <p style="margin:0; font-size:12px; color:var(--text); line-height:1.5;">
+                        Get an API key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--blue); font-weight:700; text-decoration:underline;">https://platform.openai.com/api-keys</a>.
+                    </p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px;">OpenAI API Key (Optional)</label>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="slick-pill-btn" onclick="pasteToField('wizOpenaiKey')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                            <button type="button" class="slick-pill-btn" onclick="clearField('wizOpenaiKey')"><span class="material-symbols-outlined">close</span> Clear</button>
+                        </div>
+                    </div>
+                    <input type="password" id="wizOpenaiKey" class="large-key-input" placeholder="sk-proj-..." value="{{ config['openai.api_key']|default('') }}" spellcheck="false">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">OpenAI Model Selection</label>
+                    <select class="styled-select-input" id="wizOpenaiModel">
+                        <option value="gpt-4o-mini" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o mini (Fast & Affordable)</option>
+                        <option value="gpt-4o" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4o' %}selected{% endif %}>GPT-4o (Omni High Performance)</option>
+                        <option value="gpt-4-turbo" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo</option>
+                        <option value="o1-mini" {% if config['openai.model']|default('gpt-4o-mini') == 'o1-mini' %}selected{% endif %}>o1-mini (Reasoning Model)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- CLAUDE PANEL -->
+            <div id="wizPanelClaude" class="llm-provider-subpanel" style="display:none;">
+                <div style="background:rgba(219,104,74,0.08); border:1px solid rgba(219,104,74,0.25); border-radius:12px; padding:16px; margin-bottom:20px;">
+                    <h4 style="margin:0 0 6px 0; font-size:13px; color:var(--orange); font-weight:700;">Anthropic Claude API Key:</h4>
+                    <p style="margin:0; font-size:12px; color:var(--text); line-height:1.5;">
+                        Get an API key at <a href="https://console.anthropic.com/" target="_blank" style="color:var(--orange); font-weight:700; text-decoration:underline;">https://console.anthropic.com/</a>.
+                    </p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px;">Claude API Key (Optional)</label>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="slick-pill-btn" onclick="pasteToField('wizClaudeKey')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                            <button type="button" class="slick-pill-btn" onclick="clearField('wizClaudeKey')"><span class="material-symbols-outlined">close</span> Clear</button>
+                        </div>
+                    </div>
+                    <input type="password" id="wizClaudeKey" class="large-key-input" placeholder="sk-ant-..." value="{{ config['claude.api_key']|default('') }}" spellcheck="false">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Claude Model Selection</label>
+                    <select class="styled-select-input" id="wizClaudeModel">
+                        <option value="claude-3-5-sonnet-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-5-sonnet-latest' %}selected{% endif %}>Claude 3.5 Sonnet (Recommended)</option>
+                        <option value="claude-3-5-haiku-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-5-haiku-latest' %}selected{% endif %}>Claude 3.5 Haiku</option>
+                        <option value="claude-3-opus-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-opus-latest' %}selected{% endif %}>Claude 3 Opus (High Intelligence)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- LOCAL PANEL -->
+            <div id="wizPanelLocal" class="llm-provider-subpanel" style="display:none;">
+                <div style="background:rgba(128,128,128,0.08); border:1px solid rgba(128,128,128,0.25); border-radius:12px; padding:16px; margin-bottom:20px;">
+                    <h4 style="margin:0 0 6px 0; font-size:13px; color:var(--muted); font-weight:700;">Self-Hosted / Local OpenAI-compatible API:</h4>
+                    <p style="margin:0; font-size:12px; color:var(--text); line-height:1.5;">
+                        Configure connection to Ollama, LM Studio, vLLM, or other local providers.
+                    </p>
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">API Endpoint Base URL</label>
+                    <input type="text" id="wizLocalLlmUrl" class="large-key-input" placeholder="http://localhost:11434/v1" value="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" spellcheck="false">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px;">API Key (Optional)</label>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" class="slick-pill-btn" onclick="pasteToField('wizLocalLlmKey')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                            <button type="button" class="slick-pill-btn" onclick="clearField('wizLocalLlmKey')"><span class="material-symbols-outlined">close</span> Clear</button>
+                        </div>
+                    </div>
+                    <input type="password" id="wizLocalLlmKey" class="large-key-input" placeholder="sk-local-..." value="{{ config['local_llm.api_key']|default('') }}" spellcheck="false">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Model Name</label>
+                    <input type="text" id="wizLocalLlmModel" class="large-key-input" placeholder="llama3" value="{{ config['local_llm.model']|default('local-model') }}" spellcheck="false">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:28px;">
                 <button type="button" class="hbtn" style="background:var(--bg3); padding:10px 20px;" onclick="showWizardStep(3)">← Back</button>
                 <button type="button" class="hbtn hbtn-blue" style="padding:10px 24px; font-size:13px;" onclick="showWizardStep(5)">
                     Review & Complete Setup →
@@ -424,7 +527,24 @@ if (!Array.isArray(brokerInstances) || brokerInstances.length === 0) {
 
 document.addEventListener('DOMContentLoaded', () => {
     renderBrokerInstances();
+    toggleWizLlmProvider();
 });
+
+function toggleWizLlmProvider() {
+    const provider = document.getElementById('wizLlmProvider').value;
+    document.querySelectorAll('.llm-provider-subpanel').forEach(p => {
+        p.style.display = 'none';
+    });
+    if (provider === 'gemini') {
+        document.getElementById('wizPanelGemini').style.display = 'block';
+    } else if (provider === 'openai') {
+        document.getElementById('wizPanelOpenai').style.display = 'block';
+    } else if (provider === 'claude') {
+        document.getElementById('wizPanelClaude').style.display = 'block';
+    } else if (provider === 'local') {
+        document.getElementById('wizPanelLocal').style.display = 'block';
+    }
+}
 
 function showWizardStep(step) {
     for (let i = 1; i <= 5; i++) {
@@ -768,7 +888,16 @@ async function completeSetupAndLaunch() {
 
     const payload = {
         finnhub_api_key: document.getElementById('wizFinnhubKey').value.trim(),
+        llm_provider: document.getElementById('wizLlmProvider').value,
         gemini_api_key: document.getElementById('wizGeminiKey').value.trim(),
+        gemini_model: document.getElementById('wizGeminiModel').value,
+        openai_api_key: document.getElementById('wizOpenaiKey').value.trim(),
+        openai_model: document.getElementById('wizOpenaiModel').value,
+        claude_api_key: document.getElementById('wizClaudeKey').value.trim(),
+        claude_model: document.getElementById('wizClaudeModel').value,
+        local_llm_url: document.getElementById('wizLocalLlmUrl').value.trim(),
+        local_llm_api_key: document.getElementById('wizLocalLlmKey').value.trim(),
+        local_llm_model: document.getElementById('wizLocalLlmModel').value.trim(),
         broker_instances: brokerInstances,
         mark_completed: true,
     };

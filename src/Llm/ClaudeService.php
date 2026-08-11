@@ -6,54 +6,32 @@ use App\Service\AppConfigService;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Psr\Log\LoggerInterface;
 
-class OpenAiLlmService implements LlmServiceInterface
+class ClaudeService implements LlmServiceInterface
 {
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
         private AppConfigService $appConfig,
-        private string $openAiApiUrl = 'https://api.openai.com/v1'
+        private string $claudeApiUrl = 'https://api.anthropic.com/v1'
     ) {}
 
     public function getProviderName(): string
     {
-        $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
-        if ($provider === 'local') {
-            return 'Local LLM (OpenAI-compatible)';
-        }
-        return 'OpenAI (' . $this->getEffectiveModel() . ')';
-    }
-
-    private function getEffectiveBaseUrl(): string
-    {
-        $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
-        if ($provider === 'local') {
-            return rtrim((string) $this->appConfig->get('local_llm.url', 'http://localhost:11434/v1'), '/');
-        }
-        return rtrim($this->openAiApiUrl, '/');
+        return 'Anthropic Claude (' . $this->getEffectiveModel() . ')';
     }
 
     private function getEffectiveApiKey(): ?string
     {
-        $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
-        if ($provider === 'local') {
-            $key = $this->appConfig->get('local_llm.api_key');
-            return !empty($key) ? (string) $key : 'sk-local-dummy';
-        }
-        $key = $this->appConfig->get('openai.api_key');
+        $key = $this->appConfig->get('claude.api_key');
         return !empty($key) ? (string) $key : null;
     }
 
     private function getEffectiveModel(): string
     {
-        $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
-        if ($provider === 'local') {
-            return (string) $this->appConfig->get('local_llm.model', 'local-model');
-        }
-        return (string) $this->appConfig->get('openai.model', 'gpt-4o-mini');
+        return (string) $this->appConfig->get('claude.model', 'claude-3-5-sonnet-latest');
     }
 
-    private function callChatCompletion(string $prompt, bool $jsonMode = false): ?string
+    private function callClaudeApi(string $prompt): ?string
     {
         $apiKey = $this->getEffectiveApiKey();
         if (empty($apiKey)) {
@@ -61,23 +39,21 @@ class OpenAiLlmService implements LlmServiceInterface
         }
 
         try {
-            $url = $this->getEffectiveBaseUrl() . '/chat/completions';
+            $url = rtrim($this->claudeApiUrl, '/') . '/messages';
             $payload = [
                 'model' => $this->getEffectiveModel(),
+                'max_tokens' => 4000,
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt]
                 ],
                 'temperature' => 0.2
             ];
 
-            if ($jsonMode) {
-                $payload['response_format'] = ['type' => 'json_object'];
-            }
-
             $response = $this->httpClient->request('POST', $url, [
                 'headers' => [
-                    'Authorization' => 'Bearer ' . $apiKey,
-                    'Content-Type' => 'application/json',
+                    'x-api-key' => $apiKey,
+                    'anthropic-version' => '2023-06-01',
+                    'content-type' => 'application/json',
                 ],
                 'json' => $payload,
                 'timeout' => 8.0,
@@ -86,12 +62,12 @@ class OpenAiLlmService implements LlmServiceInterface
 
             if ($response->getStatusCode() === 200) {
                 $data = $response->toArray();
-                return $data['choices'][0]['message']['content'] ?? null;
+                return $data['content'][0]['text'] ?? null;
             } else {
-                $this->logger->error('OpenAI API returned status: ' . $response->getStatusCode() . ' Body: ' . $response->getContent(false));
+                $this->logger->error('Claude API returned status: ' . $response->getStatusCode() . ' Body: ' . $response->getContent(false));
             }
         } catch (\Throwable $e) {
-            $this->logger->error('OpenAI API call failure: ' . $e->getMessage());
+            $this->logger->error('Claude API call failure: ' . $e->getMessage());
         }
 
         return null;
@@ -112,7 +88,7 @@ class OpenAiLlmService implements LlmServiceInterface
         $stockSymbols = array_map(fn($s) => is_array($s) ? ($s['symbol'] ?? '') : $s->getSymbol(), array_slice($trackedStocks, 0, 8));
         $trackedContext = implode(', ', array_filter($stockSymbols));
 
-        $prompt = "You are OpenAI, an expert Wall Street Quantitative Options Strategist specializing in Option Level 1 Basic Covered & Defined Risk strategies (Covered Calls, Cash-Secured Puts).
+        $prompt = "You are Claude, an expert Wall Street Quantitative Options Strategist specializing in Option Level 1 Basic Covered & Defined Risk strategies.
         
 Analyze this Schwab Investor Portfolio:
 - Net Liquidation Value: \${$netLiquidation}
@@ -122,34 +98,31 @@ Analyze this Schwab Investor Portfolio:
 
 - Top Tracked Screener Candidates: {$trackedContext}
 
-Please generate 3 high-conviction Option Level 1 Basic rules strategy ideas. You can suggest stocks, liquid ETFs (like SPY, QQQ, IWM, XLF) or short-term treasury/bond ETFs (like SGOV, BIL, SHV) for yield-shielding cash collateral:
-1. Covered Call Strategy for unencumbered stock blocks (100+ shares).
-2. Cash-Secured Put Strategy using available cash reserves (\${$cashAvailable}).
-3. Growth, Hedging, or Capital Preservation/Fixed Income Yield Strategy.
+Please generate 3 high-conviction Option Level 1 Basic rules strategy ideas (Covered Call on owned blocks of 100+ shares, Cash-Secured Put on cash, or Capital Preservation yield strategy).
+Output strictly JSON formatting. The JSON must be an array of 3 strategy objects. Each object must have keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
 
-Output clear JSON formatting. The JSON must be an array of 3 strategy objects. Each object must have keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
-
-        $aiText = $this->callChatCompletion($prompt, true);
+        $aiText = $this->callClaudeApi($prompt);
         if ($aiText) {
+            // Clean up code block ticks if LLM wrapped it in markdown
+            $cleanJson = preg_replace('/^```json\s*|```$/i', '', trim($aiText));
             return [
                 'source' => $this->getProviderName() . ' (Live API)',
-                'rawText' => $aiText,
-                'ideas' => $this->parseOpenAiIdeas($aiText, $cashAvailable, $equities),
+                'rawText' => $cleanJson,
+                'ideas' => $this->parseClaudeIdeas($cleanJson, $cashAvailable, $equities),
             ];
         }
 
         return [
-            'source' => 'OpenAI Financial Engine (Fallback Model)',
-            'rawText' => 'AI Flywheel Analysis Generated for Schwab Portfolio',
+            'source' => $this->getProviderName() . ' (Free/Simulated Mode)',
+            'rawText' => 'AI Flywheel Analysis Generated for Schwab Portfolio (Simulated)',
             'ideas' => $this->generateDefaultAiIdeas($cashAvailable, $equities),
         ];
     }
 
-    private function parseOpenAiIdeas(string $aiText, float $cash, array $equities): array
+    private function parseClaudeIdeas(string $aiText, float $cash, array $equities): array
     {
         try {
             $decoded = json_decode($aiText, true);
-            // OpenAI returns direct json or wrapped. Handles both.
             if (is_array($decoded)) {
                 $ideas = $decoded['ideas'] ?? $decoded;
                 if (is_array($ideas)) {
@@ -174,7 +147,7 @@ Output clear JSON formatting. The JSON must be an array of 3 strategy objects. E
                 'estimatedPremium' => '+$1,244.00 Instant Cash',
                 'annualizedYield' => '29.2% APY',
                 'APY' => '29.2% APY',
-                'reasoning' => 'You hold NVDA shares. Selling Covered Calls locks in cash premium while allowing NVDA to appreciate up to $235.',
+                'reasoning' => 'Selling Covered Calls on NVDA locks in cash premium while allowing NVDA to appreciate up to $235.',
                 'riskGuardrail' => '100% Covered by owned stock. Capped upside above $235, zero cash margin requirement.',
                 'delta' => '0.28',
                 'probabilityOfProfit' => '72%',
@@ -191,7 +164,7 @@ Output clear JSON formatting. The JSON must be an array of 3 strategy objects. E
                 'estimatedPremium' => '+$650.00 Instant Cash',
                 'annualizedYield' => '18.5% APY',
                 'APY' => '18.5% APY',
-                'reasoning' => 'With available cash, sell QQQ Puts for diversified index entry. Lower volatility risk compared to single stocks.',
+                'reasoning' => 'Sell QQQ Puts for diversified index entry. Lower volatility risk compared to single stocks.',
                 'riskGuardrail' => '100% Backed by liquid cash reserves. Defined downside risk with built-in discount entry.',
                 'delta' => '-0.25',
                 'probabilityOfProfit' => '75%',
@@ -221,10 +194,6 @@ Output clear JSON formatting. The JSON must be an array of 3 strategy objects. E
     public function analyzeOptionChain(string $symbol, float $currentPrice, array $chain): array
     {
         $symbol = strtoupper($symbol);
-        $calls = $chain['calls'] ?? [];
-        $puts = $chain['puts'] ?? [];
-
-        // Simple default parsing identical to GeminiService logic
         $bestCall = ['strike' => $currentPrice * 1.06, 'delta' => 0.30, 'midPrice' => 3.50, 'otmPct' => 6.0, 'estIncomePerContract' => 350.0, 'annualizedYield' => 29.2];
         $bestPut = ['strike' => $currentPrice * 0.93, 'delta' => -0.25, 'midPrice' => 2.80, 'discountPct' => 7.0, 'estIncomePerContract' => 280.0, 'annualizedYield' => 24.5];
 
@@ -233,9 +202,9 @@ Suggested Covered Call Strike: \${$bestCall['strike']} (+{$bestCall['otmPct']}% 
 Suggested Cash-Secured Put Strike: \${$bestPut['strike']} (-{$bestPut['discountPct']}% Discount, Delta {$bestPut['delta']})
 Explain in 2 sentences why these two strikes represent optimal risk/reward for Option Level 1 Basic traders.";
 
-        $aiCommentary = "OpenAI evaluated {$symbol} option chain: Selling the Call provides optimal theta decay while allowing stock upside. Selling the Put offers a discount entry point.";
+        $aiCommentary = "Claude evaluated {$symbol} option chain: Selling the Call provides optimal theta decay while allowing stock upside. Selling the Put offers a discount entry point.";
 
-        $commentaryResult = $this->callChatCompletion($prompt);
+        $commentaryResult = $this->callClaudeApi($prompt);
         if ($commentaryResult) {
             $aiCommentary = $commentaryResult;
         }
@@ -251,7 +220,7 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
                 'otmPct' => $bestCall['otmPct'],
                 'annualizedYield' => $bestCall['annualizedYield'],
                 'actionBadge' => '🎯 BEST COVERED CALL TARGET',
-                'reasoning' => "OpenAI selected \${$bestCall['strike']} Call (Delta {$bestCall['delta']}, +{$bestCall['otmPct']}% OTM). Selling this contract captures +\${$bestCall['estIncomePerContract']} cash credit ({$bestCall['annualizedYield']}% APY) while preserving stock upside.",
+                'reasoning' => "Claude selected \${$bestCall['strike']} Call (Delta {$bestCall['delta']}, +{$bestCall['otmPct']}% OTM). Selling this contract captures +\${$bestCall['estIncomePerContract']} cash credit ({$bestCall['annualizedYield']}% APY) while preserving stock upside.",
             ],
             'recommendedPut' => [
                 'strike' => $bestPut['strike'],
@@ -261,7 +230,7 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
                 'discountPct' => $bestPut['discountPct'],
                 'annualizedYield' => $bestPut['annualizedYield'],
                 'actionBadge' => '🎯 BEST CASH-SECURED PUT TARGET',
-                'reasoning' => "OpenAI selected \${$bestPut['strike']} Put (Delta {$bestPut['delta']}, -{$bestPut['discountPct']}% OTM). Selling this contract yields +\${$bestPut['estIncomePerContract']} cash credit ({$bestPut['annualizedYield']}% APY) with a built-in discount entry at \${$bestPut['strike']}.",
+                'reasoning' => "Claude selected \${$bestPut['strike']} Put (Delta {$bestPut['delta']}, -{$bestPut['discountPct']}% OTM). Selling this contract yields +\${$bestPut['estIncomePerContract']} cash credit ({$bestPut['annualizedYield']}% APY) with a built-in discount entry at \${$bestPut['strike']}.",
             ],
             'aiVerdict' => $aiCommentary,
         ];
@@ -274,7 +243,7 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
         $strike = $trade['strike'] ?? 235.0;
         $strategy = $trade['strategyType'] ?? 'Covered Call';
 
-        $prompt = "You are OpenAI, a senior Wall Street risk manager. A retail trader is about to manually execute this trade:
+        $prompt = "You are Claude, a senior Wall Street risk manager. A retail trader is about to manually execute this trade:
 Action: {$action} {$symbol} Strategy: {$strategy} Strike: \${$strike}
 
 Perform a 3-point sanity check:
@@ -282,7 +251,7 @@ Perform a 3-point sanity check:
 2. Volatility & Order Execution Advice (Provide target limit price, day order vs GTC).
 3. Final Verdict (PASS, WARN, or REJECT) with 1 sentence rationale.";
 
-        $aiText = $this->callChatCompletion($prompt);
+        $aiText = $this->callClaudeApi($prompt);
         if ($aiText) {
             return [
                 'symbol' => $symbol,
@@ -297,7 +266,7 @@ Perform a 3-point sanity check:
             'symbol' => $symbol,
             'verdict' => '🟢 VERIFIED PASS',
             'timestamp' => date('Y-m-d H:i:s T'),
-            'analysisText' => "OpenAI Pre-Trade Verification for {$symbol}: No immediate risks detected. Option Level 1 risk is defined. Recommendation: Execute as LIMIT order.",
+            'analysisText' => "Claude Pre-Trade Verification for {$symbol}: No immediate risks detected. Option Level 1 risk is defined. Recommendation: Execute as LIMIT order.",
             'source' => $this->getProviderName() . ' (Pre-Trade Verification Fallback)',
         ];
     }

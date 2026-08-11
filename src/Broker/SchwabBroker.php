@@ -443,6 +443,88 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
+    public function getOpenOrders(bool $forceRefresh = false): array
+    {
+        $cacheKey = 'b' . $this->id . '.' . str_replace(' ', '_', strtolower($this->getNickname())) . '.open_orders';
+        if (!$forceRefresh) {
+            $cached = $this->cache->get($cacheKey);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $token = $this->getAccessToken();
+        if (!$token) {
+            return [];
+        }
+
+        try {
+            $from = (new \DateTimeImmutable('-7 days'))->format('Y-m-d\TH:i:s.000\Z');
+            $to = (new \DateTimeImmutable('+1 day'))->format('Y-m-d\TH:i:s.000\Z');
+
+            $response = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/accounts/orders', [
+                'headers' => ['Authorization' => 'Bearer ' . $token],
+                'query' => [
+                    'fromEnteredTime' => $from,
+                    'toEnteredTime' => $to,
+                ],
+                'timeout' => (float) $this->appConfig->get('api.timeout.broker.default', 8.0),
+            ]);
+
+            if ($response->getStatusCode() !== 200) {
+                return [];
+            }
+
+            $orders = $response->toArray();
+            $parsed = $this->sanitizeOrdersData($orders);
+            $this->cache->set($cacheKey, $parsed, 30, true);
+            return $parsed;
+        } catch (\Throwable $e) {
+            $this->logger->error('Schwab Orders Fetch Error (' . $this->id . '): ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function sanitizeOrdersData(array $orders): array
+    {
+        $sanitized = [];
+        foreach ($orders as $order) {
+            $status = strtoupper($order['status'] ?? '');
+            $isOpen = in_array($status, ['WORKING', 'PENDING_ACTIVATION', 'PENDING_REPLACE', 'PENDING_CANCEL', 'ACCEPTED', 'QUEUED']);
+            if (!$isOpen) {
+                continue;
+            }
+
+            $legs = [];
+            foreach ($order['orderLegCollection'] ?? [] as $leg) {
+                $inst = $leg['instrument'] ?? [];
+                $legs[] = [
+                    'symbol' => $inst['symbol'] ?? 'UNKNOWN',
+                    'underlying' => $inst['underlyingSymbol'] ?? '',
+                    'instruction' => $leg['instruction'] ?? '',
+                    'quantity' => (float) ($leg['quantity'] ?? 0),
+                    'asset_type' => $inst['assetType'] ?? 'EQUITY',
+                ];
+            }
+
+            $accNo = (string) ($order['accountNumber'] ?? '');
+            $maskedNum = $accNo !== '' ? ('***' . substr($accNo, -4)) : '';
+
+            $sanitized[] = [
+                'order_id' => $order['orderId'] ?? null,
+                'status' => $status,
+                'entered_time' => $order['enteredTime'] ?? null,
+                'order_type' => $order['orderType'] ?? 'LIMIT',
+                'price' => (float) ($order['price'] ?? 0.0),
+                'quantity' => (float) ($order['quantity'] ?? 0),
+                'filled_quantity' => (float) ($order['filledQuantity'] ?? 0),
+                'account_number' => $maskedNum,
+                'legs' => $legs,
+            ];
+        }
+        return $sanitized;
+    }
+
     public function getOptionChain(string $symbol, float $currentPrice): array
     {
         $symbol = strtoupper(trim($symbol));
@@ -636,6 +718,15 @@ class SchwabBroker implements BrokerInterface
                 ];
             }
 
+            $symbol = $tx['transferItems'][0]['instrument']['symbol'] ?? null;
+            $description = $tx['description'] ?? '';
+            if ($symbol === 'CURRENCY_USD' && !empty($description)) {
+                $divSym = $this->extractSymbolFromDescription($description);
+                if ($divSym !== null) {
+                    $symbol = $divSym;
+                }
+            }
+
             $sanitized[] = [
                 'broker_id'       => $this->id,
                 'broker_nickname' => $this->getNickname(),
@@ -648,13 +739,13 @@ class SchwabBroker implements BrokerInterface
                 'type'            => $tx['type'] ?? 'TRADE',
                 'status'          => $tx['status'] ?? null,
                 'sub_account'     => $tx['subAccount'] ?? null,
-                'description'     => $tx['description'] ?? '',
+                'description'     => $description,
                 'amount'          => (float) ($tx['netAmount'] ?? 0.0),
                 'position_id'     => $tx['positionId'] ?? null,
                 'order_id'        => $tx['orderId'] ?? null,
                 'fees'            => $totalFees,
                 'transfer_items'  => $items,
-                'symbol'          => $tx['transferItems'][0]['instrument']['symbol'] ?? null,
+                'symbol'          => $symbol,
             ];
         }
         return $sanitized;
@@ -690,6 +781,60 @@ class SchwabBroker implements BrokerInterface
             'calls'         => $calls,
             'puts'          => $puts,
         ];
+    }
+
+    private function extractSymbolFromDescription(string $desc): ?string
+    {
+        $descUpper = strtoupper(trim($desc));
+        if (empty($descUpper)) {
+            return null;
+        }
+
+        // Hardcoded map for popular companies
+        $lookupMap = [
+            'AMERICAN EXPRESS' => 'AXP',
+            'MASTERCARD'       => 'MA',
+            'GENERAL DYNAMICS' => 'GD',
+            'NETAPP'           => 'NTAP',
+            'ORACLE'           => 'ORCL',
+            'SCIENCE APPL'     => 'SAIC',
+            'CISCO SYS'        => 'CSCO',
+            'INTUIT'           => 'INTU',
+            'KBR'              => 'KBR',
+            'HEICO'            => 'HEI',
+            'HEWLETT PACKARD'  => 'HPE',
+            'AUTOHOME'         => 'ATHM',
+            'ALIBABA'          => 'BABA',
+            'NVIDIA'           => 'NVDA',
+            'APPLE'            => 'AAPL',
+            'MICROSOFT'        => 'MSFT',
+            'ALPHABET'         => 'GOOGL',
+            'GOOGLE'           => 'GOOGL',
+            'AMAZON'           => 'AMZN',
+            'META PLATFORMS'   => 'META',
+            'BROADCOM'         => 'AVGO',
+            'JPMORGAN'         => 'JPM',
+            'TESLA'            => 'TSLA',
+            'QUALCOMM'         => 'QCOM',
+        ];
+
+        foreach ($lookupMap as $companyName => $ticker) {
+            if (str_contains($descUpper, $companyName)) {
+                return $ticker;
+            }
+        }
+
+        // Fallback: match standard uppercase ticker word
+        if (preg_match_all('/\b[A-Z]{1,5}\b/', $descUpper, $matches)) {
+            foreach ($matches[0] as $word) {
+                if (in_array($word, ['CO', 'INC', 'LTD', 'CORP', 'CLASS', 'COM', 'DIV', 'USD', 'COMCLASS', 'NEW', 'FUNDS', 'TRF', 'FROM', 'TYPE', 'TO'])) {
+                    continue;
+                }
+                return $word;
+            }
+        }
+
+        return null;
     }
 
     private function formatOptionContract(array $c, string $type): array

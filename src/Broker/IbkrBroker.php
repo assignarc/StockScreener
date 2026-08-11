@@ -103,6 +103,11 @@ class IbkrBroker implements BrokerInterface
         return [];
     }
 
+    public function getOpenOrders(bool $forceRefresh = false): array
+    {
+        return [];
+    }
+
     public function getOptionChain(string $symbol, float $currentPrice): array
     {
         return [

@@ -983,6 +983,155 @@ select.fsel { padding: 6px 12px; background: var(--bg3); border: 1px solid var(-
     color: var(--green);
 }
 
+/* WORKING & OPEN ORDERS CLASSES */
+.orders-view-container {
+    margin-bottom: 24px;
+}
+.orders-view-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+}
+.orders-header-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.orders-title-block {
+    display: flex;
+    flex-direction: column;
+}
+.orders-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    margin: 0 0 4px 0;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.orders-badge-count {
+    background: rgba(2, 132, 199, 0.15);
+    color: var(--blue);
+    border: 1px solid rgba(2, 132, 199, 0.3);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+.orders-desc {
+    font-size: 12px;
+    color: var(--muted);
+}
+.orders-table-wrap {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 12px;
+}
+.orders-table th {
+    padding: 12px 16px;
+}
+.orders-table td {
+    padding: 12px 16px;
+}
+.orders-table tr {
+    border-bottom: 1px solid var(--border);
+}
+.orders-table thead tr {
+    background: var(--bg2);
+    color: var(--muted);
+}
+.order-leg-item {
+    padding: 10px;
+    background: var(--bg3);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.order-leg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.order-leg-id {
+    font-family: monospace;
+    font-weight: 700;
+}
+.order-leg-badge {
+    background: rgba(2, 132, 199, 0.15);
+    color: var(--blue);
+    border: 1px solid rgba(2, 132, 199, 0.3);
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+.order-leg-desc {
+    color: var(--text);
+    font-weight: 500;
+}
+.order-leg-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 4px;
+}
+.orders-table-loader {
+    text-align: center;
+    padding: 20px;
+}
+.orders-table-empty {
+    text-align: center;
+    padding: 25px;
+}
+.orders-status-badge {
+    background: rgba(2, 132, 199, 0.15);
+    color: var(--blue);
+    border: 1px solid rgba(2, 132, 199, 0.3);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.positions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+.position-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--bg3);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+}
+.order-legs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
 
 
 

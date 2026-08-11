@@ -9,7 +9,8 @@ class LlmServiceRouter implements LlmServiceInterface
     public function __construct(
         private AppConfigService $appConfig,
         private GeminiService $geminiService,
-        private OpenAiLlmService $openAiService
+        private OpenAiLlmService $openAiService,
+        private ClaudeService $claudeService
     ) {}
 
     private function getActiveService(): LlmServiceInterface
@@ -17,6 +18,9 @@ class LlmServiceRouter implements LlmServiceInterface
         $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
         if ($provider === 'openai' || $provider === 'local') {
             return $this->openAiService;
+        }
+        if ($provider === 'claude') {
+            return $this->claudeService;
         }
         return $this->geminiService;
     }
