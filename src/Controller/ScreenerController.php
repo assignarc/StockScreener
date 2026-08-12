@@ -8,13 +8,35 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 use App\Service\BrokerManagerService;
+use App\Service\PersistentCacheService;
+
+use App\Service\TaxEngine;
 
 class ScreenerController extends AbstractController
 {
     public function __construct(
         private StockRepository $stockRepository,
-        private BrokerManagerService $brokerManager
+        private BrokerManagerService $brokerManager,
+        private PersistentCacheService $cache,
+        private TaxEngine $taxEngine,
     ) {}
+
+    #[Route('/portfolio/tax', name: 'app_portfolio_tax')]
+    public function taxCenter(): Response
+    {
+        $portfolioData = $this->brokerManager->getAggregatedPortfolio();
+        
+        // Fetch 2 years of history for tax calculation
+        $history = $this->brokerManager->getAggregatedHistory(730);
+        $realizations = $this->taxEngine->calculateTaxRealizations($history, $portfolioData);
+
+        return $this->render('screener/tax_center.html.twig', [
+            'portfolio' => $portfolioData,
+            'realizations' => $realizations,
+            'history' => $history,
+            'activePage' => 'tax_center',
+        ]);
+    }
 
     #[Route('/', name: 'app_dashboard')]
     public function dashboard(): Response
@@ -82,6 +104,16 @@ class ScreenerController extends AbstractController
     {
         return $this->render('screener/help.html.twig', [
             'activePage' => 'help',
+        ]);
+    }
+    #[Route('/engine-monitor', name: 'app_engine_monitor')]
+    public function engineMonitor(): Response
+    {
+        $cachedLandscape = $this->cache->get('flywheel.engine.landscape', isSensitive: true);
+
+        return $this->render('screener/engine_monitor.html.twig', [
+            'landscape' => $cachedLandscape,
+            'activePage' => 'engine_monitor',
         ]);
     }
 }

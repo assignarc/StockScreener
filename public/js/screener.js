@@ -1001,7 +1001,7 @@ function createFlywheelModals() {
         <div id="fwPlannerModal">
             <div class="modal-body-lg">
                 <div class="modal-hdr">
-                    <h2>🌅 Flywheel Daily Morning Order Planner</h2>
+                    <h2 style="display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:24px;color:var(--blue);">wb_twilight</span> Flywheel Daily Morning Order Planner</h2>
                     <button class="rpx" onclick="document.getElementById('fwPlannerModal').classList.remove('show')">✕</button>
                 </div>
                 <div class="modal-cnt" id="fwPlannerCnt"></div>
@@ -1024,24 +1024,41 @@ function createFlywheelModals() {
 function renderFlywheelPlannerContent(data, cnt) {
     let html = '';
 
-    // Early Exit Profit Locks (BTC)
+    // Early Exit Profit Locks (BTC) / LLM Existing Position Reviews
     const early = data.earlyExitsBTC || [];
     if (early.length > 0) {
-        html += `<div style="background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.3);border-radius:10px;padding:16px;">
-            <h3 style="font-size:13px;color:var(--green);margin-bottom:6px;">💰 Early Profit Lock Recommendations (Buy To Close)</h3>
-            <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">These open option positions have reached 50%+ max profit decay. Buying them back early locks in gains and frees risk collateral!</p>`;
+        html += `<div id="earlyExit" style="background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.3);border-radius:10px;padding:16px;margin-bottom:20px;">
+            <h3 style="font-size:13px;color:var(--green);margin-bottom:6px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">smart_toy</span> LLM Existing Contracts Review</h3>
+            <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">AI analysis of your open option positions based on live chain data.</p>`;
         early.forEach((item) => {
-            html += `<div class="card-trade">
+            const isClose = item.aiDecision === 'CLOSE';
+            const actionText = item.aiAction || 'Hold Position';
+            const targetPrice = item.aiTargetPrice || 'N/A';
+            const reasoning = item.aiReasoning || item.reasoning || '';
+            const statusStr = item.aiStatus || 'Open';
+
+            html += `<div class="card-trade" style="border-left: 4px solid ${isClose ? 'var(--blue)' : 'var(--muted)'};">
                 <div class="trade-hdr">
-                    <div><span class="fw-badge fw-badge-btc">BTC Profit Lock</span> <strong>${item.symbol}</strong> $${item.strike} ${item.optionType}</div>
-                    <div style="color:var(--green);font-weight:800;">+${item.profitPct}% Profit Realized (+$${item.realizedGain})</div>
+                    <div>
+                        <span class="fw-badge ${isClose ? 'fw-badge-btc' : ''}" style="${!isClose ? 'background:var(--bg3);color:var(--muted);' : ''}">${item.aiDecision || 'REVIEW'}</span> 
+                        <strong>${item.underlyingSymbol || item.symbol}</strong> $${item.strike} ${item.type || item.optionType}
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="color:${isClose ? 'var(--green)' : 'var(--text)'};font-weight:800;font-size:13px;">Target: ${targetPrice}</div>
+                        ${item.profitPct !== undefined ? `<div style="color:var(--green);font-weight:700;font-size:11px;">+${item.profitPct}% Profit (+$${item.realizedGain})</div>` : ''}
+                    </div>
                 </div>
-                <div style="font-size:12px;line-height:1.6;">${item.reasoning}</div>
-                <div class="trade-actions">
-                    <button class="btn-sm btn-ai" onclick="confirmWithGemini('${item.symbol}', 'BTC', ${item.strike}, 'Early Exit Buyback')">🤖 Re-Scan with Gemini AI</button>
-                    <button class="btn-sm btn-copy" onclick="copyBrokerOrder('${item.tradeActionText}')">📋 Copy Broker Order</button>
+                <div style="font-size:12px; margin-bottom:6px;">
+                    <strong>Status:</strong> ${statusStr} <br>
+                    <strong>Recommended Action:</strong> ${actionText}
                 </div>
-                <div id="aiRes_${item.symbol}_BTC" style="display:none;font-size:11px;padding:10px;background:var(--bg);border-radius:6px;margin-top:6px;border:1px solid var(--border);"></div>
+                <div style="font-size:12px;line-height:1.6;color:var(--muted);background:rgba(0,0,0,0.1);padding:8px;border-radius:4px;">
+                    <strong>AI Reasoning:</strong> ${reasoning}
+                </div>
+                ${isClose ? `
+                <div class="trade-actions" style="margin-top:10px;">
+                    <button class="btn-sm btn-copy" onclick="copyBrokerOrder('Buy To Close ${item.contracts}x ${item.underlyingSymbol || item.symbol} $${item.strike} ${item.type || item.optionType} at limit ${targetPrice}')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span> Copy BTC Order</button>
+                </div>` : ''}
             </div>`;
         });
         html += `</div>`;
@@ -1049,8 +1066,8 @@ function renderFlywheelPlannerContent(data, cnt) {
 
     // Staged Morning Covered Calls / Puts
     const calls = data.coveredCallsSTO || [];
-    html += `<div>
-        <h3 style="font-size:13px;color:var(--blue);margin-bottom:6px;">🌅 Staged Morning Recommendations (100% Covered & Collateralized)</h3>
+    html += `<div id="coveredCalls">
+        <h3 style="font-size:13px;color:var(--blue);margin-bottom:6px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">wb_twilight</span> Staged Morning Recommendations (100% Covered & Collateralized)</h3>
         <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Execute these orders in your brokerage app during morning login. All trades strictly fit your $${userRiskCap.toLocaleString()} monthly risk limit.</p>`;
 
     if (calls.length > 0) {
@@ -1063,9 +1080,9 @@ function renderFlywheelPlannerContent(data, cnt) {
                 <div style="font-size:12px;line-height:1.6;">${c.reasoning}</div>
                 <div style="font-size:11px;color:var(--muted);">Horizon: ${c.dteHorizon} | Location: ${c.accountLocation}</div>
                 <div class="trade-actions">
-                    <button class="btn-sm btn-ai" onclick="confirmWithGemini('${c.symbol}', 'STO', ${c.suggestedStrike}, 'Covered Call')">🤖 Re-Scan with Gemini AI</button>
-                    <button class="btn-sm btn-copy" onclick="copyBrokerOrder('${c.tradeActionText}')">📋 Copy Broker Order</button>
-                    <button class="btn-sm btn-sec" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);" onclick="openTradeScenario('${c.symbol}')">⚖️ View Scenario Pros & Cons</button>
+                    <button class="btn-sm btn-ai" onclick="confirmWithGemini('${c.symbol}', 'STO', ${c.suggestedStrike}, 'Covered Call')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">smart_toy</span> Re-Scan with Gemini AI</button>
+                    <button class="btn-sm btn-copy" onclick="copyBrokerOrder('${c.tradeActionText}')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span> Copy Broker Order</button>
+                    <button class="btn-sm btn-sec" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);" onclick="openTradeScenario('${c.symbol}')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">balance</span> View Scenario Pros & Cons</button>
                 </div>
                 <div id="aiRes_${c.symbol}_STO" style="display:none;font-size:11px;padding:10px;background:var(--bg);border-radius:6px;margin-top:6px;border:1px solid var(--border);"></div>
             </div>`;
@@ -1086,9 +1103,9 @@ function renderFlywheelPlannerFallback(cnt) {
         </div>
         <div style="font-size:12px;line-height:1.6;">Sell 2x NVDA $235 Covered Calls (35 DTE) against 200 unencumbered NVDA shares. Generates +$1,244 instant cash credit with zero margin risk.</div>
         <div class="trade-actions">
-            <button class="btn-sm btn-ai" onclick="confirmWithGemini('NVDA', 'STO', 235, 'Covered Call')">🤖 Re-Scan with Gemini AI</button>
-            <button class="btn-sm btn-copy" onclick="copyBrokerOrder('Sell 2x NVDA Call $235.00 for +$1,244.00')">📋 Copy Broker Order</button>
-            <button class="btn-sm btn-sec" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);" onclick="openTradeScenario('NVDA')">⚖️ View Scenario Pros & Cons</button>
+            <button class="btn-sm btn-ai" onclick="confirmWithGemini('NVDA', 'STO', 235, 'Covered Call')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">smart_toy</span> Re-Scan with Gemini AI</button>
+            <button class="btn-sm btn-copy" onclick="copyBrokerOrder('Sell 2x NVDA Call $235.00 for +$1,244.00')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span> Copy Broker Order</button>
+            <button class="btn-sm btn-sec" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);" onclick="openTradeScenario('NVDA')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">balance</span> View Scenario Pros & Cons</button>
         </div>
         <div id="aiRes_NVDA_STO" style="display:none;font-size:11px;padding:10px;background:var(--bg);border-radius:6px;margin-top:6px;border:1px solid var(--border);"></div>
     </div>`;
@@ -1111,7 +1128,7 @@ async function confirmWithGemini(symbol, action, strike, strategy) {
                 const d = json.data;
                 targetEl.innerHTML = `<strong style="color:var(--green);font-size:12px;">${d.verdict}</strong> (${d.timestamp})<br><span style="line-height:1.5;">${d.analysisText}</span>`;
             } else {
-                targetEl.innerHTML = `<strong style="color:var(--green);font-size:12px;">🟢 VERIFIED PASS</strong><br>Gemini AI Check: No immediate earnings crush expected in next 7 days. Option Level 1 risk is 100% defined and covered. Execute as LIMIT order at Mid-Price target.`;
+                targetEl.innerHTML = `<strong style="color:var(--green);font-size:12px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> VERIFIED PASS</strong><br>Gemini AI Check: No immediate earnings crush expected in next 7 days. Option Level 1 risk is 100% defined and covered. Execute as LIMIT order at Mid-Price target.`;
             }
         } catch(e) {
             targetEl.innerHTML = `<strong style="color:var(--green);font-size:12px;">🟢 VERIFIED PASS</strong><br>Gemini AI Check: No immediate earnings crush expected in next 7 days. Option Level 1 risk is 100% defined and covered. Execute as LIMIT order at Mid-Price target.`;
@@ -1133,7 +1150,7 @@ async function openTradeScenario(symbol) {
     const title = document.getElementById('fwScenTitle');
     const cnt = document.getElementById('fwScenCnt');
 
-    title.textContent = `⚖️ Trade Scenario Analysis: ${symbol}`;
+    title.innerHTML = `<span class="material-symbols-outlined" style="font-size:22px;color:var(--purple);vertical-align:middle;margin-right:6px;">balance</span> Trade Scenario Analysis: ${symbol}`;
     modal.classList.add('show');
     cnt.innerHTML = '<div class="lm" style="text-align:center;padding:30px;"><span class="spin">⟳</span> Calculating Scenario Outcomes (+10%, 0%, -10%)...</div>';
 

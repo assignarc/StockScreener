@@ -65,7 +65,7 @@ class AppConfigService
 
         // ── LLM behaviour defaults (no API keys – those have no safe default) ─
         'llm.provider'      => 'gemini',               // overridden by user in Setup Wizard
-        'gemini.model'      => 'gemini-1.5-flash',
+        'gemini.model'      => 'gemini-3.5-flash',
         'openai.model'      => 'gpt-4o-mini',
         'local_llm.url'     => 'http://localhost:11434/v1',
         'local_llm.api_key' => null,

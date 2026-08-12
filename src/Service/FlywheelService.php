@@ -42,7 +42,7 @@ class FlywheelService
         // ── Level 1 Basic Options Classification Rules ────────────────────────
         if ($score >= $callScoreThreshold && $upsidePct > $callUpsideThreshold) {
             $signal = 'CALL';
-            $signalBadge = '🟢 CALL';
+            $signalBadge = '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> CALL';
             $conviction = $score >= 85 ? 'HIGH' : 'MEDIUM';
             $strategy = 'Level 1 Basic: Defined-Risk Long Call (Max loss capped at small premium paid)';
             $horizon = '30 - 90 Days DTE';
@@ -51,7 +51,7 @@ class FlywheelService
             $flywheelRole = 'Capital Compounder (High Growth - Zero Margin Risk)';
         } elseif ($score < $putScoreThreshold || $upsidePct < 0 || $risk === 'HIGH') {
             $signal = 'PUT';
-            $signalBadge = '🔴 PUT';
+            $signalBadge = '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--red);">error</span> PUT';
             $conviction = ($score < 35 || $upsidePct < -10) ? 'HIGH' : 'MEDIUM';
             $strategy = 'Level 1 Basic: Protective Long Put Hedge (Max loss capped at premium paid)';
             $horizon = '30 - 60 Days DTE';
@@ -60,7 +60,7 @@ class FlywheelService
             $flywheelRole = 'Portfolio Protection (100% Capped Risk Hedge)';
         } else {
             $signal = 'WHEEL';
-            $signalBadge = '🟡 WHEEL';
+            $signalBadge = '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--yellow);">warning</span> WHEEL';
             $conviction = 'STABLE';
             $strategy = 'Level 1 Basic: Cash-Secured Put (100% Backed by Cash) OR Covered Call (100% Covered by Owned Stock)';
             $horizon = '14 - 45 Days DTE';
@@ -264,8 +264,8 @@ class FlywheelService
                 $accountText  = count($accountsList) > 0 ? implode(', ', $accountsList) : 'Schwab Brokerage';
                 $costBasisText = $costBasis > 0 ? "Cost Basis: \${$costBasis}/sh" : 'Cost Basis: N/A';
                 $plBadge       = $unrealizedPLPct >= 0
-                    ? "📈 +{$unrealizedPLPct}% Open P&L"
-                    : "📉 {$unrealizedPLPct}% Open P&L";
+                    ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">trending_up</span> +{$unrealizedPLPct}% Open P&L"
+                    : "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--red);\">trending_down</span> {$unrealizedPLPct}% Open P&L";
 
                 $expirationLabel = date('M d', strtotime("+{$dteTarget} days"));
 

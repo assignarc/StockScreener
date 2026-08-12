@@ -7,6 +7,7 @@ use App\Service\AppConfigService;
 use App\Service\BrokerManagerService;
 use App\Service\FinnhubService;
 use App\Service\FlywheelService;
+use App\Service\PersistentCacheService;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,6 +25,7 @@ class FlywheelController extends AbstractController
         private AppConfigService $appConfig,
         private LoggerInterface $logger,
         private \App\Llm\LlmServiceRouter $llmRouter,
+        private PersistentCacheService $cache,
     ) {}
 
     #[Route('/allocate', name: 'allocate', methods: ['POST'])]
@@ -45,6 +47,11 @@ class FlywheelController extends AbstractController
     #[Route('/covered-call-suggestions', name: 'covered_call_suggestions', methods: ['GET'])]
     public function coveredCallSuggestions(): JsonResponse
     {
+        $cachedLandscape = $this->cache->get('flywheel.engine.landscape', isSensitive: true);
+        if ($cachedLandscape && isset($cachedLandscape['coveredCalls'])) {
+            return $this->json(['status' => 'success', 'data' => $cachedLandscape['coveredCalls']]);
+        }
+
         $portfolio   = $this->brokerManager->getAggregatedPortfolio();
         $suggestions = $this->flywheelService->generatePortfolioCoveredCallSuggestions($portfolio);
 
@@ -62,8 +69,19 @@ class FlywheelController extends AbstractController
         $portfolio   = $this->brokerManager->getAggregatedPortfolio();
         $stocks      = $this->stockRepository->findAll();
         $allocation  = $this->flywheelService->calculateAllocation($stocks, $riskCap, $portfolio);
-        $earlyExits  = $this->flywheelService->generateEarlyExitSuggestions($portfolio);
-        $coveredCalls = $this->flywheelService->generatePortfolioCoveredCallSuggestions($portfolio);
+        
+        $cachedLandscape = $this->cache->get('flywheel.engine.landscape', isSensitive: true);
+        if ($cachedLandscape) {
+            $earlyExits = $cachedLandscape['existingContracts'] ?? [];
+            $coveredCalls = $cachedLandscape['coveredCalls']['suggestions'] ?? [];
+            $engineStatus = 'Active (Cached ' . ($cachedLandscape['timestamp'] ?? '') . ')';
+        } else {
+            // Fallback to live generation if engine hasn't run
+            $earlyExits  = $this->flywheelService->generateEarlyExitSuggestions($portfolio);
+            $coveredCallsData = $this->flywheelService->generatePortfolioCoveredCallSuggestions($portfolio);
+            $coveredCalls = $coveredCallsData['suggestions'] ?? [];
+            $engineStatus = 'Inactive (Live Fallback)';
+        }
 
         return $this->json([
             'status' => 'success',
@@ -72,9 +90,10 @@ class FlywheelController extends AbstractController
                     'configuredCap'          => $riskCap,
                     'existingRiskUsed'       => $allocation['existingRiskUsed'],
                     'availableRiskRemaining' => $allocation['availableRiskRemaining'],
+                    'engineStatus'           => $engineStatus,
                 ],
                 'earlyExitsBTC'  => $earlyExits,
-                'coveredCallsSTO'=> $coveredCalls['suggestions'] ?? [],
+                'coveredCallsSTO'=> $coveredCalls,
             ],
         ]);
     }
@@ -253,8 +272,8 @@ class FlywheelController extends AbstractController
                     $displayName = $getName($sym);
                     $calendarEvents[] = [
                         'title'          => $isPastDiv
-                            ? "💵 {$displayName} Dividend Paid (+\${$totalDividend})"
-                            : "💵 {$displayName} Expected Dividend (+\${$totalDividend})",
+                            ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">payments</span> {$displayName} Dividend Paid (+\${$totalDividend})"
+                            : "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">payments</span> {$displayName} Expected Dividend (+\${$totalDividend})",
                         'date'           => $payDate,
                         'category'       => $isPastDiv ? 'DIVIDEND_PAID' : 'DIVIDEND',
                         'symbol'         => $sym,
@@ -298,32 +317,55 @@ class FlywheelController extends AbstractController
                 $isPastOption     = ($expDate < $todayStr);
 
                 $accountBreakdown = [];
-                foreach ($eq['accountBreakdown'] ?? [] as $accB) {
-                    $accNum     = $accB['accountNumber'];
-                    $accPledged = (float) ($accB['pledgedShares'] ?? 0);
-                    $accountAssignedCash = ($contracts > 0 && $pledgedShares > 0)
-                        ? round($assignedCashValue * (min($pledgedShares, $accPledged) / $pledgedShares), 2)
-                        : $assignedCashValue;
+                $optAccs = $opt['accounts'] ?? [];
+                if (!empty($optAccs)) {
+                    foreach ($optAccs as $oAcc) {
+                        $accNum = $oAcc['accountNumber'];
+                        $oQty = abs($oAcc['quantity']);
+                        $assignedCash = $strike * 100 * $oQty;
+                        $nickname = $oAcc['nickname'] ?? "Account {$accNum}";
 
-                    if ($accPledged > 0 || count($eq['accountBreakdown']) === 1) {
                         $accountBreakdown[] = [
                             'accountNumber'           => $accNum,
-                            'nickname'                => $accB['nickname'] ?? "Account {$accNum}",
-                            'cashAvailable'           => (float) ($accB['cashAvailable'] ?? 0.0),
-                            'sharesHeld'              => (float) ($accB['quantity'] ?? 0),
-                            'availableShares'         => $accB['availableShares'] ?? 0,
-                            'assignedCashIfExercised' => $accountAssignedCash > 0 ? $accountAssignedCash : $assignedCashValue,
+                            'nickname'                => $nickname,
+                            'contracts'               => $oQty,
+                            'assignedCashIfExercised' => $assignedCash,
                         ];
 
                         if (isset($accountCashMap[$accNum]) && !$isPastOption) {
                             $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] ??= 0.0;
-                            $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] += ($accountAssignedCash > 0 ? $accountAssignedCash : $assignedCashValue);
+                            $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] += $assignedCash;
+                        }
+                    }
+                } else {
+                    // Fallback to stock breakdown if option accounts are not populated
+                    foreach ($eq['accountBreakdown'] ?? [] as $accB) {
+                        $accNum     = $accB['accountNumber'];
+                        $accPledged = (float) ($accB['pledgedShares'] ?? 0);
+                        $accountAssignedCash = ($contracts > 0 && $pledgedShares > 0)
+                            ? round($assignedCashValue * (min($pledgedShares, $accPledged) / $pledgedShares), 2)
+                            : $assignedCashValue;
+
+                        if ($accPledged > 0 || count($eq['accountBreakdown']) === 1) {
+                            $accountBreakdown[] = [
+                                'accountNumber'           => $accNum,
+                                'nickname'                => $accB['nickname'] ?? "Account {$accNum}",
+                                'cashAvailable'           => (float) ($accB['cashAvailable'] ?? 0.0),
+                                'sharesHeld'              => (float) ($accB['quantity'] ?? 0),
+                                'availableShares'         => $accB['availableShares'] ?? 0,
+                                'assignedCashIfExercised' => $accountAssignedCash > 0 ? $accountAssignedCash : $assignedCashValue,
+                            ];
+
+                            if (isset($accountCashMap[$accNum]) && !$isPastOption) {
+                                $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] ??= 0.0;
+                                $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] += ($accountAssignedCash > 0 ? $accountAssignedCash : $assignedCashValue);
+                            }
                         }
                     }
                 }
 
                 $calendarEvents[] = [
-                    'title'                   => ($isPastOption ? '✓ ' : '🔒 ') . $opt['symbol'] . ' Exp ($' . number_format($assignedCashValue, 0) . ' Cap)',
+                    'title'                   => ($isPastOption ? '<span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;">check_circle</span> ' : '<span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;">lock</span> ') . $opt['symbol'] . ' Exp ($' . number_format($assignedCashValue, 0) . ' Cap)',
                     'date'                    => $expDate,
                     'category'                => $isPastOption ? 'OPTION_PAST' : 'OPTION_' . $type,
                     'symbol'                  => $eq['symbol'],
@@ -428,5 +470,27 @@ class FlywheelController extends AbstractController
                 ],
             ],
         ]);
+    }
+    #[Route('/engine/status', name: 'engine_status', methods: ['GET'])]
+    public function engineStatus(): JsonResponse
+    {
+        $cachedLandscape = $this->cache->get('flywheel.engine.landscape', isSensitive: true);
+        return $this->json(['status' => 'success', 'data' => $cachedLandscape]);
+    }
+
+    #[Route('/engine/run', name: 'engine_run', methods: ['POST'])]
+    public function engineRun(): JsonResponse
+    {
+        $projectDir = $this->getParameter('kernel.project_dir');
+        $command = "php {$projectDir}/bin/console app:flywheel:engine";
+        
+        // Run in background
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            pclose(popen("start /B " . $command, "r"));
+        } else {
+            shell_exec($command . " > /dev/null 2>&1 &");
+        }
+
+        return $this->json(['status' => 'success', 'message' => 'Engine started in background']);
     }
 }

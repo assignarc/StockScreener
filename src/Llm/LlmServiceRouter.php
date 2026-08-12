@@ -25,9 +25,14 @@ class LlmServiceRouter implements LlmServiceInterface
         return $this->geminiService;
     }
 
-    public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = []): array
+    public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = [], array $marketIntelligence = []): array
     {
-        return $this->getActiveService()->generateFlywheelIdeas($portfolio, $trackedStocks);
+        return $this->getActiveService()->generateFlywheelIdeas($portfolio, $trackedStocks, $marketIntelligence);
+    }
+
+    public function analyzeMarketNews(array $newsItems): array
+    {
+        return $this->getActiveService()->analyzeMarketNews($newsItems);
     }
 
     public function analyzeOptionChain(string $symbol, float $currentPrice, array $chain): array
@@ -38,6 +43,11 @@ class LlmServiceRouter implements LlmServiceInterface
     public function verifyTradePreExecution(array $trade): array
     {
         return $this->getActiveService()->verifyTradePreExecution($trade);
+    }
+
+    public function reviewOptionPosition(string $symbol, array $contractData, array $liveChain): array
+    {
+        return $this->getActiveService()->reviewOptionPosition($symbol, $contractData, $liveChain);
     }
 
     public function getProviderName(): string

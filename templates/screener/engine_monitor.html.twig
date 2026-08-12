@@ -1,0 +1,665 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Flywheel Engine Monitor{% endblock %}
+
+{% block stylesheets %}
+<style>
+/* Modern Glassmorphic Dark Theme */
+:root {
+    --bg-deep: #0B0E14;
+    --card-glass: rgba(20, 25, 35, 0.6);
+    --neon-green: #00E676;
+    --neon-blue: #00B0FF;
+    --neon-purple: #D500F9;
+    --text-primary: #FFFFFF;
+    --text-muted: #8F9CAE;
+    --border-glass: rgba(255, 255, 255, 0.1);
+}
+
+body {
+    background-color: var(--bg-deep);
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(0, 230, 118, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(0, 176, 255, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+    color: var(--text-primary);
+}
+
+.engine-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+    background: var(--card-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glass);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Status Header */
+.status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+}
+
+.pulse-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--neon-green);
+    box-shadow: 0 0 10px var(--neon-green);
+    animation: pulse 2s infinite;
+    margin-right: 12px;
+}
+
+.pulse-indicator.offline {
+    background-color: #F44336;
+    box-shadow: 0 0 10px #F44336;
+    animation: none;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 230, 118, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+}
+
+/* Button */
+.btn-neon {
+    background: linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1));
+    border: 1px solid var(--neon-blue);
+    color: var(--neon-blue);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-neon:hover:not(:disabled) {
+    background: var(--neon-blue);
+    color: #000;
+    box-shadow: 0 0 20px rgba(0, 176, 255, 0.4);
+}
+
+.btn-neon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--text-muted);
+    color: var(--text-muted);
+}
+
+/* Grid Layout */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Terminal Logs */
+.terminal-window {
+    background: #050505;
+    border-radius: 8px;
+    border: 1px solid #333;
+    overflow: hidden;
+}
+
+.terminal-header {
+    background: #1A1A1A;
+    padding: 8px 16px;
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid #333;
+}
+
+.terminal-btn {
+    width: 12px; height: 12px; border-radius: 50%;
+}
+.term-red { background: #FF5F56; }
+.term-yellow { background: #FFBD2E; }
+.term-green { background: #27C93F; }
+
+.terminal-body {
+    padding: 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--neon-green);
+    height: 300px;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+.terminal-body div { border-bottom: 1px dashed #222; padding: 4px 0; }
+.terminal-body div:last-child { border-bottom: none; }
+
+/* Dynamic List Items */
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.data-row:last-child { border-bottom: none; }
+
+.text-gradient {
+    background: linear-gradient(90deg, var(--neon-blue), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: bold;
+}
+
+.badge-outline {
+    border: 1px solid var(--border-glass);
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+.badge-blue { color: var(--neon-blue); border-color: var(--neon-blue); background: rgba(0,176,255,0.1); }
+.badge-green { color: var(--neon-green); border-color: var(--neon-green); background: rgba(0,230,118,0.1); }
+
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.icon-spin { animation: spin 2s linear infinite; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div id="app">
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '<span class="material-symbols-outlined">memory</span> Engine <span class="text-gradient">Monitor</span>',
+        headerBadge: 'Live Diagnostics'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
+
+    <div class="content engine-dashboard">
+        <!-- Header Section -->
+        <div class="glass-card status-header">
+            <div>
+                <h2 style="margin: 0; display: flex; align-items: center;">
+                    <span id="pulseIcon" class="pulse-indicator {% if not landscape %}offline{% endif %}"></span>
+                    Engine State: <span id="engineStateText" style="margin-left: 8px; color: {% if landscape %}var(--neon-green){% else %}#F44336{% endif %};">{% if landscape %}ACTIVE{% else %}OFFLINE{% endif %}</span>
+                </h2>
+                <div style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">
+                    Last Run: <strong id="lastRunTime" style="color: #fff;">{{ landscape.timestamp ?? 'Never' }}</strong> 
+                    <span id="runDuration" style="margin-left: 10px; opacity: 0.8;">{% if landscape %}({{ landscape.durationMs }}ms){% endif %}</span>
+                </div>
+            </div>
+            
+            <button class="btn-neon" onclick="runEngineLive()" id="runEngineBtn">
+                <span class="material-symbols-outlined" id="runEngineIcon">bolt</span> 
+                Trigger Run
+            </button>
+        </div>
+        
+        <div class="grid-container">
+            <!-- Terminal Logs Section -->
+            <div class="glass-card full-width" style="padding: 0; background: #050505; border: 1px solid #333;">
+                <div class="terminal-header">
+                    <div class="terminal-btn term-red"></div>
+                    <div class="terminal-btn term-yellow"></div>
+                    <div class="terminal-btn term-green"></div>
+                    <span style="color: #666; font-size: 12px; margin-left: auto;">/var/log/engine.log</span>
+                </div>
+                <div class="terminal-body" id="engineLogsContainer">
+                    {% if landscape and landscape.engineLogs %}
+                        {% for log in landscape.engineLogs %}
+                            <div>{{ log }}</div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="color: #666;">Waiting for engine data...</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Portfolio Core State -->
+            <div class="glass-card">
+                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px; color: var(--neon-blue);">
+                    <span class="material-symbols-outlined">account_balance</span> Portfolio Cortex
+                </h3>
+                
+                <div id="portfolioDataContainer">
+                    {% if landscape and landscape.portfolioSummary %}
+                        <div class="data-row">
+                            <span>Net Liquidation Value</span>
+                            <span style="font-weight: bold;">${{ landscape.portfolioSummary.netLiquidationValue|number_format(2) }}</span>
+                        </div>
+                        <div class="data-row">
+                            <span>Total Idle Cash</span>
+                            <span style="color: var(--text-muted); font-weight: bold;">${{ landscape.portfolioSummary.cashBalance|number_format(2) }}</span>
+                        </div>
+                        <div class="data-row">
+                            <span>Unencumbered Cash</span>
+                            <span style="color: var(--neon-green); font-weight: bold;">${{ (landscape.portfolioSummary.availableCash ?? landscape.portfolioSummary.cashBalance)|number_format(2) }}</span>
+                        </div>
+                        <div class="data-row">
+                            <span>Tracked Accounts</span>
+                            <span class="badge-outline">{{ landscape.portfolioSummary.accountCount }}</span>
+                        </div>
+                        
+                        <div style="margin-top: 20px;">
+                            <strong style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Node Breakdown</strong>
+                            {% for acc in landscape.accounts|default([]) %}
+                                <div class="data-row" style="padding: 8px 0;">
+                                    <span style="font-size: 13px;">{{ acc.nickname ?? ('Acct ' ~ (acc.accountNumber ?? '')) }}</span>
+                                    <span style="font-size: 13px;">Cash: <span style="color: var(--neon-green);">${{ acc.cashAvailable|number_format(2) }}</span></span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div style="color: var(--text-muted); text-align: center; padding: 30px;">Offline. No state cached.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- AI LLM Evals -->
+            <div class="glass-card">
+                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px; color: var(--neon-purple);">
+                    <span class="material-symbols-outlined">psychology</span> Neuromorphic Evals
+                </h3>
+                
+                <div id="llmEvalsContainer" style="max-height: 400px; overflow-y: auto;">
+                    {% if landscape and landscape.existingContracts %}
+                        {% for eval in landscape.existingContracts %}
+                            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid {{ eval.aiDecision == 'CLOSE' ? 'var(--neon-blue)' : 'var(--text-muted)' }}">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <strong style="font-size: 16px;">{{ eval.underlyingSymbol ?? 'SYM' }} {{ eval.type }}</strong>
+                                    <span class="badge-outline {{ eval.aiDecision == 'CLOSE' ? 'badge-blue' : '' }}">{{ eval.aiDecision }}</span>
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+                                    {{ eval.aiReasoning }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="color: var(--text-muted); text-align: center; padding: 30px;">No contracts evaluated.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Macro Market Intelligence -->
+            <div class="glass-card">
+                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px; color: var(--neon-blue);">
+                    <span class="material-symbols-outlined">public</span> Macro Market Intelligence
+                </h3>
+                
+                <div id="marketIntelContainer" style="max-height: 400px; overflow-y: auto;">
+                    {% if landscape and landscape.marketIntelligence %}
+                        {% if landscape.marketIntelligence.error is defined %}
+                            <div style="background: rgba(255,100,100,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--red, #ef4444); color: var(--red, #ef4444); text-align: center;">
+                                <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">error</span>
+                                {{ landscape.marketIntelligence.error }}
+                            </div>
+                        {% else %}
+                            <div style="margin-bottom: 12px;">
+                                <strong style="color: var(--text-color); font-size: 14px;">Major Events</strong>
+                            </div>
+                            {% for event in landscape.marketIntelligence.events|default([]) %}
+                                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--neon-blue);">
+                                    <strong style="font-size: 14px; display: block; margin-bottom: 4px;">{{ event.headline }}</strong>
+                                    <span style="font-size: 12px; color: var(--text-muted);">{{ event.impact }}</span>
+                                </div>
+                            {% endfor %}
+
+                            <div style="margin-top: 16px; margin-bottom: 12px;">
+                                <strong style="color: var(--text-color); font-size: 14px;">AI Stock Picks</strong>
+                            </div>
+                            {% for pick in landscape.marketIntelligence.stockPicks|default([]) %}
+                                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--neon-green);">
+                                    <strong style="font-size: 14px; color: var(--neon-green);">{{ pick.ticker }}</strong>
+                                    <span style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 4px;">{{ pick.reasoning }}</span>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% else %}
+                        <div style="color: var(--text-muted); text-align: center; padding: 30px;">No market data synthesized.</div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- JSON Flywheel Output -->
+            <div class="glass-card full-width">
+                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">data_object</span> Idea Generation Matrix
+                </h3>
+                <div id="flywheelIdeasContainer" style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 16px; max-height: 400px; overflow-y: auto;">
+                    {% if landscape and landscape.newIdeas %}
+                        {% if landscape.newIdeas.error is defined %}
+                            <div style="background: rgba(255,100,100,0.1); padding: 15px; border-radius: 8px; border-left: 3px solid var(--red, #ef4444); color: var(--red, #ef4444); text-align: center;">
+                                <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">error</span>
+                                {{ landscape.newIdeas.error }}
+                            </div>
+                        {% elseif landscape.newIdeas.ideas %}
+                            {% for idea in landscape.newIdeas.ideas %}
+                                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--neon-purple);">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <strong style="font-size: 16px;">{{ idea.ticker }} - {{ idea.title }}</strong>
+                                        <span class="badge-outline" style="color: var(--neon-purple); border-color: var(--neon-purple);">{{ idea.strategyType }}</span>
+                                    </div>
+                                    <div style="margin-bottom: 8px; font-size: 13px;">
+                                        <span style="color: var(--neon-green); font-weight: bold;">Est. Premium: {{ idea.estimatedPremium }}</span> | 
+                                        <span style="color: var(--neon-blue); font-weight: bold;">APY: {{ idea.APY ?? idea.annualizedYield ?? 'N/A' }}</span> | 
+                                        Strike: {{ idea.targetStrike ?? idea.strike ?? 'N/A' }}
+                                    </div>
+                                    <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
+                                        {{ idea.reasoning }}
+                                    </div>
+                                    <div style="font-size: 12px; color: var(--yellow, #fbbf24); display: flex; align-items: center; gap: 4px;">
+                                        <span class="material-symbols-outlined" style="font-size: 14px;">shield</span> {{ idea.riskGuardrail }}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div style="color: var(--text-muted); text-align: center; padding: 30px;">No flywheel ideas generated.</div>
+                        {% endif %}
+                    {% else %}
+                        <div style="color: var(--text-muted); text-align: center; padding: 30px;">No flywheel ideas generated.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- JSON Covered Calls Output -->
+            <div class="glass-card full-width">
+                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined">auto_awesome</span> Covered Call Suggestions
+                </h3>
+                <div id="flywheelCallsContainer" style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 16px; max-height: 400px; overflow-y: auto;">
+                    {% if landscape and landscape.coveredCalls and landscape.coveredCalls.suggestions is defined %}
+                        {% for call in landscape.coveredCalls.suggestions %}
+                            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--neon-green);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <strong style="font-size: 16px;">{{ call.symbol }} - {{ call.tradeActionText }}</strong>
+                                    <span class="badge-outline badge-green">{{ call.eligibleContracts }} Contract(s)</span>
+                                </div>
+                                <div style="margin-bottom: 8px; font-size: 13px;">
+                                    <span style="color: var(--neon-green); font-weight: bold;">+ ${{ call.estTotalIncome }} Premium</span> | 
+                                    <span style="color: var(--neon-blue); font-weight: bold;">APY: {{ call.annualizedYieldPct }}%</span> | 
+                                    Strike: ${{ call.suggestedStrike }} ({{ call.otmPercentage }}% OTM)
+                                </div>
+                                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+                                    {{ call.reasoning }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="color: var(--text-muted); text-align: center;">No covered calls cached.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let pollingInterval = null;
+
+function runEngineLive() {
+    const btn = document.getElementById('runEngineBtn');
+    const icon = document.getElementById('runEngineIcon');
+    
+    // UI Loading state
+    icon.textContent = 'sync';
+    icon.classList.add('icon-spin');
+    btn.disabled = true;
+
+    // Trigger API
+    fetch('/api/flywheel/engine/run', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(res => res.json())
+      .then(data => {
+          // Keep it disabled for a while to prevent spamming
+          setTimeout(() => {
+              icon.textContent = 'bolt';
+              icon.classList.remove('icon-spin');
+              btn.disabled = false;
+          }, 3000);
+          
+          // Poll faster for a bit since we just started it
+          clearInterval(pollingInterval);
+          startPolling(2000);
+          setTimeout(() => {
+              clearInterval(pollingInterval);
+              startPolling(5000); // Back to normal 5s
+          }, 30000);
+      })
+      .catch(err => {
+          console.error(err);
+          icon.textContent = 'bolt';
+          icon.classList.remove('icon-spin');
+          btn.disabled = false;
+      });
+}
+
+function updateDashboardUI(landscape) {
+    if (!landscape) return;
+    
+    // Status Header
+    document.getElementById('pulseIcon').className = 'pulse-indicator';
+    const stateEl = document.getElementById('engineStateText');
+    stateEl.textContent = 'ACTIVE';
+    stateEl.style.color = 'var(--neon-green)';
+    
+    document.getElementById('lastRunTime').textContent = landscape.timestamp || 'Just now';
+    document.getElementById('runDuration').textContent = `(${landscape.durationMs || 0}ms)`;
+
+    // Terminal Logs
+    if (landscape.engineLogs && landscape.engineLogs.length > 0) {
+        const logsHtml = landscape.engineLogs.map(log => `<div>${log}</div>`).join('');
+        const logContainer = document.getElementById('engineLogsContainer');
+        
+        // Auto scroll if at bottom
+        const isScrolledToBottom = logContainer.scrollHeight - logContainer.clientHeight <= logContainer.scrollTop + 1;
+        logContainer.innerHTML = logsHtml;
+        if (isScrolledToBottom) {
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+    }
+    
+    // Portfolio Core State
+    if (landscape.portfolioSummary) {
+        const nlv = parseFloat(landscape.portfolioSummary.netLiquidationValue).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const cash = parseFloat(landscape.portfolioSummary.cashBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        let accountBreakdownHtml = '';
+        if (landscape.accounts) {
+            accountBreakdownHtml = landscape.accounts.map(acc => {
+                const name = acc.nickname || `Acct ${acc.accountNumber}`;
+                const aCash = parseFloat(acc.cashAvailable).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                return `
+                    <div class="data-row" style="padding: 8px 0;">
+                        <span style="font-size: 13px;">${name}</span>
+                        <span style="font-size: 13px;">Cash: <span style="color: var(--neon-green);">$${aCash}</span></span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('portfolioDataContainer').innerHTML = `
+            <div class="data-row">
+                <span>Net Liquidation Value</span>
+                <span style="font-weight: bold;">$${nlv}</span>
+            </div>
+            <div class="data-row">
+                <span>Total Idle Cash</span>
+                <span style="color: var(--text-muted); font-weight: bold;">$${cash}</span>
+            </div>
+            <div class="data-row">
+                <span>Unencumbered Cash</span>
+                <span style="color: var(--neon-green); font-weight: bold;">$${Number(landscape.portfolioSummary.availableCash || landscape.portfolioSummary.cashBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div class="data-row">
+                <span>Tracked Accounts</span>
+                <span class="badge-outline">${landscape.portfolioSummary.accountCount}</span>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <strong style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Node Breakdown</strong>
+                ${accountBreakdownHtml}
+            </div>
+        `;
+    }
+
+    // AI Evals
+    if (landscape.existingContracts && landscape.existingContracts.length > 0) {
+        document.getElementById('llmEvalsContainer').innerHTML = landscape.existingContracts.map(eval => {
+            const sym = eval.underlyingSymbol || 'SYM';
+            const decision = eval.aiDecision || 'HOLD';
+            const colorClass = decision === 'CLOSE' ? 'badge-blue' : '';
+            const borderCol = decision === 'CLOSE' ? 'var(--neon-blue)' : 'var(--text-muted)';
+            
+            return `
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid ${borderCol}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong style="font-size: 16px;">${sym} ${eval.type || ''}</strong>
+                        <span class="badge-outline ${colorClass}">${decision}</span>
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+                        ${eval.aiReasoning || ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Market Intelligence
+    if (landscape.marketIntelligence) {
+        let intelHtml = '';
+        
+        if (landscape.marketIntelligence.error) {
+            intelHtml = `
+                <div style="background: rgba(255,100,100,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--red, #ef4444); color: var(--red, #ef4444); text-align: center;">
+                    <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">error</span>
+                    ${landscape.marketIntelligence.error}
+                </div>
+            `;
+        } else {
+            if (landscape.marketIntelligence.events && landscape.marketIntelligence.events.length > 0) {
+                intelHtml += '<div style="margin-bottom: 12px;"><strong style="color: var(--text-color); font-size: 14px;">Major Events</strong></div>';
+                intelHtml += landscape.marketIntelligence.events.map(event => `
+                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--neon-blue);">
+                        <strong style="font-size: 14px; display: block; margin-bottom: 4px;">${event.headline || ''}</strong>
+                        <span style="font-size: 12px; color: var(--text-muted);">${event.impact || ''}</span>
+                    </div>
+                `).join('');
+            }
+
+            if (landscape.marketIntelligence.stockPicks && landscape.marketIntelligence.stockPicks.length > 0) {
+                intelHtml += '<div style="margin-top: 16px; margin-bottom: 12px;"><strong style="color: var(--text-color); font-size: 14px;">AI Stock Picks</strong></div>';
+                intelHtml += landscape.marketIntelligence.stockPicks.map(pick => `
+                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--neon-green);">
+                        <strong style="font-size: 14px; color: var(--neon-green);">${pick.ticker || ''}</strong>
+                        <span style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 4px;">${pick.reasoning || ''}</span>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        if (intelHtml !== '') {
+            document.getElementById('marketIntelContainer').innerHTML = intelHtml;
+        }
+    }
+
+    // Ideas
+    if (landscape.newIdeas) {
+        if (landscape.newIdeas.error) {
+            document.getElementById('flywheelIdeasContainer').innerHTML = `
+                <div style="background: rgba(255,100,100,0.1); padding: 15px; border-radius: 8px; border-left: 3px solid var(--red, #ef4444); color: var(--red, #ef4444); text-align: center;">
+                    <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">error</span>
+                    ${landscape.newIdeas.error}
+                </div>
+            `;
+        } else if (landscape.newIdeas.ideas && landscape.newIdeas.ideas.length > 0) {
+            document.getElementById('flywheelIdeasContainer').innerHTML = landscape.newIdeas.ideas.map(idea => `
+                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--neon-purple);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong style="font-size: 16px;">${idea.ticker || ''} - ${idea.title || ''}</strong>
+                        <span class="badge-outline" style="color: var(--neon-purple); border-color: var(--neon-purple);">${idea.strategyType || ''}</span>
+                    </div>
+                    <div style="margin-bottom: 8px; font-size: 13px;">
+                        <span style="color: var(--neon-green); font-weight: bold;">Est. Premium: ${idea.estimatedPremium || ''}</span> | 
+                        <span style="color: var(--neon-blue); font-weight: bold;">APY: ${idea.APY || idea.annualizedYield || ''}</span> | 
+                        Strike: ${idea.targetStrike || idea.strike || ''}
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
+                        ${idea.reasoning || ''}
+                    </div>
+                    <div style="font-size: 12px; color: var(--yellow, #fbbf24); display: flex; align-items: center; gap: 4px;">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">shield</span> ${idea.riskGuardrail || ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+    }
+    
+    // Covered Calls
+    if (landscape.coveredCalls && landscape.coveredCalls.suggestions) {
+        document.getElementById('flywheelCallsContainer').innerHTML = landscape.coveredCalls.suggestions.map(call => `
+            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--neon-green);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="font-size: 16px;">${call.symbol} - ${call.tradeActionText}</strong>
+                    <span class="badge-outline badge-green">${call.eligibleContracts} Contract(s)</span>
+                </div>
+                <div style="margin-bottom: 8px; font-size: 13px;">
+                    <span style="color: var(--neon-green); font-weight: bold;">+ $${call.estTotalIncome} Premium</span> | 
+                    <span style="color: var(--neon-blue); font-weight: bold;">APY: ${call.annualizedYieldPct}%</span> | 
+                    Strike: $${call.suggestedStrike} (${call.otmPercentage}% OTM)
+                </div>
+                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+                    ${call.reasoning}
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function fetchEngineStatus() {
+    fetch('/api/flywheel/engine/status')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success' && data.data) {
+                updateDashboardUI(data.data);
+            }
+        })
+        .catch(err => console.error('Error fetching engine status:', err));
+}
+
+function startPolling(intervalMs) {
+    pollingInterval = setInterval(fetchEngineStatus, intervalMs);
+}
+
+// Start polling every 5 seconds on load
+document.addEventListener('DOMContentLoaded', () => {
+    startPolling(5000);
+});
+
+</script>
+{% endblock %}

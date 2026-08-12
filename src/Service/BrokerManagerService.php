@@ -131,6 +131,7 @@ class BrokerManagerService
     {
         $allPositions = [];
         $totalCash = 0.0;
+        $totalAvailableCash = 0.0;
         $totalPortfolioVal = 0.0;
         $authorizedCount = 0;
         $accountsSummary = [];
@@ -172,6 +173,7 @@ class BrokerManagerService
                     $accVal = (float) ($accItem['liquidationValue'] ?? 0.0);
                     $accCash = (float) ($accItem['cashAvailable'] ?? 0.0);
                     $accPositions = $accItem['positions'] ?? [];
+                    $accTotalRequiredCash = 0.0;
 
                     $accMasked = $accNum !== 'N/A' ? ('***' . substr($accNum, -4)) : '';
                     $matchedOrders = [];
@@ -189,6 +191,16 @@ class BrokerManagerService
                         $costBasis = (float) ($posItem['cost_basis'] ?? $posItem['averagePrice'] ?? 0.0);
                         $unrealizedPL = (float) ($posItem['unrealized_pl'] ?? $posItem['unrealizedPL'] ?? 0.0);
                         $unrealizedPLPct = (float) ($posItem['unrealized_pl_pct'] ?? $posItem['unrealizedPLPct'] ?? 0.0);
+
+                        if ($assetType === 'OPTION') {
+                            $putCall = $posItem['putCall'] ?? '';
+                            $strike = (float) ($posItem['strikePrice'] ?? 0.0);
+                            if ($qty < 0 && $putCall === 'PUT') {
+                                // Strictly enforce 100% Cash-Secured Put requirement
+                                $reqCash = abs($qty) * $strike * 100;
+                                $accTotalRequiredCash += $reqCash;
+                            }
+                        }
 
                         $allPositions[] = [
                             'broker_id'      => $id,
@@ -236,6 +248,10 @@ class BrokerManagerService
                         $valB = (float) ($b['marketValue'] ?? $b['market_value'] ?? 0.0);
                         return $valB <=> $valA;
                     });
+
+                    // Deduct collateral from available cash
+                    $accCash = max(0.0, $accCash - $accTotalRequiredCash);
+                    $totalAvailableCash += $accCash;
 
                     $accountsSummary[] = [
                         'id'                 => $id . '_' . $accIndex,
@@ -326,10 +342,23 @@ class BrokerManagerService
                     $dateStr = "20{$yy}-{$mm}-{$dd}";
 
                     $contractCount = max(1, (int) abs($e['totalQuantity']));
-                    $pledgedShares = $contractCount * 100;
+                    $pledgedShares = $type === 'Call' ? ($contractCount * 100) : 0;
 
                     if (!isset($optionsMap[$root])) {
                         $optionsMap[$root] = [];
+                    }
+
+                    $status = $type === 'Call'
+                        ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> COVERED CALL ACTIVE — {$pledgedShares} Shares Pledged ({$contractCount} Contracts, Strike: \${$strike}, Exp: {$dateStr})"
+                        : "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">shield</span> CASH-SECURED PUT ACTIVE — ({$contractCount} Contracts, Strike: \${$strike}, Exp: {$dateStr})";
+
+                    $optAccounts = [];
+                    foreach ($e['accounts'] as $optAcc) {
+                        $optAccounts[] = [
+                            'accountNumber' => $optAcc['accountNumber'],
+                            'nickname' => $optAcc['nickname'] ?? '',
+                            'quantity' => $optAcc['quantity'],
+                        ];
                     }
 
                     $optionsMap[$root][] = [
@@ -341,15 +370,18 @@ class BrokerManagerService
                         'marketValue' => round($e['totalMarketValue'], 2),
                         'unrealizedPL' => round($e['totalUnrealizedPL'], 2),
                         'pledgedShares' => $pledgedShares,
-                        'status' => "🔒 COVERED CALL ACTIVE — {$pledgedShares} Shares Pledged ({$contractCount} Contracts, Strike: \${$strike}, Exp: {$dateStr})",
+                        'status' => $status,
+                        'accounts' => $optAccounts,
                     ];
 
-                    foreach ($e['accounts'] as $optAcc) {
-                        $accNum = $optAcc['accountNumber'];
-                        if (!isset($accountOptionPledges[$root][$accNum])) {
-                            $accountOptionPledges[$root][$accNum] = 0;
+                    if ($type === 'Call') {
+                        foreach ($e['accounts'] as $optAcc) {
+                            $accNum = $optAcc['accountNumber'];
+                            if (!isset($accountOptionPledges[$root][$accNum])) {
+                                $accountOptionPledges[$root][$accNum] = 0;
+                            }
+                            $accountOptionPledges[$root][$accNum] += (abs($optAcc['quantity']) * 100);
                         }
-                        $accountOptionPledges[$root][$accNum] += ($optAcc['quantity'] * 100);
                     }
                 }
             }
@@ -386,13 +418,13 @@ class BrokerManagerService
                     $eligibleContracts = floor($accAvail / 100);
 
                     if ($accPledged > 0 && $accAvail == 0) {
-                        $badge = "🔒 0 Available (100% Pledged to Covered Calls)";
+                        $badge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> 0 Available (100% Pledged to Covered Calls)";
                         $badgeClass = "r";
                     } elseif ($accAvail < 100) {
-                        $badge = "⚠️ {$accAvail} Unencumbered Shares (< 100 shares — CANNOT be used for Call options)";
+                        $badge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);\">warning</span> {$accAvail} Unencumbered Shares (< 100 shares — CANNOT be used for Call options)";
                         $badgeClass = "y";
                     } else {
-                        $badge = "🟢 {$accAvail} Unencumbered Shares (Eligible for {$eligibleContracts} Covered Call Contracts)";
+                        $badge = "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--green);\">check_circle</span> {$accAvail} Unencumbered Shares (Eligible for {$eligibleContracts} Covered Call Contracts)";
                         $badgeClass = "g";
                     }
 
@@ -429,13 +461,13 @@ class BrokerManagerService
                     'canUseForCalls' => $availableShares >= 100,
                     'statusBadge' => count($linkedOpts) > 0 
                         ? ($isFullyCovered 
-                            ? "🔒 COVERED CALL ACTIVE (100% Shares Pledged — 0 Available for new Calls)" 
+                            ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> COVERED CALL ACTIVE (100% Shares Pledged — 0 Available for new Calls)" 
                             : ($availableShares < 100 
-                                ? "⚠️ {$availableShares} Shares Available (< 100 shares — CANNOT be used for Call options)" 
-                                : "🟢 COVERED CALL ACTIVE ({$pledgedShares} Pledged — {$availableShares} Available for new Calls)"))
+                                ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);\">warning</span> {$availableShares} Shares Available (< 100 shares — CANNOT be used for Call options)" 
+                                : "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--green);\">check_circle</span> COVERED CALL ACTIVE ({$pledgedShares} Pledged — {$availableShares} Available for new Calls)"))
                         : ($availableShares < 100 
-                            ? "⚠️ {$availableShares} Shares Available (< 100 shares — CANNOT be used for Call options)" 
-                            : "🟢 UNENCUMBERED ({$availableShares} Shares Available for Covered Calls)"),
+                            ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);\">warning</span> {$availableShares} Shares Available (< 100 shares — CANNOT be used for Call options)" 
+                            : "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--green);\">check_circle</span> UNENCUMBERED ({$availableShares} Shares Available for Covered Calls)"),
                 ];
             }
         }
@@ -459,6 +491,7 @@ class BrokerManagerService
             'total_brokers'         => count($this->brokers),
             'netLiquidationValue'   => $totalPortfolioVal,
             'cashBalance'           => $totalCash,
+            'availableCash'         => $totalAvailableCash,
             'accounts'              => $accountsSummary,
             'balances'              => [
                 'cash'            => $totalCash,

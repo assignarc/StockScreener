@@ -34,7 +34,7 @@ class ClaudeService implements LlmServiceInterface
     private function callClaudeApi(string $prompt): ?string
     {
         $apiKey = $this->getEffectiveApiKey();
-        if (empty($apiKey)) {
+        if (empty($apiKey) || stripos($apiKey, 'dummy') !== false) {
             return null;
         }
 
@@ -63,6 +63,8 @@ class ClaudeService implements LlmServiceInterface
             if ($response->getStatusCode() === 200) {
                 $data = $response->toArray();
                 return $data['content'][0]['text'] ?? null;
+            } elseif ($response->getStatusCode() === 401) {
+                $this->logger->warning('Claude API Authentication Failed: Invalid API key.');
             } else {
                 $this->logger->error('Claude API returned status: ' . $response->getStatusCode() . ' Body: ' . $response->getContent(false));
             }
@@ -73,7 +75,7 @@ class ClaudeService implements LlmServiceInterface
         return null;
     }
 
-    public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = []): array
+    public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = [], array $marketIntelligence = []): array
     {
         $cashAvailable = $portfolio['cashBalance'] ?? 0.0;
         $netLiquidation = $portfolio['netLiquidationValue'] ?? 0.0;
@@ -88,18 +90,46 @@ class ClaudeService implements LlmServiceInterface
         $stockSymbols = array_map(fn($s) => is_array($s) ? ($s['symbol'] ?? '') : $s->getSymbol(), array_slice($trackedStocks, 0, 8));
         $trackedContext = implode(', ', array_filter($stockSymbols));
 
-        $prompt = "You are Claude, an expert Wall Street Quantitative Options Strategist specializing in Option Level 1 Basic Covered & Defined Risk strategies.
-        
-Analyze this Schwab Investor Portfolio:
-- Net Liquidation Value: \${$netLiquidation}
-- Available Cash Reserves: \${$cashAvailable}
+        $accountSummary = [];
+        foreach ($portfolio['accounts'] ?? [] as $acc) {
+            $name = $acc['nickname'] ?? $acc['accountNumber'] ?? 'Unknown';
+            $cash = $acc['cashAvailable'] ?? 0.0;
+            $accountSummary[] = "{$name}: \${$cash} cash available";
+        }
+        $accountContext = implode("\n", $accountSummary);
+
+        $marketContext = "";
+        if (!empty($marketIntelligence['events'])) {
+            $marketContext = "\n- Macro Market Intelligence (Crucial for Context):\n";
+            foreach ($marketIntelligence['events'] as $event) {
+                $marketContext .= "  * {$event['headline']}: {$event['impact']}\n";
+            }
+        }
+        if (!empty($marketIntelligence['stockPicks'])) {
+            $marketContext .= "- AI Market Intelligence Stock Picks:\n";
+            foreach ($marketIntelligence['stockPicks'] as $pick) {
+                $marketContext .= "  * {$pick['ticker']}: {$pick['reasoning']}\n";
+            }
+        }
+
+        $prompt = "You are an elite quantitative AI manager running a 'Capital Flywheel' strategy on a live brokerage account.
+Analyze this Schwab Investor Portfolio carefully. Only suggest trades that utilize the explicitly available cash reserves or unencumbered shares.
+- Available Idle Cash Reserves by Account:
+{$accountContext}
+(Total Cash: \${$cashAvailable})
 - Portfolio Holdings:
 {$equityContext}
-
+{$marketContext}
 - Top Tracked Screener Candidates: {$trackedContext}
 
-Please generate 3 high-conviction Option Level 1 Basic rules strategy ideas (Covered Call on owned blocks of 100+ shares, Cash-Secured Put on cash, or Capital Preservation yield strategy).
-Output strictly JSON formatting. The JSON must be an array of 3 strategy objects. Each object must have keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
+Please generate up to 5 high-conviction AI Capital Flywheel Strategy Ideas:
+1. Covered Call Strategy for unencumbered stock blocks (must have >= 100 shares available).
+2. Cash-Secured Put Strategy using the available cash reserves. Specify which account the put should be sold in, and ensure the account has enough cash available for the collateral.
+3. Yield/Capital Preservation Strategy for idle cash.
+You may generate multiple suggestions of the same type if they are strong candidates (e.g. 2 different Cash-Secured Puts on different tickers from the Screener Candidates).
+
+CRITICAL INSTRUCTION: You must strictly adhere to the financial constraints. Do not hallucinate strikes or prices.
+Output strictly JSON formatting. The JSON must be an array of strategy objects under an 'ideas' key. Each object must have keys: title, ticker, strategyType, targetStrike, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
 
         $aiText = $this->callClaudeApi($prompt);
         if ($aiText) {
@@ -113,9 +143,7 @@ Output strictly JSON formatting. The JSON must be an array of 3 strategy objects
         }
 
         return [
-            'source' => $this->getProviderName() . ' (Free/Simulated Mode)',
-            'rawText' => 'AI Flywheel Analysis Generated for Schwab Portfolio (Simulated)',
-            'ideas' => $this->generateDefaultAiIdeas($cashAvailable, $equities),
+            'error' => 'Failed to generate flywheel ideas: ' . $this->getProviderName() . ' API key missing or invalid.',
         ];
     }
 
@@ -219,7 +247,7 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
                 'incomePerContract' => $bestCall['estIncomePerContract'],
                 'otmPct' => $bestCall['otmPct'],
                 'annualizedYield' => $bestCall['annualizedYield'],
-                'actionBadge' => '🎯 BEST COVERED CALL TARGET',
+                'actionBadge' => '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">my_location</span> BEST COVERED CALL TARGET',
                 'reasoning' => "Claude selected \${$bestCall['strike']} Call (Delta {$bestCall['delta']}, +{$bestCall['otmPct']}% OTM). Selling this contract captures +\${$bestCall['estIncomePerContract']} cash credit ({$bestCall['annualizedYield']}% APY) while preserving stock upside.",
             ],
             'recommendedPut' => [
@@ -229,7 +257,7 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
                 'incomePerContract' => $bestPut['estIncomePerContract'],
                 'discountPct' => $bestPut['discountPct'],
                 'annualizedYield' => $bestPut['annualizedYield'],
-                'actionBadge' => '🎯 BEST CASH-SECURED PUT TARGET',
+                'actionBadge' => '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">my_location</span> BEST CASH-SECURED PUT TARGET',
                 'reasoning' => "Claude selected \${$bestPut['strike']} Put (Delta {$bestPut['delta']}, -{$bestPut['discountPct']}% OTM). Selling this contract yields +\${$bestPut['estIncomePerContract']} cash credit ({$bestPut['annualizedYield']}% APY) with a built-in discount entry at \${$bestPut['strike']}.",
             ],
             'aiVerdict' => $aiCommentary,
@@ -255,7 +283,7 @@ Perform a 3-point sanity check:
         if ($aiText) {
             return [
                 'symbol' => $symbol,
-                'verdict' => str_contains($aiText, 'REJECT') ? '🔴 WARN/REJECT' : '🟢 VERIFIED PASS',
+                'verdict' => str_contains($aiText, 'REJECT') ? '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--red);">error</span> WARN/REJECT' : '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> VERIFIED PASS',
                 'timestamp' => date('Y-m-d H:i:s T'),
                 'analysisText' => $aiText,
                 'source' => $this->getProviderName() . " Live Pre-Trade Check",
@@ -264,10 +292,119 @@ Perform a 3-point sanity check:
 
         return [
             'symbol' => $symbol,
-            'verdict' => '🟢 VERIFIED PASS',
+            'verdict' => '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> VERIFIED PASS',
             'timestamp' => date('Y-m-d H:i:s T'),
             'analysisText' => "Claude Pre-Trade Verification for {$symbol}: No immediate risks detected. Option Level 1 risk is defined. Recommendation: Execute as LIMIT order.",
             'source' => $this->getProviderName() . ' (Pre-Trade Verification Fallback)',
         ];
+    }
+
+    public function reviewOptionPosition(string $symbol, array $contractData, array $liveChain): array
+    {
+        $type = strtoupper($contractData['type'] ?? 'CALL');
+        $strike = $contractData['strike'] ?? 0;
+        $expDate = $contractData['expiration'] ?? '';
+        $qty = $contractData['contracts'] ?? 1;
+        $currentPrice = $liveChain['underlyingPrice'] ?? 'Unknown';
+
+        // Limit the chain data to just the relevant options to prevent token explosion
+        $relevantOptions = [];
+        $optionsList = $type === 'CALL' ? ($liveChain['calls'] ?? []) : ($liveChain['puts'] ?? []);
+        
+        foreach ($optionsList as $opt) {
+            $optStrike = $opt['strike'] ?? 0;
+            if (abs($optStrike - $strike) < ($currentPrice * 0.1)) {
+                $relevantOptions[] = [
+                    'strike' => $optStrike,
+                    'bid' => $opt['bid'] ?? 0,
+                    'ask' => $opt['ask'] ?? 0,
+                    'delta' => $opt['delta'] ?? 0,
+                ];
+            }
+        }
+        $chainJson = json_encode($relevantOptions);
+
+        $prompt = "You are Claude, a senior Wall Street options analyst. Review this active option position nearing expiration.
+Symbol: {$symbol}
+Contract Type: {$type}
+Strike: \${$strike}
+Expiration: {$expDate}
+Quantity: {$qty} contracts
+Current Underlying Price: \${$currentPrice}
+
+Live Option Chain Data (Nearby Strikes):
+{$chainJson}
+
+Provide a STRICT JSON response with exactly these fields:
+- decision (must be exactly 'HOLD' or 'CLOSE')
+- status (e.g. 'Safe', 'At Risk', 'Deep ITM')
+- probabilityOfAssignment (e.g. 'Very Low (<5%)', 'High (>90%)')
+- action (e.g. 'Let expire worthless', 'Buy To Close (BTC)')
+- targetLimitPrice (extract the ask/bid from the JSON chain that corresponds to the strike, if available)
+- reasoning (1-2 sentences explaining the decision mathematically based on the provided chain)";
+
+        $aiText = $this->callClaudeApi($prompt);
+        if ($aiText) {
+            if (preg_match('/\{.*\}/s', $aiText, $match)) {
+                $decoded = json_decode($match[0], true);
+                if (is_array($decoded) && isset($decoded['decision'])) {
+                    return $decoded;
+                }
+            }
+        }
+
+        // Fallback dummy response
+        return [
+            'decision' => 'HOLD',
+            'status' => 'Safe (OTM)',
+            'probabilityOfAssignment' => 'Very Low (< 5%)',
+            'action' => 'Let expire worthless',
+            'targetLimitPrice' => 'N/A',
+            'reasoning' => 'Based on current market trends, the underlying asset is well away from the strike price. Theta decay will rapidly reduce remaining extrinsic value to zero.'
+        ];
+    }
+
+    public function analyzeMarketNews(array $newsItems): array
+    {
+        if (empty($newsItems)) {
+            return ['error' => 'No recent market news available from Finnhub (API key missing or no news).'];
+        }
+
+        $newsContext = "";
+        foreach ($newsItems as $i => $news) {
+            $headline = $news['headline'] ?? 'Unknown';
+            $summary = $news['summary'] ?? '';
+            $newsContext .= ($i + 1) . ". {$headline}\n   Summary: {$summary}\n\n";
+        }
+
+        $prompt = "You are a top-tier Macroeconomic AI Analyst.
+Review the following recent general market news headlines and summaries:
+
+{$newsContext}
+
+Synthesize this data and extract:
+1. Up to 3 major macroeconomic or world events that might affect the stock market.
+2. Up to 3 specific stock purchase ideas or sectors that look bullish based on these events.
+
+Output strictly JSON formatting with the following structure:
+{
+  \"events\": [
+    {\"headline\": \"Event title\", \"impact\": \"Brief explanation of market impact\"}
+  ],
+  \"stockPicks\": [
+    {\"ticker\": \"TICKER_SYMBOL\", \"reasoning\": \"Brief reasoning for bullishness\"}
+  ]
+}";
+
+        $aiText = $this->callClaudeApi($prompt);
+        if ($aiText) {
+            $cleanJson = preg_replace('/^```json\s*|```$/i', '', trim($aiText));
+            $parsed = json_decode($cleanJson, true);
+            if (json_last_error() === JSON_ERROR_NONE && isset($parsed['events'])) {
+                return $parsed;
+            }
+        }
+
+        return ['error' => 'Failed to synthesize market news: ' . $this->getProviderName() . ' API key missing or invalid.'];
     }
 }

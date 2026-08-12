@@ -409,10 +409,11 @@
                             <div class="cfg-key">gemini.model</div>
                         </div>
                     </div>
-                    <select class="styled-select-input cfg-input" id="cfg_gemini_model" data-key="gemini.model" data-original="{{ config['gemini.model']|default('gemini-1.5-flash') }}" onchange="onFieldChange(this)">
-                        <option value="gemini-1.5-flash" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-1.5-flash' %}selected{% endif %}>Gemini 1.5 Flash (Fast & Efficient)</option>
-                        <option value="gemini-1.5-pro" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-1.5-pro' %}selected{% endif %}>Gemini 1.5 Pro (Deep Reasoning)</option>
-                        <option value="gemini-2.0-flash-exp" {% if config['gemini.model']|default('gemini-1.5-flash') == 'gemini-2.0-flash-exp' %}selected{% endif %}>Gemini 2.0 Flash (Experimental)</option>
+                    <select class="styled-select-input cfg-input" id="cfg_gemini_model" data-key="gemini.model" data-original="{{ config['gemini.model']|default('gemini-3.5-flash') }}" onchange="onFieldChange(this)">
+                        <option value="gemini-3.5-flash" {% if config['gemini.model']|default('gemini-3.5-flash') == 'gemini-3.5-flash' %}selected{% endif %}>Gemini 3.5 Flash (Recommended - Fastest)</option>
+                        <option value="gemini-2.5-flash" {% if config['gemini.model']|default('gemini-3.5-flash') == 'gemini-2.5-flash' %}selected{% endif %}>Gemini 2.5 Flash (Stable Standard)</option>
+                        <option value="gemini-2.5-pro" {% if config['gemini.model']|default('gemini-3.5-flash') == 'gemini-2.5-pro' %}selected{% endif %}>Gemini 2.5 Pro (Deep Reasoning)</option>
+                        <option value="gemini-3.1-pro-preview" {% if config['gemini.model']|default('gemini-3.5-flash') == 'gemini-3.1-pro-preview' %}selected{% endif %}>Gemini 3.1 Pro (Experimental Preview)</option>
                     </select>
                 </div>
 
@@ -532,7 +533,7 @@
                     </div>
                 </div>
                        <!-- ── Flywheel Signal Thresholds ────────────────────────── -->
-        <div class="cfg-section">
+        <div class="cfg-section" id="cfgThresholds">
             <div class="cfg-section-header">
                 <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">analytics</span>
                 <div>
@@ -551,7 +552,7 @@
         </div>
 
         <!-- ── Capital Allocation Weights ──────────────────────────── -->
-        <div class="cfg-section">
+        <div class="cfg-section" id="cfgAllocation">
             <div class="cfg-section-header">
                 <span class="material-symbols-outlined" style="font-size:22px; color:var(--purple);">balance</span>
                 <div>
@@ -568,7 +569,7 @@
         </div>
 
         <!-- ── Covered Call Parameters ─────────────────────────────── -->
-        <div class="cfg-section">
+        <div class="cfg-section" id="cfgCoveredCall">
             <div class="cfg-section-header">
                 <span class="material-symbols-outlined" style="font-size:22px; color:var(--green);">call</span>
                 <div>
@@ -586,7 +587,7 @@
         </div>
 
         <!-- ── Early Exit Parameters ───────────────────────────────── -->
-        <div class="cfg-section">
+        <div class="cfg-section" id="cfgEarlyExit">
             <div class="cfg-section-header">
                 <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">directions_run</span>
                 <div>
@@ -600,7 +601,7 @@
         </div>
 
         <!-- ── Calendar Bounds ─────────────────────────────────────── -->
-        <div class="cfg-section">
+        <div class="cfg-section" id="cfgCalendar">
             <div class="cfg-section-header">
                 <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">calendar_month</span>
                 <div>
@@ -807,7 +808,7 @@ async function copyText(text, btn) {
         await navigator.clipboard.writeText(text);
         if (btn) {
             const orig = btn.innerHTML;
-            btn.innerHTML = '✓ Copied!';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:2px;">check</span> Copied!';
             btn.style.color = 'var(--green)';
             setTimeout(() => {
                 btn.innerHTML = orig;

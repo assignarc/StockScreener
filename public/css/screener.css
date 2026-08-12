@@ -244,8 +244,7 @@ body {
     padding: 0 16px;
     gap: 2px;
     align-items: stretch;
-    overflow-x: auto;
-    overflow-y: visible;
+    overflow: visible;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;

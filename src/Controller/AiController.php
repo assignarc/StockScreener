@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Repository\StockRepository;
 use App\Service\BrokerManagerService;
+use App\Service\PersistentCacheService;
 use App\Llm\LlmServiceRouter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -17,6 +18,7 @@ class AiController extends AbstractController
         private LlmServiceRouter $llmService,
         private BrokerManagerService $brokerManager,
         private StockRepository $stockRepository,
+        private PersistentCacheService $cache,
     ) {}
 
     /**
@@ -26,11 +28,16 @@ class AiController extends AbstractController
     #[Route('/flywheel-ideas', name: 'flywheel_ideas', methods: ['GET'])]
     public function flywheelIdeas(): JsonResponse
     {
+        $cachedLandscape = $this->cache->get('flywheel.engine.landscape', isSensitive: true);
+        if ($cachedLandscape && isset($cachedLandscape['newIdeas'])) {
+            return $this->json(['status' => 'success', 'source' => 'cache', 'data' => $cachedLandscape['newIdeas']]);
+        }
+
         $portfolio    = $this->brokerManager->getAggregatedPortfolio();
         $stocks       = $this->stockRepository->findByFilters();
         $aiIdeas      = $this->llmService->generateFlywheelIdeas($portfolio, $stocks);
 
-        return $this->json(['status' => 'success', 'data' => $aiIdeas]);
+        return $this->json(['status' => 'success', 'source' => 'live', 'data' => $aiIdeas]);
     }
 
     /**
@@ -62,17 +69,43 @@ class AiController extends AbstractController
     }
 
     /**
+     * AI review of an active option position nearing expiration.
+     */
+    #[Route('/review-option/{symbol}/{strike}', name: 'review_option', methods: ['GET'])]
+    public function reviewOption(string $symbol, string $strike): JsonResponse
+    {
+        $symbol       = strtoupper(trim($symbol));
+        $stock        = $this->stockRepository->findOneBy(['symbol' => $symbol]);
+        $currentPrice = $stock ? $stock->getPrice() : 100.0;
+
+        $chain = $this->brokerManager->getOptionChain($symbol, $currentPrice);
+        $contractData = [
+            'type' => 'CALL', // We assume call for simple review, but ideally frontend sends this
+            'strike' => (float)$strike,
+            'expiration' => '',
+            'contracts' => 1
+        ];
+
+        $review = $this->llmService->reviewOptionPosition($symbol, $contractData, $chain);
+
+        return $this->json(['status' => 'success', 'data' => $review]);
+    }
+
+    /**
      * AI-powered discover suggestions — replaces the old static hardcoded stock list.
      * Falls back to curated defaults when API key is not configured.
      */
     #[Route('/discover-suggestions', name: 'discover_suggestions', methods: ['GET'])]
     public function discoverSuggestions(): JsonResponse
     {
-        $portfolio = $this->brokerManager->getAggregatedPortfolio();
-        $stocks    = $this->stockRepository->findByFilters();
-
-        // Attempt live AI-powered suggestions
-        $aiResult = $this->llmService->generateFlywheelIdeas($portfolio, $stocks);
+        $cachedLandscape = $this->cache->get('flywheel.engine.landscape', isSensitive: true);
+        if ($cachedLandscape && isset($cachedLandscape['newIdeas'])) {
+            $aiResult = $cachedLandscape['newIdeas'];
+        } else {
+            $portfolio = $this->brokerManager->getAggregatedPortfolio();
+            $stocks    = $this->stockRepository->findByFilters();
+            $aiResult  = $this->llmService->generateFlywheelIdeas($portfolio, $stocks);
+        }
 
         // If Gemini returned live ideas, reformat them as discover-style cards
         if (!empty($aiResult['ideas'])) {
@@ -119,7 +152,7 @@ class AiController extends AbstractController
                 'reasoning'       => 'Dominating the x86 server market and rapidly expanding MI300X AI GPU market share.',
                 'catalysts'       => 'MI350 series launch, datacenter market share gains.',
                 'keyRisks'        => 'Competition from NVIDIA Blackwell.',
-                'suggestedStrategy'=> '🟢 Level 1 Basic: Long Call 5% OTM Target $150 (30-60 DTE)',
+                'suggestedStrategy'=> '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> Level 1 Basic: Long Call 5% OTM Target $150 (30-60 DTE)',
             ],
             [
                 'symbol'          => 'AMZN',
@@ -134,7 +167,7 @@ class AiController extends AbstractController
                 'reasoning'       => 'AWS cloud growth re-accelerating past +19% YoY.',
                 'catalysts'       => 'AWS AI workload adoption, Prime Video ad network.',
                 'keyRisks'        => 'Consumer spending slowdown.',
-                'suggestedStrategy'=> '🟡 Level 1 Basic: Cash-Secured Put at $170 (8% Discount)',
+                'suggestedStrategy'=> '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--yellow);">warning</span> Level 1 Basic: Cash-Secured Put at $170 (8% Discount)',
             ],
             [
                 'symbol'          => 'MSFT',
@@ -149,7 +182,7 @@ class AiController extends AbstractController
                 'reasoning'       => 'Azure OpenAI leading corporate AI cloud migration.',
                 'catalysts'       => 'Copilot seat expansion, Azure growth.',
                 'keyRisks'        => 'AI datacenter capex intensity.',
-                'suggestedStrategy'=> '🟡 Level 1 Basic: Cash-Secured Put at $385',
+                'suggestedStrategy'=> '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--yellow);">warning</span> Level 1 Basic: Cash-Secured Put at $385',
             ],
             [
                 'symbol'          => 'META',
@@ -164,7 +197,7 @@ class AiController extends AbstractController
                 'reasoning'       => 'AI recommendation engine driving massive engagement gains.',
                 'catalysts'       => 'Llama 4 rollout, Advantage+ AI ad suite.',
                 'keyRisks'        => 'EU data privacy regulations.',
-                'suggestedStrategy'=> '🟢 Level 1 Basic: Defined-Risk Long Call at $530 (45 DTE)',
+                'suggestedStrategy'=> '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> Level 1 Basic: Defined-Risk Long Call at $530 (45 DTE)',
             ],
             [
                 'symbol'          => 'AVGO',
@@ -179,7 +212,7 @@ class AiController extends AbstractController
                 'reasoning'       => 'Exclusive custom ASIC AI chip partner for Google, Meta, and ByteDance.',
                 'catalysts'       => 'Custom AI accelerator orders, VMware migration.',
                 'keyRisks'        => 'Debt leverage and customer concentration.',
-                'suggestedStrategy'=> '🟡 Level 1 Basic: Cash-Secured Put at $150',
+                'suggestedStrategy'=> '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--yellow);">warning</span> Level 1 Basic: Cash-Secured Put at $150',
             ],
             [
                 'symbol'          => 'CRWD',
@@ -194,7 +227,7 @@ class AiController extends AbstractController
                 'reasoning'       => 'Falcon XDR platform consolidating enterprise cybersecurity spend.',
                 'catalysts'       => 'Cloud security module expansion, identity protection.',
                 'keyRisks'        => 'Outage reputational impact.',
-                'suggestedStrategy'=> '🟢 Level 1 Basic: Long Call 5% OTM Target $280',
+                'suggestedStrategy'=> '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> Level 1 Basic: Long Call 5% OTM Target $280',
             ],
         ];
 

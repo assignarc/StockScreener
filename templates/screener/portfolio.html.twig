@@ -57,8 +57,12 @@
                 <div class="val g">${% if portfolio.netLiquidationValue is defined %}{{ portfolio.netLiquidationValue|number_format(2) }}{% else %}0.00{% endif %}</div>
             </div>
             <div class="port-card">
-                <div class="lbl">Total Cash Available for Trading</div>
+                <div class="lbl">Total Cash Balance</div>
                 <div class="val y">${% if portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %}</div>
+            </div>
+            <div class="port-card">
+                <div class="lbl">Unencumbered Cash (Available)</div>
+                <div class="val g">${% if portfolio.availableCash is defined %}{{ portfolio.availableCash|number_format(2) }}{% else %}0.00{% endif %}</div>
             </div>
             <div class="port-card">
                 <div class="lbl">Connected Accounts / Positions</div>
@@ -170,13 +174,13 @@
 
                 <!-- TRANSACTION ACTIVITY TABLE -->
                 <div class="hist-table-wrap" style="background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid var(--border); background:var(--bg2); flex-wrap:wrap; gap:10px;">
-                        <span style="font-weight:700; font-size:12px; color:var(--text); text-transform:uppercase; letter-spacing:.5px;">📜 Brokerage Activity Log</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-weight:700; font-size:12px; color:var(--text); text-transform:uppercase; letter-spacing:.5px; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">receipt_long</span> Brokerage Activity Log</span>
                         <div style="display:flex; gap:6px;">
-                            <button class="hbtn active" style="padding:4px 8px; font-size:10px;" id="histFilterAll" onclick="filterHistoryRows('ALL')">All</button>
-                            <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterDiv" onclick="filterHistoryRows('DIVIDEND')">💵 Dividends</button>
-                            <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterOpt" onclick="filterHistoryRows('OPTION')">Option Deals</button>
-                            <button class="hbtn" style="padding:4px 8px; font-size:10px;" id="histFilterTrade" onclick="filterHistoryRows('TRADE')">📈 Trades</button>
+                            <button class="hbtn active" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:2px;" onclick="filterHistoryRows('ALL')">All</button>
+                            <button class="hbtn" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:2px;" id="histFilterDiv" onclick="filterHistoryRows('DIVIDEND')"><span class="material-symbols-outlined" style="font-size:14px;">payments</span> Dividends</button>
+                            <button class="hbtn" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:2px;" id="histFilterEarn" onclick="filterHistoryRows('EARNINGS')"><span class="material-symbols-outlined" style="font-size:14px;">campaign</span> Earnings</button>
+                            <button class="hbtn" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:2px;" id="histFilterTrade" onclick="filterHistoryRows('TRADE')"><span class="material-symbols-outlined" style="font-size:14px;">trending_up</span> Trades</button>
                         </div>
                     </div>
                     <table class="hist-table" id="histTable" style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
@@ -215,7 +219,7 @@
                 </div>
 
                 <div id="portCoveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
-                    <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">⚡ Scanning unencumbered stock positions...</div>
+                    <div class="m" style="grid-column:1/-1; text-align:center; padding:15px; display:flex; justify-content:center; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:18px;">bolt</span> Scanning unencumbered stock positions...</div>
                 </div>
             </div>
         </div>
@@ -369,7 +373,7 @@
 
                             <div style="padding:12px 18px; background:var(--bg2); border-top:1px solid var(--border);">
                                 <a href="/screener" class="btn btn-pri" style="width:100%; text-align:center; text-decoration:none; display:block; box-sizing:border-box; font-size:12px; padding:8px;">
-                                    ⚡ Load ${{ acc.cash|default(acc.cashAvailable|default(0))|number_format(0) }} Cash
+                                    <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:2px;">bolt</span> Load ${{ acc.cash|default(acc.cashAvailable|default(0))|number_format(0) }} Cash
                                 </a>
                             </div>
                         </div>
@@ -417,7 +421,7 @@
                                 <span>Avg Cost Basis</span>
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
-                                        <div class="col-popover-title">💵 Average Purchase Price</div>
+                                        <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">payments</span> Average Purchase Price</div>
                                         Weighted average cost basis per share from trade executions in your brokerage accounts.
                                     </span>
                                 </span>
@@ -435,7 +439,7 @@
                                 <span>Total Unrealized P/L</span>
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
-                                        <div class="col-popover-title">📈 Unrealized Profit / Loss</div>
+                                        <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">trending_up</span> Unrealized Profit / Loss</div>
                                         Live gain/loss calculated as: <code>MarketValue - (Quantity * AveragePrice)</code> ($ and %).
                                     </span>
                                 </span>
@@ -453,7 +457,7 @@
                                 <span>Accounts</span>
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
-                                        <div class="col-popover-title">🏦 Account Count</div>
+                                        <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">account_balance</span> Account Count</div>
                                         Number of distinct connected brokerage accounts currently holding this ticker.
                                     </span>
                                 </span>
@@ -472,7 +476,7 @@
                                             <strong style="font-size:15px; color:var(--text);">{{ e.symbol }}</strong>
                                             {% if e.linkedOptions|length > 0 %}
                                                 <span class="rb" style="background:rgba(210,153,34,0.18); color:var(--yellow); border:1px solid rgba(210,153,34,0.4); font-size:10px;">
-                                                    🔒 {{ e.linkedOptions|length }} Covered Call Order Active
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ e.linkedOptions|length }} Covered Call Order Active
                                                 </span>
                                             {% endif %}
                                         </div>
@@ -510,7 +514,7 @@
                                         <tr class="{{ subId }}" style="background: var(--bg3); border-bottom: 1px solid var(--border);">
                                             <td colspan="3" style="padding-left: 28px;">
                                                 <div style="display:flex; align-items:center; gap:8px;">
-                                                    <span style="color:var(--blue); font-size:12px; font-weight:700;">🏦</span>
+                                                    <span style="color:var(--blue); font-size:12px; font-weight:700;"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">account_balance</span></span>
                                                     <strong style="font-size:12px; color:var(--text);">{% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}</strong>
                                                     <span class="hbadge" style="font-size:9px;">{{ acc.type }}</span>
                                                     <span class="rb" style="background:{% if acc.canUseForCalls %}rgba(21,128,61,0.15){% elseif acc.availableShares > 0 %}rgba(180,83,9,0.15){% else %}rgba(220,38,38,0.15){% endif %}; color:{% if acc.canUseForCalls %}var(--green){% elseif acc.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; font-size:10px;">
@@ -524,11 +528,11 @@
                                             <td style="text-align:right; font-size:12px;"><strong>${{ acc.marketValue|number_format(2) }}</strong></td>
                                             <td colspan="3" style="font-size:11px; color:var(--muted); text-align:center;">
                                                 {% if acc.canUseForCalls %}
-                                                    <span class="g">✓ {{ acc.eligibleContracts }} Call Option Contract(s) Available</span>
+                                                    <span class="g"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">check_circle</span> {{ acc.eligibleContracts }} Call Option Contract(s) Available</span>
                                                 {% elseif acc.availableShares > 0 %}
-                                                    <span class="y">⚠️ Less than 100 shares — CANNOT be used for Call options</span>
+                                                    <span class="y"><span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);">warning</span> Less than 100 shares — CANNOT be used for Call options</span>
                                                 {% else %}
-                                                    <span class="r">🔒 100% Pledged to Option Orders</span>
+                                                    <span class="r"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> 100% Pledged to Option Orders</span>
                                                 {% endif %}
                                             </td>
                                         </tr>
@@ -542,6 +546,14 @@
                                             <div style="display:flex; align-items:center; gap:8px;">
                                                 <span style="color:var(--yellow); font-size:14px; font-weight:700;">↳</span>
                                                 <strong style="color:var(--yellow); font-size:12px;">{{ opt.symbol }}</strong>
+                                                {% if opt.accounts is defined and opt.accounts|length > 0 %}
+                                                    {% for oacc in opt.accounts %}
+                                                        <span class="hbadge" style="font-size:9px; background:rgba(88,166,255,0.15); color:var(--blue); border:1px solid rgba(88,166,255,0.3); padding:2px 6px; border-radius:4px;">
+                                                            <span class="material-symbols-outlined" style="font-size:10px;vertical-align:middle;margin-right:2px;">account_balance</span>
+                                                            {{ oacc.nickname ? oacc.nickname : 'Account ' ~ oacc.accountNumber }}
+                                                        </span>
+                                                    {% endfor %}
+                                                {% endif %}
                                                 <span class="rb" style="background:rgba(180,83,9,0.18); color:var(--yellow); font-size:10px;">
                                                     {{ opt.status }}
                                                 </span>
@@ -557,7 +569,7 @@
                                             <strong>{% if opt.unrealizedPL >= 0 %}+{% endif %}${{ opt.unrealizedPL|number_format(2) }}</strong>
                                         </td>
                                         <td colspan="2" style="text-align:center;">
-                                            <span style="font-size:11px; color:var(--red); font-weight:700;">🔒 {{ opt.pledgedShares }} Shares Tied Up</span>
+                                            <span style="font-size:11px; color:var(--red); font-weight:700;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ opt.pledgedShares }} Shares Tied Up</span>
                                         </td>
                                     </tr>
                                 {% endfor %}
@@ -579,7 +591,7 @@
     <div class="modal-body-lg" style="width:680px; max-width:94vw; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; border-radius:16px; border:1px solid var(--border); background:var(--bg2); box-shadow:0 25px 60px rgba(0,0,0,0.85);">
         <div class="modal-hdr" style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg3); flex-shrink:0;">
             <h2 id="calModalTitle" style="font-family:'Outfit',sans-serif; font-size:17px; color:var(--blue); margin:0; display:flex; align-items:center; gap:8px;">📌 Event Details & Explanation</h2>
-            <button class="rpx" onclick="document.getElementById('calEventModal').style.display='none'" style="background:none; border:none; color:var(--text); font-size:20px; cursor:pointer; padding:4px 8px; border-radius:6px;">✕</button>
+            <button class="rpx" onclick="document.getElementById('calEventModal').style.display='none'" style="background:none; border:none; color:var(--text); cursor:pointer; padding:4px 8px; border-radius:6px; display:flex; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">close</span></button>
         </div>
         <div class="modal-cnt" id="calModalCnt" style="padding:20px 24px; font-size:13px; line-height:1.6; overflow-y:auto; flex:1; min-height:0;"></div>
     </div>
@@ -748,7 +760,8 @@ async function loadOpenOrders(force = false) {
         }
     } catch(e) {
         console.error('Failed to load open orders:', e);
-        tbody.innerHTML = `<tr><td colspan="7" class="orders-table-loader">⚠️ Failed to load open orders: ${e.message}</td></tr>`;
+        const tbody = document.querySelector('#openOrdersTable tbody');
+        tbody.innerHTML = `<tr><td colspan="7" class="orders-table-loader"><span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);">warning</span> Failed to load open orders: ${e.message}</td></tr>`;
     }
 }
 
@@ -1008,6 +1021,7 @@ function renderCalendarForSelectedMonth() {
                                         <strong>${e.title}</strong><br/>
                                         Date: ${e.date}<br/>
                                         ${e.details || ''}
+                                        ${e.accountBreakdown && e.accountBreakdown.length > 0 ? `<br/><span style="color:var(--blue); font-weight:600;">Account: ${e.accountBreakdown.map(a => a.nickname).join(', ')}</span>` : ''}
                                     </div>
                                 </div>
                             `;
@@ -1017,7 +1031,7 @@ function renderCalendarForSelectedMonth() {
 
                 ${dayProj ? `
                     <div onclick="openDateAccountSummaryModal('${dateKey}')" class="cal-day-bubble" title="Projected Portfolio Cash: $${dayProj.projectedPortfolioCash.toLocaleString()}">
-                        💰 +$${((dayProj.totalAssignedCash || 0) + (dayProj.totalDividendCash || 0)).toLocaleString(undefined, {maximumFractionDigits:0})} Release
+                        <span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">payments</span> +$${((dayProj.totalAssignedCash || 0) + (dayProj.totalDividendCash || 0)).toLocaleString(undefined, {maximumFractionDigits:0})} Release
                     </div>
                 ` : ''}
             </div>
@@ -1182,8 +1196,14 @@ function renderCalendarForSelectedMonth() {
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
                         <span class="material-symbols-outlined" style="font-size:18px; color:${badgeFg};">${iconName}</span>
                         <strong style="font-size:15px; font-family:'Outfit',sans-serif; color:var(--text);">${ev.title}</strong>
+                        ${(ev.accountBreakdown || []).map(a => `
+                            <span class="hbadge" style="font-size:9px; background:rgba(88,166,255,0.15); color:var(--blue); border:1px solid rgba(88,166,255,0.3); padding:2px 6px; border-radius:4px; display:inline-flex; align-items:center; gap:2px;">
+                                <span class="material-symbols-outlined" style="font-size:10px;vertical-align:middle;">account_balance</span>
+                                ${a.nickname}
+                            </span>
+                        `).join(' ')}
                         <span class="hbadge" style="background:${badgeBg}; color:${badgeFg}; font-size:10px; font-weight:700;">${ev.badge || dteLabel}</span>
-                        ${isPast ? '<span class="hbadge" style="background:rgba(255,255,255,0.06); color:var(--muted); font-size:9px;">✓ LAST 30 DAYS</span>' : ''}
+                        ${isPast ? '<span class="hbadge" style="background:rgba(255,255,255,0.06); color:var(--muted); font-size:9px; display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:12px;">check_circle</span> LAST 30 DAYS</span>' : ''}
                     </div>
                     <div style="font-size:12px; color:var(--muted);">
                         Date: <strong style="color:var(--text);">${ev.date}</strong> &bull; ${ev.details || ''}
@@ -1251,24 +1271,24 @@ function openCalEventCard(encodedJson) {
     const isEarnings = ev.category && ev.category.startsWith('EARNINGS');
 
     if (isOption) {
-        title.innerHTML = `🔒 Option Expiration Card: ${ev.symbol} ${ev.strike || ''}`;
+        title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">lock</span> Option Expiration Card: ${ev.symbol} ${ev.strike || ''}`;
     } else if (isHistory) {
         const symbolText = ev.realSymbol && ev.realSymbol !== 'CURRENCY_USD' && ev.realSymbol !== 'USD' ? ` (${ev.realSymbol})` : '';
-        title.innerHTML = `📜 Transaction: ${ev.accountNickname || 'Broker'}${symbolText}`;
+        title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">receipt_long</span> Transaction: ${ev.accountNickname || 'Broker'}${symbolText}`;
     } else if (isDividend) {
-        title.innerHTML = `💵 Dividend Details: ${ev.symbol}`;
+        title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">payments</span> Dividend Details: ${ev.symbol}`;
     } else if (isEarnings) {
-        title.innerHTML = `📢 Earnings Release: ${ev.symbol}`;
+        title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">campaign</span> Earnings Release: ${ev.symbol}`;
     } else {
-        title.innerHTML = `📈 Event Details: ${ev.symbol}`;
+        title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">trending_up</span> Event Details: ${ev.symbol}`;
     }
-
+    
     let accountRowsHtml = '';
     if (isOption && ev.accountBreakdown && ev.accountBreakdown.length > 0) {
         accountRowsHtml = `
             <div style="margin-top:14px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px;">
                 <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
-                    <span>🏦 Account Level Cash Projections & Collateral</span>
+                    <span><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;">account_balance</span> Account Level Cash Projections & Collateral</span>
                 </h5>
                 <div style="overflow-x:auto; width:100%;">
                     <table style="width:100%; border-collapse:collapse; font-size:11px;">
@@ -1322,6 +1342,31 @@ function openCalEventCard(encodedJson) {
         `;
     }
 
+    let aiReviewHtml = '';
+    if (isOption) {
+        aiReviewHtml = `
+            <div style="margin-top:14px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
+                        <span><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;">psychology</span> AI Option Analysis</span>
+                    </h5>
+                    <button class="hbtn hbtn-blue" style="font-size:11px; padding:4px 8px;" onclick="triggerAiReview('${ev.symbol}', '${ev.strike}')">
+                        <span class="material-symbols-outlined" style="font-size:14px;">auto_awesome</span> Generate Review
+                    </button>
+                </div>
+                <div id="aiReviewContainer" style="display:none; margin-top:12px; padding:12px; background:rgba(30,136,229,0.1); border:1px solid rgba(30,136,229,0.3); border-radius:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; color:var(--blue); font-size:12px; font-weight:600; margin-bottom:6px;">
+                        <span class="material-symbols-outlined" style="font-size:16px; animation:spin 2s linear infinite;">progress_activity</span>
+                        Generating AI Analysis...
+                    </div>
+                    <div style="font-size:11px; color:var(--text); line-height:1.5; opacity:0.8;">
+                        Analyzing greek exposure, premium decay, and probability of assignment for ${ev.symbol} $${ev.strike}...
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     cnt.innerHTML = `
         <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border); margin-bottom:14px;">
             <h4 style="font-size:16px; font-weight:800; color:var(--text); margin:0 0 6px 0;">${ev.title}</h4>
@@ -1332,10 +1377,11 @@ function openCalEventCard(encodedJson) {
             </div>
         </div>
 
+        ${aiReviewHtml}
         ${accountRowsHtml}
 
         <div style="background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.25); border-radius:8px; padding:12px; margin-top:14px; margin-bottom:16px;">
-            <h5 style="font-size:13px; font-weight:700; color:var(--blue); margin:0 0 6px 0;">💡 Event Details</h5>
+            <h5 style="font-size:13px; font-weight:700; color:var(--blue); margin:0 0 6px 0; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">lightbulb</span> Event Details</h5>
             <p style="margin:0; font-size:12px; color:var(--text); line-height:1.5;">
                 ${isOption 
                     ? `On <strong>${ev.date}</strong>, this <strong>${ev.symbol} $${ev.strike} Call</strong> expires. If exercised (assigned), selling your <strong>${ev.pledgedShares} shares</strong> at the <strong>$${ev.strike} strike price</strong> releases <strong class="g">+$${ev.assignedCashIfExercised ? ev.assignedCashIfExercised.toLocaleString() : '0'} in cash liquidity</strong> back into your brokerage account!`
@@ -1343,7 +1389,7 @@ function openCalEventCard(encodedJson) {
             </p>
         </div>
         <div style="display:flex; justify-content:flex-end;">
-            <a href="/screener?symbol=${ev.symbol}" class="hbtn hbtn-blue" style="text-decoration:none;">⚡ Inspect ${ev.symbol} Option Chain</a>
+            <a href="/screener?symbol=${ev.symbol}" class="hbtn hbtn-blue" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">bolt</span> Inspect ${ev.symbol} Option Chain</a>
         </div>
     `;
 
@@ -1360,7 +1406,7 @@ function openDateAccountSummaryModal(dateKey) {
     const cnt = document.getElementById('calModalCnt');
     if (!modal || !cnt) return;
 
-    title.innerHTML = `💵 Cash Projection Summary for ${dateKey}`;
+    title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">payments</span> Cash Projection Summary for ${dateKey}`;
 
     let optionsListHtml = eventsOnDate.map(e => `
         <tr style="border-bottom:1px solid var(--border);">
@@ -1402,7 +1448,7 @@ function openDateAccountSummaryModal(dateKey) {
 
         <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border); margin-bottom:16px;">
             <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase;">
-                📋 Expiring Contracts on ${dateKey} (${eventsOnDate.length} Total)
+                <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">assignment</span> Expiring Contracts on ${dateKey} (${eventsOnDate.length} Total)
             </h5>
             <div style="overflow-x:auto; width:100%;">
                 <table style="width:100%; border-collapse:collapse; font-size:12px;">
@@ -1422,7 +1468,7 @@ function openDateAccountSummaryModal(dateKey) {
 
         <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:16px;">
             <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase;">
-                🏦 Account Cash Projections for ${dateKey}
+                <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">account_balance</span> Account Cash Projections for ${dateKey}
             </h5>
             <div style="overflow-x:auto; width:100%;">
                 <table style="width:100%; border-collapse:collapse; font-size:12px;">
@@ -1443,11 +1489,11 @@ function openDateAccountSummaryModal(dateKey) {
 
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(88,166,255,0.08); border:1px solid rgba(88,166,255,0.25); padding:12px 16px; border-radius:10px;">
             <div>
-                <strong style="font-size:13px; color:var(--text); display:block;">⚡ Ready to Compound on ${dateKey}?</strong>
+                <strong style="font-size:13px; color:var(--text); display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:18px; color:var(--yellow);">bolt</span> Ready to Compound on ${dateKey}?</strong>
                 <span style="font-size:11px; color:var(--muted);">Load this projected <strong class="g">$${proj ? proj.projectedPortfolioCash.toLocaleString(undefined, {maximumFractionDigits:0}) : '0'} cash</strong> into Stock Screener to find high-yield Cash-Secured Puts & Covered Calls.</span>
             </div>
             <a href="/screener?projectedCash=${proj ? proj.projectedPortfolioCash : 0}" class="hbtn hbtn-green" style="text-decoration:none; white-space:nowrap; padding:8px 16px;">
-                ⚡ Stage ${dateKey} Trade Ideas →
+                <span class="material-symbols-outlined" style="font-size:16px;">bolt</span> Stage ${dateKey} Trade Ideas →
             </a>
         </div>
     `;
@@ -1507,8 +1553,34 @@ function setAccountViewLayout(mode) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    switchPortSubView('calendar');
+    const hash = window.location.hash;
+    let defaultTab = 'calendar';
+    if (hash === '#subViewHoldings') {
+        defaultTab = 'holdings';
+    } else if (hash === '#subViewFlywheel') {
+        defaultTab = 'flywheel';
+    } else if (hash === '#subViewHistory') {
+        defaultTab = 'history';
+    } else if (hash === '#subViewOrders') {
+        defaultTab = 'orders';
+    }
+    switchPortSubView(defaultTab);
     loadPortCoveredCallSuggestions();
+});
+
+window.addEventListener('hashchange', () => {
+    const hash = window.location.hash;
+    if (hash === '#subViewHoldings') {
+        switchPortSubView('holdings');
+    } else if (hash === '#subViewFlywheel') {
+        switchPortSubView('flywheel');
+    } else if (hash === '#subViewHistory') {
+        switchPortSubView('history');
+    } else if (hash === '#subViewOrders') {
+        switchPortSubView('orders');
+    } else if (hash === '#subViewCalendar') {
+        switchPortSubView('calendar');
+    }
 });
 
 
@@ -1551,8 +1623,8 @@ async function loadPortCoveredCallSuggestions() {
                             <span class="g" style="font-size:15px; font-weight:800;">+$${s.estTotalIncome} Income</span>
                         </div>
 
-                        <div style="background:rgba(63,185,80,0.06); border:1px solid rgba(63,185,80,0.2); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700;">
-                            ⚡ ${s.tradeActionText}
+                        <div style="background:rgba(63,185,80,0.06); border:1px solid rgba(63,185,80,0.2); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700; display:flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-outlined" style="font-size:14px;">bolt</span> ${s.tradeActionText}
                         </div>
 
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--bg2); padding:8px; border-radius:6px; border:1px solid var(--border);">
@@ -1580,6 +1652,70 @@ async function loadPortCoveredCallSuggestions() {
         }
     } catch(e) {
         console.error('Failed to load trade suggestions:', e);
+    }
+}
+
+async function triggerAiReview(symbol, strike) {
+    const container = document.getElementById('aiReviewContainer');
+    if (!container) return;
+    
+    // Show the container with loading state
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px; color:var(--blue); font-size:12px; font-weight:600; margin-bottom:6px;">
+            <span class="material-symbols-outlined" style="font-size:16px; animation:spin 2s linear infinite;">progress_activity</span>
+            Generating AI Analysis...
+        </div>
+        <div style="font-size:11px; color:var(--text); line-height:1.5; opacity:0.8;">
+            Analyzing greek exposure, premium decay, and probability of assignment for ${symbol} ${strike}...
+        </div>
+    `;
+    
+    try {
+        const res = await fetch(`/api/ai/review-option/${encodeURIComponent(symbol)}/${encodeURIComponent(strike)}`);
+        if (!res.ok) throw new Error('API error');
+        const json = await res.json();
+        
+        if (json.status === 'success' && json.data) {
+            const data = json.data;
+            const badgeColor = data.status && data.status.toLowerCase().includes('risk') ? 'var(--red)' : 'var(--green)';
+            const icon = badgeColor === 'var(--red)' ? 'warning' : 'check_circle';
+            
+            container.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; color:${badgeColor}; font-size:13px; font-weight:700;">
+                        <span class="material-symbols-outlined" style="font-size:18px;">${icon}</span>
+                        ${data.status || 'Analysis Complete'}
+                    </div>
+                </div>
+                <div style="font-size:12px; color:var(--text); line-height:1.5; margin-bottom:8px;">
+                    ${data.analysis || 'Analysis generation completed.'}
+                </div>
+                <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
+                    <div style="display:flex; justify-content:space-between; padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                        <span style="color:var(--muted);">Probability of Assignment:</span>
+                        <strong style="color:var(--text);">${data.probabilityOfAssignment || 'Unknown'}</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; padding-top:2px;">
+                        <span style="color:var(--muted);">AI Recommended Action:</span>
+                        <strong style="color:var(--text);">${data.action || 'No action'}</strong>
+                    </div>
+                </div>
+            `;
+        } else {
+            throw new Error('Invalid response format');
+        }
+    } catch(e) {
+        console.error(e);
+        container.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px; color:var(--red); font-size:12px; font-weight:600; margin-bottom:6px;">
+                <span class="material-symbols-outlined" style="font-size:16px;">error</span>
+                Analysis Failed
+            </div>
+            <div style="font-size:11px; color:var(--text); line-height:1.5;">
+                Unable to generate AI review. Please check if your LLM API Key is configured in settings.
+            </div>
+        `;
     }
 }
 </script>

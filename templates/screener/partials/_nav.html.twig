@@ -128,17 +128,26 @@
 
     <!-- 4. PORTFOLIO DETAILS -->
     <div class="nav-item">
-        <a href="/portfolio" class="nav-link {% if activePage is defined and activePage == 'portfolio' %}active{% endif %}">
+        <a href="/portfolio" class="nav-link {% if activePage is defined and (activePage == 'portfolio' or activePage == 'tax_center') %}active{% endif %}">
             <span class="material-symbols-outlined">work</span> Portfolio Details <span class="nav-caret">▾</span>
         </a>
         <div class="nav-dropdown-menu">
-            <a href="/portfolio" class="nav-subitem" onclick="if(typeof switchPortSubView==='function'){switchPortSubView('calendar');}">
+            <a href="/portfolio#subViewCalendar" class="nav-subitem" onclick="if(typeof switchPortSubView==='function'){switchPortSubView('calendar');}">
                 <div class="nav-subitem-icon"><span class="material-symbols-outlined">calendar_month</span></div>
                 <div class="nav-subitem-text">
                     <div class="nav-subitem-title">Options & Equities Calendar</div>
                     <div class="nav-subitem-desc">6-month forward cash flow timeline</div>
                 </div>
             </a>
+
+            <a href="/portfolio/tax" class="nav-subitem">
+                <div class="nav-subitem-icon"><span class="material-symbols-outlined">account_balance_wallet</span></div>
+                <div class="nav-subitem-text">
+                    <div class="nav-subitem-title">Tax Center & Realizations</div>
+                    <div class="nav-subitem-desc">Realized gains, holding periods & estimated tax</div>
+                </div>
+            </a>
+
             <a href="/portfolio#subViewFlywheel" class="nav-subitem" onclick="if(typeof switchPortSubView==='function'){switchPortSubView('flywheel');}">
                 <div class="nav-subitem-icon"><span class="material-symbols-outlined">auto_awesome</span></div>
                 <div class="nav-subitem-text">
@@ -244,7 +253,14 @@
         </div>
     </div>
 
-    <!-- 7. HELP & API GUIDE -->
+    <!-- 7. AI ENGINE MONITOR -->
+    <div class="nav-item">
+        <a href="/engine-monitor" class="nav-link {% if activePage is defined and activePage == 'engine_monitor' %}active{% endif %}">
+            <span class="material-symbols-outlined">memory</span> AI Engine Monitor
+        </a>
+    </div>
+
+    <!-- 8. HELP & API GUIDE -->
     <div class="nav-item">
         <a href="/help" target="_blank" class="nav-link {% if activePage is defined and activePage == 'help' %}active{% endif %}">
             <span class="material-symbols-outlined">menu_book</span> API Guide

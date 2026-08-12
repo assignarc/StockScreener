@@ -15,12 +15,56 @@ class PersistentCacheService
     /** @var array<string, bool> Active computation locks for stampede mitigation */
     private array $pendingLocks = [];
 
+    /** @var string Cache encryption key */
+    private string $encryptionKey;
+
     public function __construct(
         private EntityManagerInterface $em,
         private PersistentCacheRepository $cacheRepo,
         private LoggerInterface $logger,
         private string $projectDir,
-    ) {}
+    ) {
+        $this->encryptionKey = $_ENV['CACHE_ENCRYPTION_KEY'] ?? $_ENV['APP_SECRET'] ?? 'default_fallback_secret_key_1234567890';
+        if (strlen($this->encryptionKey) < 32) {
+            $this->encryptionKey = str_pad($this->encryptionKey, 32, '0');
+        }
+    }
+
+    /**
+     * Encrypts a serialized value using AES-256-GCM.
+     */
+    private function encryptValue(mixed $value): string
+    {
+        $serialized = serialize($value);
+        $iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length('aes-256-gcm'));
+        $tag = '';
+        $encrypted = openssl_encrypt($serialized, 'aes-256-gcm', $this->encryptionKey, OPENSSL_RAW_DATA, $iv, $tag);
+        return base64_encode($iv . $tag . $encrypted);
+    }
+
+    /**
+     * Decrypts a value using AES-256-GCM.
+     */
+    private function decryptValue(string $payload): mixed
+    {
+        try {
+            $raw = base64_decode($payload);
+            $ivLength = openssl_cipher_iv_length('aes-256-gcm');
+            if (strlen($raw) < $ivLength + 16) return null;
+
+            $iv = substr($raw, 0, $ivLength);
+            $tag = substr($raw, $ivLength, 16);
+            $encrypted = substr($raw, $ivLength + 16);
+
+            $decrypted = openssl_decrypt($encrypted, 'aes-256-gcm', $this->encryptionKey, OPENSSL_RAW_DATA, $iv, $tag);
+            if ($decrypted === false) return null;
+
+            return unserialize($decrypted);
+        } catch (\Throwable $e) {
+            $this->logger->error("Cache decryption failed: " . $e->getMessage());
+            return null;
+        }
+    }
 
     /**
      * Retrieves a cached value, or executes fallback, persists result in data.db, and returns it.
@@ -41,9 +85,17 @@ class PersistentCacheService
         try {
             $cached = $this->cacheRepo->findValid($key);
             if ($cached !== null && !$cached->isExpired()) {
-                $val = $cached->getValue();
-                $this->memoryCache[$key] = $val;
-                return $val;
+                $rawVal = $cached->getValue();
+                
+                // If it's a string that looks like base64 and it's marked as sensitive, try to decrypt
+                $val = ($isSensitive && is_string($rawVal) && base64_decode($rawVal, true) !== false) 
+                    ? $this->decryptValue($rawVal) 
+                    : $rawVal;
+                
+                if ($val !== null) {
+                    $this->memoryCache[$key] = $val;
+                    return $val;
+                }
             }
         } catch (\Throwable $e) {
             $this->logger->warning("Persistent cache read error for {$key}: " . $e->getMessage());
@@ -102,14 +154,16 @@ class PersistentCacheService
         }
 
         $this->memoryCache[$key] = $value;
+        
+        $valueToStore = $isSensitive ? $this->encryptValue($value) : $value;
 
         try {
             $existing = $this->cacheRepo->findOneBy(['cacheKey' => $key]);
             if ($existing) {
-                $existing->setValue($value);
+                $existing->setValue($valueToStore);
                 $existing->setTtl($ttlSeconds);
             } else {
-                $entry = new PersistentCache($key, $value, $ttlSeconds, $isSensitive);
+                $entry = new PersistentCache($key, $valueToStore, $ttlSeconds, $isSensitive);
                 $this->em->persist($entry);
             }
             $this->em->flush();

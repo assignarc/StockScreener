@@ -150,7 +150,7 @@
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span class="rb rLOW" style="background: rgba(88,166,255,0.2); color: var(--blue);"><span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle;">lock</span> OPTION LEVEL 1 BASIC (100% COVERED / RISK DEFINED)</span>
                 <span style="font-size: 12px; color: var(--text);">
-                    Allocating your <strong style="color:var(--green);" id="playbookCashText">$25,143 available cash</strong> into 100% Covered & Capped-Risk strategies:
+                    Allocating your <strong style="color:var(--green);" id="playbookCashText">{% if portfolio.availableCash is defined %}${{ portfolio.availableCash|number_format(2) }}{% else %}$0.00{% endif %} available cash</strong> into 100% Covered & Capped-Risk strategies:
                 </span>
             </div>
             <div style="display: flex; gap: 12px; font-size: 11px; font-weight: 600;">
@@ -223,7 +223,7 @@
                             <span class="col-popover-trigger" tabindex="0">ℹ
                                 <span class="col-popover">
                                     <div class="col-popover-title">⚙ Option Signal</div>
-                                    Evaluated real-time by <code>FlywheelService</code>. Evaluates fundamental score (&ge;70, &lt;45), upside %, and risk to classify Level 1 Basic option strategies (🟢 CALL, 🟡 WHEEL, 🔴 PUT).
+                                    Evaluated real-time by <code>FlywheelService</code>. Evaluates fundamental score (&ge;70, &lt;45), upside %, and risk to classify Level 1 Basic option strategies (<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> CALL, <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--yellow);">warning</span> WHEEL, <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--red);">error</span> PUT).
                                 </span>
                             </span>
                         </th>
@@ -249,7 +249,7 @@
                             <span>Target</span>
                             <span class="col-popover-trigger" tabindex="0">ℹ
                                 <span class="col-popover">
-                                    <div class="col-popover-title">🎯 12M Analyst Target</div>
+                                    <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">my_location</span> 12M Analyst Target</div>
                                     Aggregated 12-month Wall Street consensus analyst price target from Finnhub consensus endpoint & database baseline.
                                 </span>
                             </span>
@@ -258,7 +258,7 @@
                             <span>Upside</span>
                             <span class="col-popover-trigger" tabindex="0">ℹ
                                 <span class="col-popover">
-                                    <div class="col-popover-title">📈 Implied Upside %</div>
+                                    <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">trending_up</span> Implied Upside %</div>
                                     Calculated dynamically in frontend JS: <code>((TargetPrice - Price) / Price) * 100</code>.
                                 </span>
                             </span>
@@ -276,7 +276,7 @@
                             <span>Risk</span>
                             <span class="col-popover-trigger" tabindex="0">ℹ
                                 <span class="col-popover">
-                                    <div class="col-popover-title">⚡ Volatility Risk Level</div>
+                                    <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">bolt</span> Volatility Risk Level</div>
                                     Assigned based on 30-day historical beta, market capitalization tier, and price volatility range (<code>LOW</code>, <code>MED</code>, <code>HIGH</code>).
                                 </span>
                             </span>

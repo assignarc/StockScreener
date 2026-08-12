@@ -42,7 +42,7 @@
     <!-- DEDICATED STOCK SCREENER PAGE -->
     <div id="screenerView">
         <!-- FLYWHEEL CAPITAL ALLOCATOR WIDGET -->
-        <div class="fw-panel">
+        <div class="fw-panel" id="capitalAllocator">
             <div class="fw-title">
                 <span class="fw-icon"><span class="material-symbols-outlined">settings</span> CAPITAL FLYWHEEL</span>
                 <span>Portfolio Allocation Engine</span>
@@ -74,7 +74,7 @@
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span class="rb rLOW" style="background: rgba(88,166,255,0.2); color: var(--blue);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">lock</span> OPTION LEVEL 1 BASIC (100% COVERED / RISK DEFINED)</span>
                 <span style="font-size: 12px; color: var(--text);">
-                    Allocating your <strong style="color:var(--green);" id="playbookCashText">$25,143 available cash</strong> into 100% Covered & Capped-Risk strategies:
+                    Allocating your <strong style="color:var(--green);" id="playbookCashText">{% if portfolio.availableCash is defined %}${{ portfolio.availableCash|number_format(2) }}{% else %}$0.00{% endif %} available cash</strong> into 100% Covered & Capped-Risk strategies:
                 </span>
             </div>
             <div style="display: flex; gap: 12px; font-size: 11px; font-weight: 600;">

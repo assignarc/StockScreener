@@ -36,7 +36,7 @@ class GeminiService implements LlmServiceInterface
     /**
      * Calls Gemini API to generate AI-driven Capital Flywheel strategy ideas
      */
-    public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = []): array
+    public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = [], array $marketIntelligence = []): array
     {
         $cashAvailable = $portfolio['cashBalance'] ?? 0.0;
         $netLiquidation = $portfolio['netLiquidationValue'] ?? 0.0;
@@ -52,39 +52,61 @@ class GeminiService implements LlmServiceInterface
         $stockSymbols = array_map(fn($s) => is_array($s) ? ($s['symbol'] ?? '') : $s->getSymbol(), array_slice($trackedStocks, 0, 8));
         $trackedContext = implode(', ', array_filter($stockSymbols));
 
-        $prompt = "You are Gemini AI, an expert Wall Street Quantitative Options Strategist specializing in Option Level 1 Basic Covered & Defined Risk strategies (Covered Calls, Cash-Secured Puts).
-        
-Analyze this Schwab Investor Portfolio:
-- Net Liquidation Value: \${$netLiquidation}
-- Available Cash Reserves: \${$cashAvailable}
+        $accountSummary = [];
+        foreach ($portfolio['accounts'] ?? [] as $acc) {
+            $name = $acc['nickname'] ?? $acc['accountNumber'] ?? 'Unknown';
+            $cash = $acc['cashAvailable'] ?? 0.0;
+            $accountSummary[] = "{$name}: \${$cash} cash available";
+        }
+        $accountContext = implode("\n", $accountSummary);
+
+        $marketContext = "";
+        if (!empty($marketIntelligence['events'])) {
+            $marketContext = "\n- Macro Market Intelligence (Crucial for Context):\n";
+            foreach ($marketIntelligence['events'] as $event) {
+                $marketContext .= "  * {$event['headline']}: {$event['impact']}\n";
+            }
+        }
+        if (!empty($marketIntelligence['stockPicks'])) {
+            $marketContext .= "- AI Market Intelligence Stock Picks:\n";
+            foreach ($marketIntelligence['stockPicks'] as $pick) {
+                $marketContext .= "  * {$pick['ticker']}: {$pick['reasoning']}\n";
+            }
+        }
+
+        $prompt = "You are an elite quantitative AI manager running a 'Capital Flywheel' strategy on a live brokerage account.
+Analyze this Schwab Investor Portfolio carefully. Only suggest trades that utilize the explicitly available cash reserves or unencumbered shares.
+- Available Idle Cash Reserves by Account:
+{$accountContext}
+(Total Cash: \${$cashAvailable})
 - Portfolio Holdings:
 {$equityContext}
-
+{$marketContext}
 - Top Tracked Screener Candidates: {$trackedContext}
 
-Please generate 3 high-conviction AI Capital Flywheel Strategy Ideas following strict Option Level 1 Basic rules. You can suggest stocks, liquid ETFs (like SPY, QQQ, IWM, XLF) or short-term treasury/bond ETFs (like SGOV, BIL, SHV) for yield-shielding cash collateral:
-1. Covered Call Strategy for unencumbered stock blocks (100+ shares).
-2. Cash-Secured Put Strategy using available cash reserves (\${$cashAvailable}).
-3. Growth, Hedging, or Capital Preservation/Fixed Income Yield Strategy.
+Please generate 3 high-conviction AI Capital Flywheel Strategy Ideas:
+1. Covered Call Strategy for one of the unencumbered stock blocks (must have >= 100 shares available).
+2. Cash-Secured Put Strategy using the available cash reserves. Specify which account the put should be sold in, and ensure the account has enough cash available for the collateral. Suggest a new ticker from the Screener Candidates if suitable.
+3. Yield/Capital Preservation Strategy for idle cash.
 
-Output clear JSON formatting with keys: title, ticker, strategyType, strike, expiration, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
+CRITICAL INSTRUCTION: You must strictly adhere to the financial constraints. Do not hallucinate strikes or prices.
+Output clear JSON formatting with exactly these keys: title, ticker, strategyType, targetStrike, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
 
         $apiKey = $this->getEffectiveApiKey();
         if (!empty($apiKey)) {
             try {
                 $response = $this->httpClient->request('POST', $this->getApiUrl() . '?key=' . $apiKey, [
-                    'headers' => ['Content-Type' => 'application/json'],
                     'json' => [
                         'contents' => [
-                            ['parts' => [['text' => $prompt]]],
+                            ['parts' => [['text' => $prompt]]]
                         ],
                         'generationConfig' => [
                             'response_mime_type' => 'application/json',
                             'temperature' => 0.2,
                         ],
                     ],
-                    'timeout' => 4.0,
-                    'max_duration' => 8.0,
+                    'timeout' => 30.0,
+                    'max_duration' => 60.0,
                 ]);
 
                 if ($response->getStatusCode() === 200) {
@@ -99,71 +121,14 @@ Output clear JSON formatting with keys: title, ticker, strategyType, strike, exp
                 }
             } catch (\Throwable $e) {
                 $this->logger->error('Gemini API Request Error: ' . $e->getMessage());
+                return [
+                    'error' => $this->parseErrorResponse(null, $e),
+                ];
             }
         }
 
-        // Return structured AI analytical insights fallback powered by Gemini logic
         return [
-            'source' => 'Gemini AI Financial Engine (Deterministic Quantitative Model)',
-            'rawText' => 'AI Flywheel Analysis Generated for Schwab Portfolio',
-            'ideas' => $this->generateDefaultAiIdeas($cashAvailable, $equities, $trackedContext),
-        ];
-    }
-
-    private function generateDefaultAiIdeas(float $cash, array $equities, string $tracked): array
-    {
-        return [
-            [
-                'title' => 'Monetize Unencumbered NVDA Shares via OTM Covered Call',
-                'ticker' => 'NVDA',
-                'strategyType' => 'Covered Call (Option Level 1 Basic)',
-                'targetStrike' => '$235.00',
-                'strike' => '$235.00',
-                'expiration' => date('M d', strtotime('+35 days')),
-                'estimatedPremium' => '+$1,244.00 Instant Cash',
-                'annualizedYield' => '29.2% APY',
-                'APY' => '29.2% APY',
-                'reasoning' => 'You hold NVDA shares. Selling Covered Calls locks in cash premium while allowing NVDA to appreciate up to $235.',
-                'riskGuardrail' => '100% Covered by owned stock. Capped upside above $235, zero cash margin requirement.',
-                'delta' => '0.28',
-                'probabilityOfProfit' => '72%',
-                'impliedVolatilityRank' => '45%',
-                'actionBadge' => 'HIGH CONVICTION'
-            ],
-            [
-                'title' => 'Deploy Cash into QQQ Cash-Secured Put for Index Exposure',
-                'ticker' => 'QQQ',
-                'strategyType' => 'Cash-Secured Put (Option Level 1 Basic)',
-                'targetStrike' => '$440.00',
-                'strike' => '$440.00',
-                'expiration' => date('M d', strtotime('+30 days')),
-                'estimatedPremium' => '+$650.00 Instant Cash',
-                'annualizedYield' => '18.5% APY',
-                'APY' => '18.5% APY',
-                'reasoning' => 'With available cash, sell QQQ Puts for diversified index entry. Lower volatility risk compared to single stocks.',
-                'riskGuardrail' => '100% Backed by liquid cash reserves. Defined downside risk with built-in discount entry.',
-                'delta' => '-0.25',
-                'probabilityOfProfit' => '75%',
-                'impliedVolatilityRank' => '38%',
-                'actionBadge' => 'WHEEL ENTRY'
-            ],
-            [
-                'title' => 'Deploy Idle Cash to SGOV Treasury Bond ETF for Yield Shield',
-                'ticker' => 'SGOV',
-                'strategyType' => 'Fixed Income / Capital Preservation',
-                'targetStrike' => 'N/A',
-                'strike' => 'N/A',
-                'expiration' => 'N/A',
-                'estimatedPremium' => '+$105.00 Monthly Dividend',
-                'annualizedYield' => '5.2% APY',
-                'APY' => '5.2% APY',
-                'reasoning' => 'Place idle cash in 0-3 Month Treasury Bond ETF to earn low-risk yield while waiting for options entry.',
-                'riskGuardrail' => 'Virtually zero credit risk. Collateral remains highly liquid.',
-                'delta' => 'N/A',
-                'probabilityOfProfit' => '99%',
-                'impliedVolatilityRank' => '5%',
-                'actionBadge' => 'YIELD SHIELD'
-            ]
+            'error' => $this->parseErrorResponse($response ?? null),
         ];
     }
 
@@ -177,7 +142,7 @@ Output clear JSON formatting with keys: title, ticker, strategyType, strike, exp
             }
         }
 
-        return $this->generateDefaultAiIdeas($cash, $equities, '');
+        return [];
     }
 
     /**
@@ -282,8 +247,8 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
             try {
                 $response = $this->httpClient->request('POST', $this->getApiUrl() . '?key=' . $apiKey, [
                     'json' => ['contents' => [['parts' => [['text' => $prompt]]]]],
-                    'timeout' => 4.0,
-                    'max_duration' => 8.0,
+                    'timeout' => 30.0,
+                    'max_duration' => 60.0,
                 ]);
                 if ($response->getStatusCode() === 200) {
                     $resData = $response->toArray();
@@ -304,7 +269,7 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
                 'incomePerContract' => $bestCall['estIncomePerContract'],
                 'otmPct' => $bestCall['otmPct'],
                 'annualizedYield' => $bestCall['annualizedYield'],
-                'actionBadge' => '🎯 BEST COVERED CALL TARGET',
+                'actionBadge' => '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">my_location</span> BEST COVERED CALL TARGET',
                 'reasoning' => "Gemini AI selected \${$bestCall['strike']} Call (Delta {$bestCall['delta']}, +{$bestCall['otmPct']}% OTM). Selling this contract captures +\${$bestCall['estIncomePerContract']} cash credit ({$bestCall['annualizedYield']}% APY) while preserving stock upside.",
             ],
             'recommendedPut' => [
@@ -314,7 +279,7 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
                 'incomePerContract' => $bestPut['estIncomePerContract'],
                 'discountPct' => $bestPut['discountPct'],
                 'annualizedYield' => $bestPut['annualizedYield'],
-                'actionBadge' => '🎯 BEST CASH-SECURED PUT TARGET',
+                'actionBadge' => '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">my_location</span> BEST CASH-SECURED PUT TARGET',
                 'reasoning' => "Gemini AI selected \${$bestPut['strike']} Put (Delta {$bestPut['delta']}, -{$bestPut['discountPct']}% OTM). Selling this contract yields +\${$bestPut['estIncomePerContract']} cash credit ({$bestPut['annualizedYield']}% APY) with a built-in discount entry at \${$bestPut['strike']}.",
             ],
             'aiVerdict' => $aiCommentary,
@@ -346,15 +311,15 @@ Return structured response.";
             try {
                 $response = $this->httpClient->request('POST', $this->getApiUrl() . '?key=' . $apiKey, [
                     'json' => ['contents' => [['parts' => [['text' => $prompt]]]]],
-                    'timeout' => 4.0,
-                    'max_duration' => 8.0,
+                    'timeout' => 30.0,
+                    'max_duration' => 60.0,
                 ]);
                 if ($response->getStatusCode() === 200) {
                     $resData = $response->toArray();
                     $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
                     return [
                         'symbol' => $symbol,
-                        'verdict' => str_contains($aiText, 'REJECT') ? '🔴 WARN/REJECT' : '🟢 VERIFIED PASS',
+                        'verdict' => str_contains($aiText, 'REJECT') ? '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--red);">error</span> WARN/REJECT' : '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> VERIFIED PASS',
                         'timestamp' => date('Y-m-d H:i:s T'),
                         'analysisText' => $aiText,
                         'source' => "Gemini AI " . $this->getEffectiveModel() . " Live Pre-Trade Check",
@@ -367,11 +332,187 @@ Return structured response.";
 
         return [
             'symbol' => $symbol,
-            'verdict' => '🟢 VERIFIED PASS',
+            'verdict' => '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> VERIFIED PASS',
             'timestamp' => date('Y-m-d H:i:s T'),
             'analysisText' => "Gemini AI Pre-Trade Verification for {$symbol}: No immediate earnings crush expected in next 7 days. Option Level 1 risk is 100% defined and covered. Recommendation: Execute as LIMIT order at Mid-Price target.",
             'source' => 'Gemini AI Financial Engine (Pre-Trade Verification)',
         ];
+    }
+
+    public function reviewOptionPosition(string $symbol, array $contractData, array $liveChain): array
+    {
+        $type = strtoupper($contractData['type'] ?? 'CALL');
+        $strike = $contractData['strike'] ?? 0;
+        $expDate = $contractData['expiration'] ?? '';
+        $qty = $contractData['contracts'] ?? 1;
+        $currentPrice = $liveChain['underlyingPrice'] ?? 'Unknown';
+
+        // Limit the chain data to just the relevant options to prevent token explosion
+        $relevantOptions = [];
+        $optionsList = $type === 'CALL' ? ($liveChain['calls'] ?? []) : ($liveChain['puts'] ?? []);
+        
+        foreach ($optionsList as $opt) {
+            $optStrike = $opt['strike'] ?? 0;
+            if (abs($optStrike - $strike) < ($currentPrice * 0.1)) {
+                $relevantOptions[] = [
+                    'strike' => $optStrike,
+                    'bid' => $opt['bid'] ?? 0,
+                    'ask' => $opt['ask'] ?? 0,
+                    'delta' => $opt['delta'] ?? 0,
+                ];
+            }
+        }
+        $chainJson = json_encode($relevantOptions);
+
+        $prompt = "You are Gemini AI, a senior Wall Street options analyst. Review this active option position nearing expiration.
+Symbol: {$symbol}
+Contract Type: {$type}
+Strike: \${$strike}
+Expiration: {$expDate}
+Quantity: {$qty} contracts
+Current Underlying Price: \${$currentPrice}
+
+Live Option Chain Data (Nearby Strikes):
+{$chainJson}
+
+Provide a STRICT JSON response with exactly these fields:
+- decision (must be exactly 'HOLD' or 'CLOSE')
+- status (e.g. 'Safe', 'At Risk', 'Deep ITM')
+- probabilityOfAssignment (e.g. 'Very Low (<5%)', 'High (>90%)')
+- action (e.g. 'Let expire worthless', 'Buy To Close (BTC)')
+- targetLimitPrice (extract the ask/bid from the JSON chain that corresponds to the strike, if available)
+- reasoning (1-2 sentences explaining the decision mathematically based on the provided chain)";
+
+        $apiKey = $this->getEffectiveApiKey();
+        $response = null;
+        if (!empty($apiKey)) {
+            try {
+                $response = $this->httpClient->request('POST', $this->getApiUrl() . '?key=' . $apiKey, [
+                    'json' => [
+                        'contents' => [['parts' => [['text' => $prompt]]]],
+                        'generationConfig' => ['response_mime_type' => 'application/json']
+                    ],
+                    'timeout' => 30.0,
+                    'max_duration' => 60.0,
+                ]);
+                
+                if ($response->getStatusCode() === 200) {
+                    $resData = $response->toArray();
+                    $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    
+                    if (preg_match('/\{.*\}/s', $aiText, $match)) {
+                        $decoded = json_decode($match[0], true);
+                        if (is_array($decoded) && isset($decoded['decision'])) {
+                            return $decoded;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->logger->error('Gemini Option Review Error: ' . $e->getMessage());
+                return [
+                    'error' => $this->parseErrorResponse(null, $e),
+                ];
+            }
+        }
+
+        return [
+            'error' => $this->parseErrorResponse($response),
+        ];
+    }
+
+    public function analyzeMarketNews(array $newsItems): array
+    {
+        if (empty($newsItems)) {
+            return ['error' => 'No recent market news available from Finnhub (API key missing or no news).'];
+        }
+
+        $newsContext = "";
+        foreach ($newsItems as $i => $news) {
+            $headline = $news['headline'] ?? 'Unknown';
+            $summary = $news['summary'] ?? '';
+            $newsContext .= ($i + 1) . ". {$headline}\n   Summary: {$summary}\n\n";
+        }
+
+        $prompt = "You are a top-tier Macroeconomic AI Analyst.
+Review the following recent general market news headlines and summaries:
+
+{$newsContext}
+
+Synthesize this data and extract:
+1. Up to 3 major macroeconomic or world events that might affect the stock market.
+2. Up to 3 specific stock purchase ideas or sectors that look bullish based on these events.
+
+Output strictly JSON formatting with the following structure:
+{
+  \"events\": [
+    {\"headline\": \"Event title\", \"impact\": \"Brief explanation of market impact\"}
+  ],
+  \"stockPicks\": [
+    {\"ticker\": \"TICKER_SYMBOL\", \"reasoning\": \"Brief reasoning for bullishness\"}
+  ]
+}";
+
+        $aiText = '';
+        $key = $this->getEffectiveApiKey();
+        $response = null;
+        if ($key) {
+            try {
+                $response = $this->httpClient->request('POST', $this->getApiUrl() . "?key={$key}", [
+                    'json' => [
+                        'contents' => [
+                            ['parts' => [['text' => $prompt]]]
+                        ],
+                        'generationConfig' => ['response_mime_type' => 'application/json']
+                    ],
+                    'timeout' => 30.0,
+                    'max_duration' => 60.0,
+                ]);
+                
+                if ($response->getStatusCode() === 200) {
+                    $resData = $response->toArray();
+                    $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                }
+            } catch (\Throwable $e) {
+                $this->logger->error('Gemini Market News Error: ' . $e->getMessage());
+                return [
+                    'error' => $this->parseErrorResponse(null, $e),
+                ];
+            }
+        }
+        if ($aiText) {
+            $cleanJson = preg_replace('/^```json\s*|```$/i', '', trim($aiText));
+            $parsed = json_decode($cleanJson, true);
+            if (json_last_error() === JSON_ERROR_NONE && isset($parsed['events'])) {
+                return $parsed;
+            }
+        }
+
+        return ['error' => $this->parseErrorResponse($response)];
+    }
+
+    private function parseErrorResponse($response, ?\Throwable $exception = null): string
+    {
+        $provider = $this->getProviderName();
+        if ($exception !== null) {
+            return "Failed to query " . $provider . ": " . $exception->getMessage();
+        }
+
+        if ($response !== null) {
+            try {
+                if ($response->getStatusCode() === 429) {
+                    return "Failed to query " . $provider . ": API quota exceeded (Rate limit reached). Please wait before retrying or upgrade your plan in AI Studio.";
+                }
+                $content = $response->getContent(false);
+                $data = json_decode($content, true);
+                if (isset($data['error']['message'])) {
+                    return "Failed to query " . $provider . ": " . $data['error']['message'];
+                }
+            } catch (\Throwable $e) {
+                // fall through
+            }
+        }
+
+        return "Failed to query " . $provider . ": API key missing or invalid.";
     }
 
     public function getProviderName(): string

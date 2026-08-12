@@ -1,0 +1,717 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Tax Center & Realizations — KHAPRE MoonShot Portfolio{% endblock %}
+
+{% block body %}
+<div id="app">
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '<span class="material-symbols-outlined" style="color:var(--blue); font-size:24px;">account_balance_wallet</span> Tax Center <span>& Realizations</span>',
+        headerBadge: 'Tax Year 2026 Engine'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
+
+    <div class="port-container" style="max-width: 1400px; margin: 0 auto; padding: 24px;">
+        
+        <!-- EXPLANATORY HERO BANNER -->
+        <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(168, 85, 247, 0.03)); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 16px;">
+            <span class="material-symbols-outlined" style="font-size: 32px; color: var(--blue); margin-top: 4px;">info</span>
+            <div>
+                <h3 style="margin: 0 0 6px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text);">How Tax Realizations are Calculated</h3>
+                <p style="margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6;">
+                    This ledger utilizes the standard **FIFO (First-In, First-Out)** accounting method to match buy/sell transactions. 
+                    Short-Term gains (held &le; 365 days) are estimated at a **24%** marginal tax rate. 
+                    Long-Term gains (held &gt; 365 days) are estimated at **15%**. 
+                    Option expirations and assignments are automatically recognized from broker journals to capture written premiums.
+                </p>
+            </div>
+        </div>
+
+        <!-- TOP EXECUTIVE TAX STATS -->
+        <div class="port-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 24px;">
+            <div class="port-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; position: relative; overflow: hidden;">
+                <div class="lbl" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Net Capital Gains</div>
+                <div class="val" id="statNetGains" style="font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900;">$0.00</div>
+                <div style="font-size: 10px; color: var(--muted); margin-top: 6px;">Total realized profit minus losses</div>
+                <div style="position: absolute; right: 12px; bottom: 12px; opacity: 0.05; font-size: 64px;" class="material-symbols-outlined">payments</div>
+            </div>
+            <div class="port-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; position: relative; overflow: hidden;">
+                <div class="lbl" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Short-Term Gains</div>
+                <div class="val y" id="statShortTerm" style="font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; color: var(--yellow);">$0.00</div>
+                <div style="font-size: 10px; color: var(--muted); margin-top: 6px;">Held &le; 1 year (Taxed as ordinary income)</div>
+                <div style="position: absolute; right: 12px; bottom: 12px; opacity: 0.05; font-size: 64px;" class="material-symbols-outlined">schedule</div>
+            </div>
+            <div class="port-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; position: relative; overflow: hidden;">
+                <div class="lbl" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Long-Term Gains</div>
+                <div class="val g" id="statLongTerm" style="font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900; color: var(--green);">$0.00</div>
+                <div style="font-size: 10px; color: var(--muted); margin-top: 6px;">Held &gt; 1 year (Taxed at lower capital gains rate)</div>
+                <div style="position: absolute; right: 12px; bottom: 12px; opacity: 0.05; font-size: 64px;" class="material-symbols-outlined">trending_up</div>
+            </div>
+            <div class="port-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; position: relative; overflow: hidden;">
+                <div class="lbl" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Est. Tax Liability</div>
+                <div class="val r" style="color: var(--red); font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900;" id="statEstTax">$0.00</div>
+                <div style="font-size: 10px; color: var(--muted); margin-top: 6px;">Estimated 24% ST / 15% LT tax burden</div>
+                <div style="position: absolute; right: 12px; bottom: 12px; opacity: 0.05; font-size: 64px;" class="material-symbols-outlined">gavel</div>
+            </div>
+        </div>
+
+        <!-- TAB SWITCHER -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+            <div style="display: flex; gap: 24px;">
+                <button class="vtab active" id="tabRealizedGains" onclick="switchTaxView('realized')" style="background: transparent; border: none; color: var(--text); font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; padding: 8px 0; cursor: pointer; position: relative; outline: none; transition: color 0.2s;">
+                    Realized Capital Gains (Tax View)
+                    <div class="indicator" style="position: absolute; bottom: -10px; left: 0; right: 0; height: 3px; background: var(--blue); border-radius: 2px;"></div>
+                </button>
+                <button class="vtab" id="tabAllTransactions" onclick="switchTaxView('all_tx')" style="background: transparent; border: none; color: var(--muted); font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700; padding: 8px 0; cursor: pointer; position: relative; outline: none; transition: color 0.2s;">
+                    All Account Transactions (Audit Log)
+                    <div class="indicator" style="position: absolute; bottom: -10px; left: 0; right: 0; height: 3px; background: transparent; border-radius: 2px;"></div>
+                </button>
+            </div>
+            <div style="font-size: 12px; color: var(--muted); background: var(--bg2); border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px;" id="activeCountsText">
+                Showing 0 realizations
+            </div>
+        </div>
+
+        <!-- FILTER BAR -->
+        <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; flex: 1;">
+                
+                <!-- Search Box -->
+                <div style="position: relative; min-width: 180px;">
+                    <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--muted);">search</span>
+                    <input id="filterSearch" type="text" placeholder="Search Ticker..." oninput="applyTaxFilters()" style="background: var(--bg1); border: 1px solid var(--border); color: var(--text); padding: 8px 12px 8px 32px; border-radius: 8px; font-size: 12px; font-weight: 600; outline: none; width: 100%; box-sizing: border-box;">
+                </div>
+
+                <!-- Timeframe Selector -->
+                <div style="display: flex; background: var(--bg1); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
+                    <button class="fbtn active" onclick="setFilterTimeframe('all', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--text);">All History</button>
+                    <button class="fbtn" onclick="setFilterTimeframe('6m', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--muted);">6 Months</button>
+                    <button class="fbtn" onclick="setFilterTimeframe('this_year', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--muted);">This Year</button>
+                    <button class="fbtn" onclick="setFilterTimeframe('last_year', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--muted);">Last Year</button>
+                </div>
+
+                <!-- Account Filter -->
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Account:</span>
+                    <select id="filterAccount" onchange="applyTaxFilters()" style="background: var(--bg1); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
+                        <option value="ALL">All Accounts</option>
+                        {% set uniqueAccounts = [] %}
+                        {% for r in realizations %}
+                            {% if r.account not in uniqueAccounts %}
+                                {% set uniqueAccounts = uniqueAccounts|merge([r.account]) %}
+                                <option value="{{ r.account }}">{{ r.account }}</option>
+                            {% endif %}
+                        {% endfor %}
+                        {% for tx in history %}
+                            {% set nickname = tx.account_nickname|default(tx.account_number) %}
+                            {% if nickname not in uniqueAccounts %}
+                                {% set uniqueAccounts = uniqueAccounts|merge([nickname]) %}
+                                <option value="{{ nickname }}">{{ nickname }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Asset Type Filter -->
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Asset:</span>
+                    <select id="filterAssetType" onchange="applyTaxFilters()" style="background: var(--bg1); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
+                        <option value="ALL">All Assets</option>
+                        <option value="EQUITY">Stocks</option>
+                        <option value="OPTION">Options</option>
+                    </select>
+                </div>
+
+                <!-- Group By Selector -->
+                <div id="groupSelectorContainer" style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Group By:</span>
+                    <select id="filterGroupBy" onchange="applyTaxFilters()" style="background: var(--bg1); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
+                        <option value="NONE">None (Chronological)</option>
+                        <option value="TICKER">Security Ticker</option>
+                        <option value="ACCOUNT">Account Nickname</option>
+                        <option value="MONTH">Month / Year</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Collapse/Expand All Buttons -->
+            <div id="expandCollapseAllActions" style="display: flex; gap: 8px;">
+                <button onclick="toggleAllGroups(true)" style="background: var(--bg1); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">unfold_more</span> Expand All
+                </button>
+                <button onclick="toggleAllGroups(false)" style="background: var(--bg1); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">unfold_less</span> Collapse All
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 1: REALIZED CAPITAL GAINS LEDGER -->
+        <div id="viewRealized" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--card-shadow);">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: var(--bg3); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px;">
+                        <th style="padding: 14px 18px;">Ticker / Asset</th>
+                        <th style="padding: 14px 18px;">Account</th>
+                        <th style="padding: 14px 18px;">Holding Period (Buy → Sell)</th>
+                        <th style="padding: 14px 18px; text-align: center;">Term</th>
+                        <th style="padding: 14px 18px; text-align: right;">Quantity</th>
+                        <th style="padding: 14px 18px; text-align: right;">Cost Basis</th>
+                        <th style="padding: 14px 18px; text-align: right;">Proceeds</th>
+                        <th style="padding: 14px 18px; text-align: right;">Realized Gain/Loss</th>
+                        <th style="padding: 14px 18px; text-align: right;">Est. Tax Impact</th>
+                    </tr>
+                </thead>
+                <tbody id="taxRealizationBody">
+                    <!-- Loaded dynamically via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- VIEW 2: ALL ACCOUNT TRANSACTIONS AUDIT LEDGER -->
+        <div id="viewAllTx" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--card-shadow); display: none;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: var(--bg3); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px;">
+                        <th style="padding: 14px 18px;">Date</th>
+                        <th style="padding: 14px 18px;">Ticker / Asset</th>
+                        <th style="padding: 14px 18px;">Account</th>
+                        <th style="padding: 14px 18px;">Type</th>
+                        <th style="padding: 14px 18px;">Description</th>
+                        <th style="padding: 14px 18px; text-align: right;">Price</th>
+                        <th style="padding: 14px 18px; text-align: right;">Cash Flow</th>
+                    </tr>
+                </thead>
+                <tbody id="allTxBody">
+                    <!-- Loaded dynamically via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Raw data arrays serialized directly from Twig
+const realizationsRaw = {{ realizations|json_encode|raw }};
+const historyRaw = {{ history|json_encode|raw }};
+
+let currentFilterTimeframe = 'all';
+let currentActiveView = 'realized';
+let groupStates = {}; // Keep track of collapsed states: { safeKey: boolean }
+
+function switchTaxView(view) {
+    currentActiveView = view;
+    
+    const tabRealized = document.getElementById('tabRealizedGains');
+    const tabAllTx = document.getElementById('tabAllTransactions');
+    const viewRealized = document.getElementById('viewRealized');
+    const viewAllTx = document.getElementById('viewAllTx');
+    const expandCollapseActions = document.getElementById('expandCollapseAllActions');
+
+    if (view === 'realized') {
+        tabRealized.classList.add('active');
+        tabRealized.style.color = 'var(--text)';
+        tabRealized.querySelector('.indicator').style.background = 'var(--blue)';
+
+        tabAllTx.classList.remove('active');
+        tabAllTx.style.color = 'var(--muted)';
+        tabAllTx.querySelector('.indicator').style.background = 'transparent';
+
+        viewRealized.style.display = 'block';
+        viewAllTx.style.display = 'none';
+    } else {
+        tabAllTx.classList.add('active');
+        tabAllTx.style.color = 'var(--text)';
+        tabAllTx.querySelector('.indicator').style.background = 'var(--blue)';
+
+        tabRealized.classList.remove('active');
+        tabRealized.style.color = 'var(--muted)';
+        tabRealized.querySelector('.indicator').style.background = 'transparent';
+
+        viewRealized.style.display = 'none';
+        viewAllTx.style.display = 'block';
+    }
+
+    applyTaxFilters();
+}
+
+function setFilterTimeframe(timeframe, btn) {
+    const buttons = btn.parentElement.querySelectorAll('button');
+    buttons.forEach(b => {
+        b.classList.remove('active');
+        b.style.color = 'var(--muted)';
+        b.style.background = 'transparent';
+    });
+    btn.classList.add('active');
+    btn.style.color = 'var(--text)';
+    
+    currentFilterTimeframe = timeframe;
+    applyTaxFilters();
+}
+
+function toggleTaxGroup(safeKey, headerEl) {
+    const rows = document.querySelectorAll('.group-row-' + safeKey);
+    const arrow = headerEl.querySelector('.group-arrow');
+    const summarySpan = headerEl.querySelector('.hdr-summary');
+    
+    // Toggle state
+    groupStates[safeKey] = !groupStates[safeKey];
+    const isCollapsed = groupStates[safeKey];
+
+    rows.forEach(r => {
+        r.style.display = isCollapsed ? 'none' : '';
+    });
+
+    if (arrow) {
+        arrow.textContent = isCollapsed ? '▶' : '▼';
+    }
+    if (summarySpan) {
+        summarySpan.style.display = isCollapsed ? 'inline-flex' : 'none';
+    }
+}
+
+function toggleAllGroups(expand) {
+    const groupBy = document.getElementById('filterGroupBy').value;
+    if (groupBy === 'NONE') return;
+
+    Object.keys(groupStates).forEach(safeKey => {
+        groupStates[safeKey] = !expand;
+    });
+
+    // Re-trigger visual filter application
+    applyTaxFilters();
+}
+
+function applyTaxFilters() {
+    const searchVal = document.getElementById('filterSearch').value.toUpperCase().trim();
+    const accountFilter = document.getElementById('filterAccount').value;
+    const typeFilter = document.getElementById('filterAssetType').value;
+    const groupBy = document.getElementById('filterGroupBy').value;
+    
+    const now = new Date();
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(now.getMonth() - 6);
+
+    let totalGains = 0.0;
+    let totalST = 0.0;
+    let totalLT = 0.0;
+    let totalTax = 0.0;
+
+    // Show/hide Expand/Collapse buttons
+    const expandCollapseActions = document.getElementById('expandCollapseAllActions');
+    expandCollapseActions.style.display = (groupBy === 'NONE') ? 'none' : 'flex';
+
+    // 1. FILTER REALIZATIONS
+    const filteredRealizations = realizationsRaw.filter(r => {
+        const rowDate = new Date(r.sellDate);
+        let matchesTime = true;
+        if (currentFilterTimeframe === '6m') {
+            matchesTime = (rowDate >= sixMonthsAgo);
+        } else if (currentFilterTimeframe === 'this_year') {
+            matchesTime = (rowDate.getFullYear() === now.getFullYear());
+        } else if (currentFilterTimeframe === 'last_year') {
+            matchesTime = (rowDate.getFullYear() === now.getFullYear() - 1);
+        }
+
+        const matchesAcc = (accountFilter === 'ALL' || r.account === accountFilter);
+        const matchesType = (typeFilter === 'ALL' || r.assetType === typeFilter);
+        const matchesSearch = (searchVal === '' || r.symbol.toUpperCase().includes(searchVal));
+
+        return matchesTime && matchesAcc && matchesType && matchesSearch;
+    });
+
+    // Update KPI aggregates using currently visible items
+    filteredRealizations.forEach(r => {
+        totalGains += r.realizedGain;
+        totalTax += r.estTax;
+        if (r.term === 'LONG_TERM') {
+            totalLT += r.realizedGain;
+        } else {
+            totalST += r.realizedGain;
+        }
+    });
+
+    // 2. RENDER REALIZATIONS (WITH COLLAPSIBLE GROUPING & SUB-TOTALS)
+    const realizationBody = document.getElementById('taxRealizationBody');
+    realizationBody.innerHTML = '';
+
+    if (filteredRealizations.length > 0) {
+        let groups = {};
+
+        if (groupBy === 'NONE') {
+            filteredRealizations.sort((a, b) => b.sellDate.localeCompare(a.sellDate));
+            filteredRealizations.forEach(r => {
+                realizationBody.appendChild(createRealizationRow(r));
+            });
+        } else {
+            // Group visible rows
+            filteredRealizations.forEach(r => {
+                let key = 'Other';
+                if (groupBy === 'TICKER') {
+                    key = r.symbol || 'Unknown Ticker';
+                } else if (groupBy === 'ACCOUNT') {
+                    key = r.account || 'Unknown Account';
+                } else if (groupBy === 'MONTH') {
+                    const d = new Date(r.sellDate);
+                    key = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                }
+
+                if (!groups[key]) {
+                    groups[key] = {
+                        items: [],
+                        costBasis: 0,
+                        proceeds: 0,
+                        gain: 0,
+                        tax: 0
+                    };
+                }
+                groups[key].items.push(r);
+                groups[key].costBasis += r.costBasis;
+                groups[key].proceeds += r.proceeds;
+                groups[key].gain += r.realizedGain;
+                groups[key].tax += r.estTax;
+            });
+
+            // Render groups
+            Object.keys(groups).forEach(grpKey => {
+                const grp = groups[grpKey];
+                const safeKey = 'realized_' + grpKey.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                // Initialize default state as expanded (false) if not set yet
+                if (groupStates[safeKey] === undefined) {
+                    groupStates[safeKey] = false; 
+                }
+                const isCollapsed = groupStates[safeKey];
+
+                // Group Header row
+                const hdrRow = document.createElement('tr');
+                hdrRow.style.background = 'var(--bg3)';
+                hdrRow.style.borderBottom = '1px solid var(--border)';
+                hdrRow.style.cursor = 'pointer';
+                hdrRow.style.userSelect = 'none';
+                hdrRow.onclick = function() { toggleTaxGroup(safeKey, hdrRow); };
+                
+                const formattedGain = (grp.gain >= 0 ? '+' : '') + '$' + grp.gain.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const gainColor = grp.gain >= 0 ? 'var(--green)' : 'var(--red)';
+
+                hdrRow.innerHTML = `
+                    <td colspan="9" style="padding:12px 18px; font-weight:800; font-family:'Outfit',sans-serif; font-size:13px; color:var(--text);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span class="group-arrow" style="margin-right:6px; font-size:11px; color:var(--blue);">${isCollapsed ? '▶' : '▼'}</span>
+                                <span class="material-symbols-outlined" style="font-size:16px; color:var(--blue);">folder</span>
+                                <span style="font-weight:700;">${grpKey}</span>
+                                <span style="font-size:11px; color:var(--muted); font-weight:600; background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:10px; margin-left:6px;">${grp.items.length} trades</span>
+                            </div>
+                            <!-- SUMMARY PREVIEW ON COLLAPSE -->
+                            <div class="hdr-summary" style="display:${isCollapsed ? 'inline-flex' : 'none'}; gap:14px; font-size:11px; font-family:'SFMono-Regular',Consolas,monospace; font-weight:700; align-items:center; margin-right:8px;">
+                                <span>Proceeds: <strong style="color:var(--text);">$${grp.proceeds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                                <span>Realized: <strong style="color:${gainColor};">${formattedGain}</strong></span>
+                            </div>
+                        </div>
+                    </td>`;
+                realizationBody.appendChild(hdrRow);
+
+                // Group items
+                grp.items.forEach(r => {
+                    const row = createRealizationRow(r);
+                    row.classList.add('group-row-' + safeKey);
+                    if (isCollapsed) {
+                        row.style.display = 'none';
+                    }
+                    realizationBody.appendChild(row);
+                });
+
+                // Group Sub-total row
+                const subRow = document.createElement('tr');
+                subRow.classList.add('group-row-' + safeKey);
+                subRow.style.background = 'rgba(255,255,255,0.02)';
+                subRow.style.borderBottom = '2px solid var(--border)';
+                subRow.style.fontSize = '12px';
+                subRow.style.fontWeight = '700';
+                if (isCollapsed) {
+                    subRow.style.display = 'none';
+                }
+                subRow.innerHTML = `
+                    <td colspan="5" style="padding:10px 18px; text-align:right; color:var(--muted);">Sub-total (${grpKey}):</td>
+                    <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; color:var(--muted);">$${grp.costBasis.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; color:var(--text);">$${grp.proceeds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; color:${gainColor};">
+                        ${formattedGain}
+                    </td>
+                    <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; color:${grp.tax > 0 ? 'var(--red)' : 'var(--muted)'};">
+                        $${grp.tax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </td>
+                `;
+                realizationBody.appendChild(subRow);
+            });
+        }
+    } else {
+        realizationBody.innerHTML = `<tr>
+            <td colspan="9" style="text-align:center; padding:40px; color:var(--muted);">
+                <span class="material-symbols-outlined" style="font-size:32px; display:block; margin-bottom:8px; opacity:0.5;">receipt_long</span>
+                No realized capital gains found for the selected filters.
+            </td>
+        </tr>`;
+    }
+
+    // 3. FILTER & RENDER RAW TRANSACTIONS (WITH COLLAPSIBLE GROUPING & SUB-TOTALS)
+    const allTxBody = document.getElementById('allTxBody');
+    allTxBody.innerHTML = '';
+
+    const filteredTx = historyRaw.filter(tx => {
+        const rowDate = new Date(tx.date);
+        let matchesTime = true;
+        if (currentFilterTimeframe === '6m') {
+            matchesTime = (rowDate >= sixMonthsAgo);
+        } else if (currentFilterTimeframe === 'this_year') {
+            matchesTime = (rowDate.getFullYear() === now.getFullYear());
+        } else if (currentFilterTimeframe === 'last_year') {
+            matchesTime = (rowDate.getFullYear() === now.getFullYear() - 1);
+        }
+
+        const accNickname = tx.account_nickname || tx.account_number;
+        const matchesAcc = (accountFilter === 'ALL' || accNickname === accountFilter);
+
+        const item = tx.transfer_items ? tx.transfer_items[0] : null;
+        const assetType = item ? (item.asset_type || '').toUpperCase() : '';
+        const isOption = assetType === 'OPTION' || (tx.symbol && /^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/.test(tx.symbol));
+        const isEquity = tx.symbol && tx.symbol !== 'CURRENCY_USD' && !isOption;
+        
+        let matchesType = true;
+        if (typeFilter === 'OPTION') {
+            matchesType = isOption;
+        } else if (typeFilter === 'EQUITY') {
+            matchesType = isEquity;
+        }
+
+        const matchesSearch = (searchVal === '' || (tx.symbol && tx.symbol.toUpperCase().includes(searchVal)) || tx.description.toUpperCase().includes(searchVal));
+
+        return matchesTime && matchesAcc && matchesType && matchesSearch;
+    });
+
+    if (filteredTx.length > 0) {
+        if (groupBy === 'NONE') {
+            filteredTx.forEach(tx => {
+                allTxBody.appendChild(createTransactionRow(tx));
+            });
+        } else {
+            // Group visible transactions
+            let txGroups = {};
+            filteredTx.forEach(tx => {
+                const item = tx.transfer_items ? tx.transfer_items[0] : null;
+                const assetType = item ? (item.asset_type || '').toUpperCase() : '';
+                const isOption = assetType === 'OPTION' || (tx.symbol && /^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/.test(tx.symbol));
+                const isEquity = tx.symbol && tx.symbol !== 'CURRENCY_USD' && !isOption;
+
+                let key = 'Other';
+                if (groupBy === 'TICKER') {
+                    key = tx.symbol || 'Cash / USD';
+                } else if (groupBy === 'ACCOUNT') {
+                    key = tx.account_nickname || tx.account_number || 'Unknown Account';
+                } else if (groupBy === 'MONTH') {
+                    const d = new Date(tx.date);
+                    key = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+                }
+
+                if (!txGroups[key]) {
+                    txGroups[key] = {
+                        items: [],
+                        netAmount: 0
+                    };
+                }
+                txGroups[key].items.push(tx);
+                txGroups[key].netAmount += tx.amount;
+            });
+
+            // Render groups
+            Object.keys(txGroups).forEach(grpKey => {
+                const grp = txGroups[grpKey];
+                const safeKey = 'tx_' + grpKey.replace(/[^a-zA-Z0-9]/g, '_');
+
+                if (groupStates[safeKey] === undefined) {
+                    groupStates[safeKey] = false;
+                }
+                const isCollapsed = groupStates[safeKey];
+
+                const formattedNet = (grp.netAmount >= 0 ? '+' : '') + '$' + grp.netAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const netColor = grp.netAmount >= 0 ? 'var(--green)' : 'var(--red)';
+
+                // Group Header row
+                const hdrRow = document.createElement('tr');
+                hdrRow.style.background = 'var(--bg3)';
+                hdrRow.style.borderBottom = '1px solid var(--border)';
+                hdrRow.style.cursor = 'pointer';
+                hdrRow.style.userSelect = 'none';
+                hdrRow.onclick = function() { toggleTaxGroup(safeKey, hdrRow); };
+                hdrRow.innerHTML = `<td colspan="7" style="padding:12px 18px; font-weight:800; font-family:'Outfit',sans-serif; font-size:13px; color:var(--text);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span class="group-arrow" style="margin-right:6px; font-size:11px; color:var(--blue);">${isCollapsed ? '▶' : '▼'}</span>
+                            <span class="material-symbols-outlined" style="font-size:16px; color:var(--blue);">folder</span>
+                            <span style="font-weight:700;">${grpKey}</span>
+                            <span style="font-size:11px; color:var(--muted); font-weight:600; background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:10px; margin-left:6px;">${grp.items.length} records</span>
+                        </div>
+                        <!-- SUMMARY PREVIEW ON COLLAPSE -->
+                        <div class="hdr-summary" style="display:${isCollapsed ? 'inline-flex' : 'none'}; gap:14px; font-size:11px; font-family:'SFMono-Regular',Consolas,monospace; font-weight:700; align-items:center; margin-right:8px;">
+                            <span>Net Flow: <strong style="color:${netColor};">${formattedNet}</strong></span>
+                        </div>
+                    </div>
+                </td>`;
+                allTxBody.appendChild(hdrRow);
+
+                // Group items
+                grp.items.forEach(tx => {
+                    const row = createTransactionRow(tx);
+                    row.classList.add('group-row-' + safeKey);
+                    if (isCollapsed) {
+                        row.style.display = 'none';
+                    }
+                    allTxBody.appendChild(row);
+                });
+
+                // Group Sub-total row
+                const subRow = document.createElement('tr');
+                subRow.classList.add('group-row-' + safeKey);
+                subRow.style.background = 'rgba(255,255,255,0.02)';
+                subRow.style.borderBottom = '2px solid var(--border)';
+                subRow.style.fontSize = '12px';
+                subRow.style.fontWeight = '700';
+                if (isCollapsed) {
+                    subRow.style.display = 'none';
+                }
+                subRow.innerHTML = `
+                    <td colspan="6" style="padding:10px 18px; text-align:right; color:var(--muted);">Net Cash Flow (${grpKey}):</td>
+                    <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; color:${netColor};">
+                        ${formattedNet}
+                    </td>
+                `;
+                allTxBody.appendChild(subRow);
+            });
+        }
+    } else {
+        allTxBody.innerHTML = `<tr>
+            <td colspan="7" style="text-align:center; padding:40px; color:var(--muted);">
+                <span class="material-symbols-outlined" style="font-size:32px; display:block; margin-bottom:8px; opacity:0.5;">receipt_long</span>
+                No raw transactions found for the selected filters.
+            </td>
+        </tr>`;
+    }
+
+    // 4. UPDATE KPI LABELS & COUNTS LABEL
+    document.getElementById('statNetGains').textContent = formatCurrency(totalGains);
+    document.getElementById('statNetGains').className = 'val ' + (totalGains >= 0 ? 'g' : 'r');
+    
+    document.getElementById('statShortTerm').textContent = formatCurrency(totalST);
+    document.getElementById('statShortTerm').className = 'val ' + (totalST >= 0 ? 'y' : 'r');
+
+    document.getElementById('statLongTerm').textContent = formatCurrency(totalLT);
+    document.getElementById('statLongTerm').className = 'val ' + (totalLT >= 0 ? 'g' : 'r');
+
+    document.getElementById('statEstTax').textContent = formatCurrency(totalTax);
+
+    const label = document.getElementById('activeCountsText');
+    if (currentActiveView === 'realized') {
+        label.textContent = `Showing ${filteredRealizations.length} realizations`;
+    } else {
+        label.textContent = `Showing ${filteredTx.length} transactions`;
+    }
+}
+
+function createRealizationRow(r) {
+    const row = document.createElement('tr');
+    row.style.borderBottom = '1px solid var(--border)';
+    row.style.fontSize = '13px';
+    row.style.background = 'var(--bg1)';
+    row.innerHTML = `
+        <td style="padding:14px 18px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <strong style="color:var(--text); font-size:14px;">${r.symbol}</strong>
+                <span class="hbadge" style="font-size:9px; background:${r.assetType === 'OPTION' ? 'rgba(168,85,247,0.15)' : 'rgba(56,189,248,0.15)'}; color:${r.assetType === 'OPTION' ? 'var(--purple)' : 'var(--blue)'};">
+                    ${r.assetType}
+                </span>
+            </div>
+        </td>
+        <td style="padding:14px 18px; color:var(--text);">
+            <div style="display:inline-flex; align-items:center; gap:4px; font-size:12px;">
+                <span class="material-symbols-outlined" style="font-size:13px; color:var(--muted);">account_balance</span>
+                ${r.account}
+            </div>
+        </td>
+        <td style="padding:14px 18px; color:var(--muted); font-size:12px;">
+            <strong>${r.buyDate}</strong> &rarr; <strong>${r.sellDate}</strong>
+        </td>
+        <td style="padding:14px 18px; text-align:center;">
+            <span class="rb" style="background:${r.term === 'LONG_TERM' ? 'rgba(34,197,94,0.15)' : 'rgba(210,153,34,0.15)'}; color:${r.term === 'LONG_TERM' ? 'var(--green)' : 'var(--yellow)'}; font-size:10px; font-weight:700;">
+                ${r.term.replace('_', ' ')}
+            </span>
+        </td>
+        <td style="padding:14px 18px; text-align:right; font-weight:600;">${r.qty}</td>
+        <td style="padding:14px 18px; text-align:right; color:var(--muted); font-family:'SFMono-Regular',Consolas,monospace;">$${r.costBasis.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace;">$${r.proceeds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+        <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:800;" class="${r.realizedGain >= 0 ? 'g' : 'r'}">
+            ${r.realizedGain >= 0 ? '+' : ''}$${r.realizedGain.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+        </td>
+        <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:600; color:${r.estTax > 0 ? 'var(--red)' : 'var(--muted)'};">
+            $${r.estTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+        </td>
+    `;
+    return row;
+}
+
+function createTransactionRow(tx) {
+    const item = tx.transfer_items ? tx.transfer_items[0] : null;
+    const assetType = item ? (item.asset_type || '').toUpperCase() : '';
+    const isOption = assetType === 'OPTION' || (tx.symbol && /^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/.test(tx.symbol));
+    const isEquity = tx.symbol && tx.symbol !== 'CURRENCY_USD' && !isOption;
+
+    const row = document.createElement('tr');
+    row.style.borderBottom = '1px solid var(--border)';
+    row.style.fontSize = '13px';
+    row.style.background = 'var(--bg1)';
+    row.innerHTML = `
+        <td style="padding:14px 18px; color:var(--text); font-weight:600;">${tx.date}</td>
+        <td style="padding:14px 18px;">
+            ${tx.symbol && tx.symbol !== 'CURRENCY_USD' ? `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <strong style="color:var(--text); font-size:14px;">${tx.symbol}</strong>
+                    <span class="hbadge" style="font-size:9px; background:${isOption ? 'rgba(168,85,247,0.15)' : 'rgba(56,189,248,0.15)'}; color:${isOption ? 'var(--purple)' : 'var(--blue)'};">
+                        ${isOption ? 'OPTION' : 'STOCK'}
+                    </span>
+                </div>
+            ` : `<span style="color:var(--muted); font-size:12px;">Cash / USD</span>`}
+        </td>
+        <td style="padding:14px 18px; color:var(--text);">
+            <div style="display:inline-flex; align-items:center; gap:4px; font-size:12px;">
+                <span class="material-symbols-outlined" style="font-size:13px; color:var(--muted);">account_balance</span>
+                ${tx.account_nickname || tx.account_number}
+            </div>
+        </td>
+        <td style="padding:14px 18px;">
+            <span class="hbadge" style="background:${tx.type === 'TRADE' ? 'rgba(56,189,248,0.15)' : (tx.type === 'DIVIDEND' || tx.type === 'DIVIDEND_OR_INTEREST' ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.08)')}; color:${tx.type === 'TRADE' ? 'var(--blue)' : (tx.type === 'DIVIDEND' || tx.type === 'DIVIDEND_OR_INTEREST' ? 'var(--green)' : 'var(--text)')};">
+                ${tx.type}
+            </span>
+        </td>
+        <td style="padding:14px 18px; color:var(--muted); font-size:12px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${tx.description}">
+            ${tx.description}
+        </td>
+        <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace;">
+            ${item && item.price > 0 ? `$${item.price.toFixed(2)}` : '—'}
+        </td>
+        <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:700;" class="${tx.amount >= 0 ? 'g' : 'r'}">
+            ${tx.amount >= 0 ? '+' : ''}$${tx.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+        </td>
+    `;
+    return row;
+}
+
+function formatCurrency(val) {
+    const sign = val >= 0 ? '' : '-';
+    return sign + '$' + Math.abs(val).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// Initial filter execution to populate stats
+document.addEventListener('DOMContentLoaded', () => {
+    applyTaxFilters();
+});
+</script>
+{% endblock %}

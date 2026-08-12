@@ -209,7 +209,7 @@ class SchwabBroker implements BrokerInterface
     public function getAccountPortfolio(): array
     {
         $cacheKey = 'b' . $this->id . '.' . str_replace(' ', '_', strtolower($this->getNickname())) . '.portfolio';
-        $cached = $this->cache->get($cacheKey);
+        $cached = $this->cache->get($cacheKey, isSensitive: true);
         if ($cached !== null) {
             return $cached;
         }
@@ -275,7 +275,7 @@ class SchwabBroker implements BrokerInterface
         $overallCacheKey = 'b' . $this->id . '.history.' . $days;
         
         if (!$forceRefresh) {
-            $cachedOverall = $this->cache->get($overallCacheKey);
+            $cachedOverall = $this->cache->get($overallCacheKey, isSensitive: true);
             if ($cachedOverall !== null) {
                 return $cachedOverall;
             }
@@ -370,7 +370,7 @@ class SchwabBroker implements BrokerInterface
                 
                 // Load master list of all known transactions for this account (indefinite storage)
                 $masterCacheKey = 'b' . $this->id . '.tx_master.' . $accountNumber;
-                $masterList = $this->cache->get($masterCacheKey) ?: [];
+                $masterList = $this->cache->get($masterCacheKey, isSensitive: true) ?: [];
                 $masterMap = [];
                 foreach ($masterList as $txItem) {
                     if (isset($txItem['id'])) {
@@ -381,35 +381,51 @@ class SchwabBroker implements BrokerInterface
                 // Query Schwab only if we have not fetched today, or it is a force pull
                 if ($shouldFetchFromApi) {
                     try {
-                        $txResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . "/accounts/{$hashVal}/transactions", [
-                            'headers' => ['Authorization' => 'Bearer ' . $token],
-                            'query'   => [
-                                'startDate' => $startDate,
-                                'endDate'   => $endDate,
-                                'types'     => $txTypes,
-                            ],
-                            'timeout' => $timeout,
-                        ]);
+                        // Chunk queries in maximum 365-day intervals to satisfy Schwab API range limits
+                        $chunks = [];
+                        $totalDays = $days;
+                        $currentEnd = new \DateTimeImmutable();
+                        while ($totalDays > 0) {
+                            $daysToSub = min($totalDays, 365);
+                            $currentStart = $currentEnd->sub(new \DateInterval("P{$daysToSub}D"));
+                            $chunks[] = [
+                                'start' => $currentStart->format('Y-m-d\TH:i:s.000\Z'),
+                                'end'   => $currentEnd->format('Y-m-d\TH:i:s.000\Z'),
+                            ];
+                            $currentEnd = $currentStart;
+                            $totalDays -= $daysToSub;
+                        }
 
-                        if ($txResponse->getStatusCode() === 200) {
-                            $transactions = $txResponse->toArray();
-                            $freshTxs = $this->sanitizeHistoryData($transactions, $accountNumber, $nick);
-                            
-                            // Merge fresh transactions into master list using activity ID deduplication
-                            $hasNew = false;
-                            foreach ($freshTxs as $txItem) {
-                                $txId = $txItem['id'];
-                                if (!isset($masterMap[$txId])) {
-                                    $masterMap[$txId] = $txItem;
-                                    $hasNew = true;
+                        $hasNew = false;
+                        foreach ($chunks as $chunk) {
+                            $txResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . "/accounts/{$hashVal}/transactions", [
+                                'headers' => ['Authorization' => 'Bearer ' . $token],
+                                'query'   => [
+                                    'startDate' => $chunk['start'],
+                                    'endDate'   => $chunk['end'],
+                                    'types'     => $txTypes,
+                                ],
+                                'timeout' => $timeout,
+                            ]);
+
+                            if ($txResponse->getStatusCode() === 200) {
+                                $transactions = $txResponse->toArray();
+                                $freshTxs = $this->sanitizeHistoryData($transactions, $accountNumber, $nick);
+                                
+                                foreach ($freshTxs as $txItem) {
+                                    $txId = $txItem['id'];
+                                    if (!isset($masterMap[$txId])) {
+                                        $masterMap[$txId] = $txItem;
+                                        $hasNew = true;
+                                    }
                                 }
                             }
-                            
-                            if ($hasNew || empty($masterList)) {
-                                $masterList = array_values($masterMap);
-                                // Persist master transaction list indefinitely (1 year)
-                                $this->cache->set($masterCacheKey, $masterList, 31536000, true);
-                            }
+                        }
+
+                        if ($hasNew || empty($masterList)) {
+                            $masterList = array_values($masterMap);
+                            // Persist master transaction list indefinitely (1 year)
+                            $this->cache->set($masterCacheKey, $masterList, 31536000, true);
                         }
                     } catch (\Throwable $e) {
                         $this->logger->error("Schwab Tx Error ({$this->id} / {$accountNumber}): " . $e->getMessage());
@@ -447,7 +463,7 @@ class SchwabBroker implements BrokerInterface
     {
         $cacheKey = 'b' . $this->id . '.' . str_replace(' ', '_', strtolower($this->getNickname())) . '.open_orders';
         if (!$forceRefresh) {
-            $cached = $this->cache->get($cacheKey);
+            $cached = $this->cache->get($cacheKey, isSensitive: true);
             if ($cached !== null) {
                 return $cached;
             }
@@ -606,6 +622,19 @@ class SchwabBroker implements BrokerInterface
                 $instrument = $pos['instrument'] ?? [];
                 $assetType  = strtoupper($instrument['assetType'] ?? 'EQUITY');
                 $symbol     = $instrument['symbol'] ?? 'UNKNOWN';
+                $putCall    = $instrument['putCall'] ?? '';
+                $strike     = (float) ($instrument['strikePrice'] ?? 0.0);
+
+                if ($assetType === 'OPTION' && ($strike === 0.0 || empty($putCall))) {
+                    if (preg_match('/^[A-Z\s]+(\d{6})([PC])(\d{8})$/', $symbol, $matches)) {
+                        if (empty($putCall)) {
+                            $putCall = $matches[2] === 'P' ? 'PUT' : 'CALL';
+                        }
+                        if ($strike === 0.0) {
+                            $strike = (float) $matches[3] / 1000;
+                        }
+                    }
+                }
 
                 $qty = (float) ($pos['longQuantity'] ?? 0);
                 if ($qty == 0) {
@@ -632,6 +661,8 @@ class SchwabBroker implements BrokerInterface
                     'unrealizedPL'      => $mktVal - ($cost * $qty),
                     'unrealized_pl_pct' => ($cost * $qty) != 0 ? (($mktVal - ($cost * $qty)) / abs($cost * $qty)) * 100 : 0.0,
                     'unrealizedPLPct'   => ($cost * $qty) != 0 ? (($mktVal - ($cost * $qty)) / abs($cost * $qty)) * 100 : 0.0,
+                    'putCall'           => $putCall,
+                    'strikePrice'       => $strike,
                 ];
 
                 $accPositions[] = $posItem;
@@ -718,8 +749,24 @@ class SchwabBroker implements BrokerInterface
                 ];
             }
 
-            $symbol = $tx['transferItems'][0]['instrument']['symbol'] ?? null;
+            $symbol = null;
             $description = $tx['description'] ?? '';
+            foreach ($tx['transferItems'] ?? [] as $item) {
+                $inst = $item['instrument'] ?? [];
+                $instSym = $inst['symbol'] ?? null;
+                $instDesc = $inst['description'] ?? null;
+                if ($instSym && $instSym !== 'CURRENCY_USD') {
+                    $symbol = $instSym;
+                    break;
+                }
+                if ($instDesc && empty($description)) {
+                    $description = $instDesc;
+                }
+            }
+            if ($symbol === null) {
+                $symbol = $tx['transferItems'][0]['instrument']['symbol'] ?? 'CURRENCY_USD';
+            }
+
             if ($symbol === 'CURRENCY_USD' && !empty($description)) {
                 $divSym = $this->extractSymbolFromDescription($description);
                 if ($divSym !== null) {

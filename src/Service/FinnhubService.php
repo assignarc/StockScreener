@@ -254,4 +254,37 @@ class FinnhubService
             return [];
         }, (int) $this->appConfig->get('cache.ttl.finnhub.dividends', 86400)) ?? []; // configurable TTL
     }
+
+    /**
+     * Fetches general market news.
+     */
+    public function getMarketNews(string $category = 'general', bool $forceRefresh = false): array
+    {
+        $key = $this->getEffectiveApiKey();
+        $cacheKey = "finnhub.news.{$category}";
+        if ($forceRefresh) {
+            $this->cache->delete($cacheKey);
+        }
+
+        return $this->cache->get($cacheKey, function() use ($category, $key) {
+            try {
+                $response = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/news', [
+                    'query' => [
+                        'category' => $category,
+                        'token'  => $key,
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $data = $response->toArray(false);
+                    return is_array($data) ? $data : [];
+                }
+                return [];
+            } catch (\Exception $e) {
+                $this->logger->error("Finnhub Market News Error: " . $e->getMessage(), ['category' => $category]);
+                return [];
+            }
+        });
+    }
 }
