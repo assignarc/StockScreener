@@ -352,16 +352,7 @@ Provide a STRICT JSON response with exactly these fields:
                 }
             }
         }
-
-        // Fallback dummy response
-        return [
-            'decision' => 'HOLD',
-            'status' => 'Safe (OTM)',
-            'probabilityOfAssignment' => 'Very Low (< 5%)',
-            'action' => 'Let expire worthless',
-            'targetLimitPrice' => 'N/A',
-            'reasoning' => 'Based on current market trends, the underlying asset is well away from the strike price. Theta decay will rapidly reduce remaining extrinsic value to zero.'
-        ];
+        return [];
     }
 
     public function analyzeMarketNews(array $newsItems): array

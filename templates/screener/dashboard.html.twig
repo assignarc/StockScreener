@@ -164,12 +164,12 @@
                         {% if portfolio.accounts is defined and portfolio.accounts|length > 0 %}
                             {% for acc in portfolio.accounts %}
                                 <tr style="border-bottom:1px solid var(--border);">
-                                    <td style="padding:10px;"><strong>{{ acc.nickname }}</strong> <div style="font-size:10px; color:var(--muted);">{{ acc.accountNumber }} ({{ acc.type|upper }})</div></td>
-                                    <td style="text-align:right; padding:10px;">${{ acc.liquidationValue|number_format(2) }}</td>
-                                    <td style="text-align:right; padding:10px;"><strong class="g">${{ acc.cashAvailable|number_format(2) }}</strong></td>
-                                    <td style="text-align:right; padding:10px;">{{ acc.positionsCount }}</td>
+                                    <td style="padding:10px;"><strong>{{ acc.nickname|default('Account') }}</strong> <div style="font-size:10px; color:var(--muted);">{{ acc.accountNumber ?? acc.id ?? 'N/A' }} ({{ (acc.type|default('N/A'))|upper }})</div></td>
+                                    <td style="text-align:right; padding:10px;">${{ (acc.liquidationValue|default(0))|number_format(2) }}</td>
+                                    <td style="text-align:right; padding:10px;"><strong class="g">${{ (acc.cashAvailable|default(0))|number_format(2) }}</strong></td>
+                                    <td style="text-align:right; padding:10px;">{{ acc.positionsCount|default(0) }}</td>
                                     <td style="text-align:right; padding:10px;">
-                                        {% if acc.authorized %}
+                                        {% if acc.authorized|default(false) %}
                                             <span class="badge bg-green"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">check_circle</span> ACTIVE</span>
                                         {% else %}
                                             <span class="badge bg-red"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">error</span> {{ acc.status|default('UNAUTHORIZED') }}</span>

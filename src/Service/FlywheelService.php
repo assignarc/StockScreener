@@ -187,27 +187,6 @@ class FlywheelService
             }
         }
 
-        // Placeholder demo entry when no live positions qualify
-        if (empty($earlyExits)) {
-            $earlyExits[] = [
-                'symbol'               => 'NVDA',
-                'optionType'           => 'CALL',
-                'strike'               => 220.00,
-                'contracts'            => 2,
-                'initialCreditPerShare'=> 4.50,
-                'currentCostPerShare'  => 0.90,
-                'profitPct'            => 80.0,
-                'realizedGain'         => 720.00,
-                'freedCollateral'      => 0.0,
-                'action'               => 'BTC',
-                'orderType'            => 'LIMIT',
-                'limitPrice'           => 0.90,
-                'tradeActionText'      => 'Buy To Close (BTC) 2x NVDA $220.00 CALL at $0.90 (Lock in +$720.00 Profit)',
-                'reasoning'            => 'You have achieved 80.0% of max profit on NVDA $220 Call! Buying to close now for $0.90/sh ($180 total) locks in +$720 profit and eliminates tail-end risk.',
-                '_demo'                => true,
-            ];
-        }
-
         return $earlyExits;
     }
 
