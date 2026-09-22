@@ -17,14 +17,182 @@ class GeminiService implements LlmServiceInterface
         private string $geminiApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models',
     ) {}
 
-    private function getEffectiveModel(): string
+    private ?array $cachedDynamicModels = null;
+
+    private function getModelCandidates(): array
     {
-        return (string) $this->appConfig->get('gemini.model', 'gemini-1.5-flash');
+        $candidates = [];
+
+        // 1. User-configured model takes top priority if explicitly specified
+        $configured = (string) $this->appConfig->get('gemini.model', '');
+        if (!empty($configured) && strtolower($configured) !== 'auto') {
+            $candidates[] = trim($configured);
+        }
+
+        // 2. Fetch live available models from Google Gemini API dynamically if possible
+        $dynamicModels = $this->fetchAvailableModelsFromApi();
+        foreach ($dynamicModels as $dm) {
+            if (!in_array($dm, $candidates, true)) {
+                $candidates[] = $dm;
+            }
+        }
+
+        // 3. Robust fallback list of model names (newest Pro/Flash to legacy)
+        $knownFallbacks = [
+            'gemini-2.5-pro',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-2.0-pro-exp',
+            'gemini-1.5-pro',
+            'gemini-1.5-flash',
+            'gemini-1.5-flash-8b',
+            'gemini-pro',
+        ];
+
+        foreach ($knownFallbacks as $fallback) {
+            if (!in_array($fallback, $candidates, true)) {
+                $candidates[] = $fallback;
+            }
+        }
+
+        return array_values($candidates);
     }
 
-    private function getApiUrl(): string
+    private function fetchAvailableModelsFromApi(): array
     {
-        return rtrim($this->geminiApiUrl, '/') . '/' . $this->getEffectiveModel() . ':generateContent';
+        if ($this->cachedDynamicModels !== null) {
+            return $this->cachedDynamicModels;
+        }
+
+        $key = $this->getEffectiveApiKey();
+        if (!$key) {
+            return [];
+        }
+
+        try {
+            $url = rtrim($this->geminiApiUrl, '/') . '?key=' . $key;
+            $response = $this->httpClient->request('GET', $url, ['timeout' => 5.0]);
+            
+            if ($response->getStatusCode() === 200) {
+                $data = $response->toArray();
+                $models = [];
+                
+                foreach ($data['models'] ?? [] as $modelInfo) {
+                    $name = $modelInfo['name'] ?? ''; // e.g. "models/gemini-1.5-flash"
+                    $supportedMethods = $modelInfo['supportedGenerationMethods'] ?? [];
+                    
+                    if (in_array('generateContent', $supportedMethods, true)) {
+                        $cleanName = preg_replace('#^models/#', '', $name);
+                        $models[] = $cleanName;
+                    }
+                }
+
+                // Sort models so Pro & Flash top versions come first
+                usort($models, function ($a, $b) {
+                    // Prefer 2.5 > 2.0 > 1.5 > others, prefer pro/flash over lite/exp
+                    $scoreA = $this->calculateModelScore($a);
+                    $scoreB = $this->calculateModelScore($b);
+                    return $scoreB <=> $scoreA;
+                });
+
+                $this->cachedDynamicModels = $models;
+                return $models;
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning('Failed to dynamically fetch Gemini models: ' . $e->getMessage());
+        }
+
+        return [];
+    }
+
+    private function calculateModelScore(string $model): int
+    {
+        $score = 0;
+        if (str_contains($model, '2.5')) $score += 400;
+        elseif (str_contains($model, '2.0')) $score += 300;
+        elseif (str_contains($model, '1.5')) $score += 200;
+
+        if (str_contains($model, 'pro')) $score += 50;
+        elseif (str_contains($model, 'flash')) $score += 40;
+
+        if (str_contains($model, 'exp') || str_contains($model, 'preview')) $score -= 5;
+        if (str_contains($model, '8b') || str_contains($model, 'lite')) $score -= 10;
+
+        return $score;
+    }
+
+    private function postWithModelFallback(array $payload, int &$usedModelIndex = 0): array
+    {
+        $key = $this->getEffectiveApiKey();
+        if (!$key) {
+            throw new \RuntimeException("API key missing or invalid.");
+        }
+
+        $models = $this->getModelCandidates();
+        $lastException = null;
+
+        foreach ($models as $idx => $model) {
+            $url = rtrim($this->geminiApiUrl, '/') . '/' . $model . ':generateContent?key=' . $key;
+            try {
+                $response = $this->httpClient->request('POST', $url, [
+                    'json' => $payload,
+                    'timeout' => 15.0,
+                    'max_duration' => 30.0,
+                ]);
+
+                $statusCode = $response->getStatusCode();
+                if ($statusCode === 200) {
+                    $usedModelIndex = $idx;
+                    return [
+                        'response' => $response->toArray(),
+                        'model'    => $model,
+                    ];
+                }
+
+                // If 404/400 (deprecated/invalid), 429 (quota), 503/500/504 (server overload/gateway timeout), fallback to next candidate
+                if ($statusCode === 404 || $statusCode === 400 || $statusCode === 429 || $statusCode === 503 || $statusCode === 500 || $statusCode === 504) {
+                    $this->logger->warning("Gemini model '{$model}' returned HTTP {$statusCode}, attempting next model candidate...");
+                    continue;
+                }
+
+                $content = $response->getContent(false);
+                $data = json_decode($content, true);
+                $errorMsg = $data['error']['message'] ?? ("HTTP " . $statusCode);
+                
+                if (stripos($errorMsg, 'quota') !== false 
+                    || stripos($errorMsg, 'rate limit') !== false 
+                    || stripos($errorMsg, 'not found') !== false
+                    || stripos($errorMsg, 'demand') !== false
+                    || stripos($errorMsg, 'busy') !== false
+                    || stripos($errorMsg, 'overloaded') !== false
+                    || stripos($errorMsg, 'unavailable') !== false
+                    || stripos($errorMsg, 'timeout') !== false) {
+                    $this->logger->warning("Gemini model '{$model}' error: {$errorMsg}, trying next model candidate...");
+                    continue;
+                }
+
+                throw new \RuntimeException($errorMsg);
+            } catch (\Throwable $e) {
+                $lastException = $e;
+                $msg = $e->getMessage();
+                if (str_contains($msg, '404') || str_contains($msg, '400') || str_contains($msg, '429') || str_contains($msg, '503') || str_contains($msg, '500')
+                    || stripos($msg, 'quota') !== false 
+                    || stripos($msg, 'rate limit') !== false
+                    || stripos($msg, 'not found') !== false 
+                    || stripos($msg, 'demand') !== false
+                    || stripos($msg, 'busy') !== false
+                    || stripos($msg, 'overloaded') !== false
+                    || stripos($msg, 'unavailable') !== false
+                    || stripos($msg, 'timeout') !== false
+                    || str_contains($msg, 'is not supported')) {
+                    $this->logger->warning("Gemini model '{$model}' error: {$msg}. Attempting next model candidate...");
+                    continue;
+                }
+                throw $e;
+            }
+        }
+
+        throw $lastException ?? new \RuntimeException("All Gemini model candidates failed.");
     }
 
     public function getEffectiveApiKey(): ?string
@@ -92,44 +260,33 @@ Please generate 3 high-conviction AI Capital Flywheel Strategy Ideas:
 CRITICAL INSTRUCTION: You must strictly adhere to the financial constraints. Do not hallucinate strikes or prices.
 Output clear JSON formatting with exactly these keys: title, ticker, strategyType, targetStrike, estimatedPremium, APY, reasoning, riskGuardrail, delta, probabilityOfProfit, impliedVolatilityRank.";
 
-        $apiKey = $this->getEffectiveApiKey();
-        if (!empty($apiKey)) {
-            try {
-                $response = $this->httpClient->request('POST', $this->getApiUrl() . '?key=' . $apiKey, [
-                    'json' => [
-                        'contents' => [
-                            ['parts' => [['text' => $prompt]]]
-                        ],
-                        'generationConfig' => [
-                            'response_mime_type' => 'application/json',
-                            'temperature' => 0.2,
-                        ],
-                    ],
-                    'timeout' => 30.0,
-                    'max_duration' => 60.0,
-                ]);
-
-                if ($response->getStatusCode() === 200) {
-                    $resData = $response->toArray();
-                    $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-                    
-                    return [
-                        'source' => "Google Gemini " . $this->getEffectiveModel() . " (Live API)",
-                        'rawText' => $aiText,
-                        'ideas' => $this->parseGeminiIdeas($aiText, $cashAvailable, $equities),
-                    ];
-                }
-            } catch (\Throwable $e) {
-                $this->logger->error('Gemini API Request Error: ' . $e->getMessage());
-                return [
-                    'error' => $this->parseErrorResponse(null, $e),
-                ];
-            }
-        }
-
-        return [
-            'error' => $this->parseErrorResponse($response ?? null),
+        $payload = [
+            'contents' => [
+                ['parts' => [['text' => $prompt]]]
+            ],
+            'generationConfig' => [
+                'response_mime_type' => 'application/json',
+                'temperature' => 0.2,
+            ],
         ];
+
+        try {
+            $result = $this->postWithModelFallback($payload);
+            $resData = $result['response'];
+            $usedModel = $result['model'];
+            $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+            return [
+                'source' => "Google Gemini ({$usedModel})",
+                'rawText' => $aiText,
+                'ideas' => $this->parseGeminiIdeas($aiText, $cashAvailable, $equities),
+            ];
+        } catch (\Throwable $e) {
+            $this->logger->error('Gemini API Request Error: ' . $e->getMessage());
+            return [
+                'error' => $this->parseErrorResponse(null, $e),
+            ];
+        }
     }
 
     private function parseGeminiIdeas(string $aiText, float $cash, array $equities): array
@@ -242,21 +399,13 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
 
         $aiCommentary = "Gemini AI evaluated {$symbol} option chain: Selling the \${$bestCall['strike']} Call (+{$bestCall['otmPct']}% OTM) provides optimal theta decay (+\${$bestCall['estIncomePerContract']} credit per contract) while allowing stock upside. Selling the \${$bestPut['strike']} Put offers a {$bestPut['discountPct']}% discount entry point.";
 
-        $apiKey = $this->getEffectiveApiKey();
-        if (!empty($apiKey)) {
-            try {
-                $response = $this->httpClient->request('POST', $this->getApiUrl() . '?key=' . $apiKey, [
-                    'json' => ['contents' => [['parts' => [['text' => $prompt]]]]],
-                    'timeout' => 30.0,
-                    'max_duration' => 60.0,
-                ]);
-                if ($response->getStatusCode() === 200) {
-                    $resData = $response->toArray();
-                    $aiCommentary = $resData['candidates'][0]['content']['parts'][0]['text'] ?? $aiCommentary;
-                }
-            } catch (\Throwable $e) {
-                $this->logger->error('Gemini Option Chain Error: ' . $e->getMessage());
-            }
+        try {
+            $payload = ['contents' => [['parts' => [['text' => $prompt]]]]];
+            $result = $this->postWithModelFallback($payload);
+            $resData = $result['response'];
+            $aiCommentary = $resData['candidates'][0]['content']['parts'][0]['text'] ?? $aiCommentary;
+        } catch (\Throwable $e) {
+            $this->logger->error('Gemini Option Chain Error: ' . $e->getMessage());
         }
 
         return [
@@ -306,28 +455,21 @@ Perform a 3-point real-time pre-execution sanity check:
 
 Return structured response.";
 
-        $apiKey = $this->getEffectiveApiKey();
-        if (!empty($apiKey)) {
-            try {
-                $response = $this->httpClient->request('POST', $this->getApiUrl() . '?key=' . $apiKey, [
-                    'json' => ['contents' => [['parts' => [['text' => $prompt]]]]],
-                    'timeout' => 30.0,
-                    'max_duration' => 60.0,
-                ]);
-                if ($response->getStatusCode() === 200) {
-                    $resData = $response->toArray();
-                    $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-                    return [
-                        'symbol' => $symbol,
-                        'verdict' => str_contains($aiText, 'REJECT') ? '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--red);">error</span> WARN/REJECT' : '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> VERIFIED PASS',
-                        'timestamp' => date('Y-m-d H:i:s T'),
-                        'analysisText' => $aiText,
-                        'source' => "Gemini AI " . $this->getEffectiveModel() . " Live Pre-Trade Check",
-                    ];
-                }
-            } catch (\Throwable $e) {
-                $this->logger->error('Gemini Pre-Trade Check Error: ' . $e->getMessage());
-            }
+        try {
+            $payload = ['contents' => [['parts' => [['text' => $prompt]]]]];
+            $result = $this->postWithModelFallback($payload);
+            $resData = $result['response'];
+            $usedModel = $result['model'];
+            $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            return [
+                'symbol' => $symbol,
+                'verdict' => str_contains($aiText, 'REJECT') ? '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--red);">error</span> WARN/REJECT' : '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> VERIFIED PASS',
+                'timestamp' => date('Y-m-d H:i:s T'),
+                'analysisText' => $aiText,
+                'source' => "Gemini AI ({$usedModel}) Live Pre-Trade Check",
+            ];
+        } catch (\Throwable $e) {
+            $this->logger->error('Gemini Pre-Trade Check Error: ' . $e->getMessage());
         }
 
         return [
@@ -383,40 +525,30 @@ Provide a STRICT JSON response with exactly these fields:
 - targetLimitPrice (extract the ask/bid from the JSON chain that corresponds to the strike, if available)
 - reasoning (1-2 sentences explaining the decision mathematically based on the provided chain)";
 
-        $apiKey = $this->getEffectiveApiKey();
-        $response = null;
-        if (!empty($apiKey)) {
-            try {
-                $response = $this->httpClient->request('POST', $this->getApiUrl() . '?key=' . $apiKey, [
-                    'json' => [
-                        'contents' => [['parts' => [['text' => $prompt]]]],
-                        'generationConfig' => ['response_mime_type' => 'application/json']
-                    ],
-                    'timeout' => 30.0,
-                    'max_duration' => 60.0,
-                ]);
-                
-                if ($response->getStatusCode() === 200) {
-                    $resData = $response->toArray();
-                    $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-                    
-                    if (preg_match('/\{.*\}/s', $aiText, $match)) {
-                        $decoded = json_decode($match[0], true);
-                        if (is_array($decoded) && isset($decoded['decision'])) {
-                            return $decoded;
-                        }
-                    }
+        try {
+            $payload = [
+                'contents' => [['parts' => [['text' => $prompt]]]],
+                'generationConfig' => ['response_mime_type' => 'application/json']
+            ];
+            $result = $this->postWithModelFallback($payload);
+            $resData = $result['response'];
+            $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+            
+            if (preg_match('/\{.*\}/s', $aiText, $match)) {
+                $decoded = json_decode($match[0], true);
+                if (is_array($decoded) && isset($decoded['decision'])) {
+                    return $decoded;
                 }
-            } catch (\Throwable $e) {
-                $this->logger->error('Gemini Option Review Error: ' . $e->getMessage());
-                return [
-                    'error' => $this->parseErrorResponse(null, $e),
-                ];
             }
+        } catch (\Throwable $e) {
+            $this->logger->error('Gemini Option Review Error: ' . $e->getMessage());
+            return [
+                'error' => $this->parseErrorResponse(null, $e),
+            ];
         }
 
         return [
-            'error' => $this->parseErrorResponse($response),
+            'error' => $this->parseErrorResponse(null),
         ];
     }
 
@@ -453,32 +585,21 @@ Output strictly JSON formatting with the following structure:
 }";
 
         $aiText = '';
-        $key = $this->getEffectiveApiKey();
-        $response = null;
-        if ($key) {
-            try {
-                $response = $this->httpClient->request('POST', $this->getApiUrl() . "?key={$key}", [
-                    'json' => [
-                        'contents' => [
-                            ['parts' => [['text' => $prompt]]]
-                        ],
-                        'generationConfig' => ['response_mime_type' => 'application/json']
-                    ],
-                    'timeout' => 30.0,
-                    'max_duration' => 60.0,
-                ]);
-                
-                if ($response->getStatusCode() === 200) {
-                    $resData = $response->toArray();
-                    $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
-                }
-            } catch (\Throwable $e) {
-                $this->logger->error('Gemini Market News Error: ' . $e->getMessage());
-                return [
-                    'error' => $this->parseErrorResponse(null, $e),
-                ];
-            }
+        try {
+            $payload = [
+                'contents' => [['parts' => [['text' => $prompt]]]],
+                'generationConfig' => ['response_mime_type' => 'application/json']
+            ];
+            $result = $this->postWithModelFallback($payload);
+            $resData = $result['response'];
+            $aiText = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        } catch (\Throwable $e) {
+            $this->logger->error('Gemini Market News Error: ' . $e->getMessage());
+            return [
+                'error' => $this->parseErrorResponse(null, $e),
+            ];
         }
+
         if ($aiText) {
             $cleanJson = preg_replace('/^```json\s*|```$/i', '', trim($aiText));
             $parsed = json_decode($cleanJson, true);
@@ -487,7 +608,7 @@ Output strictly JSON formatting with the following structure:
             }
         }
 
-        return ['error' => $this->parseErrorResponse($response)];
+        return ['error' => $this->parseErrorResponse(null)];
     }
 
     private function parseErrorResponse($response, ?\Throwable $exception = null): string
@@ -517,6 +638,6 @@ Output strictly JSON formatting with the following structure:
 
     public function getProviderName(): string
     {
-        return 'Google Gemini (' . $this->getEffectiveModel() . ')';
+        return 'Google Gemini';
     }
 }

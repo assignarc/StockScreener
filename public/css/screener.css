@@ -1131,6 +1131,25 @@ select.fsel { padding: 6px 12px; background: var(--bg3); border: 1px solid var(-
     margin-bottom: 14px;
 }
 
+/* COMPACT DESCRIPTION HOVER POPOVERS */
+.desc-popover-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.desc-popover-wrapper:hover .desc-popover-box {
+    display: block !important;
+    animation: fadeInPopover 0.15s ease-out;
+}
+.desc-popover-wrapper:hover .desc-info-icon {
+    color: var(--blue) !important;
+}
+
+@keyframes fadeInPopover {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 
 
 

@@ -1,0 +1,565 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Historical Growth & Attribution — KHAPRE MoonShot Portfolio{% endblock %}
+
+{% block body %}
+<div id="app">
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '<span class="material-symbols-outlined" style="color:var(--blue); font-size:24px;">show_chart</span> Historical Growth <span>& Attribution</span>',
+        headerBadge: 'Performance Engine'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
+
+    <div class="port-container" style="max-width: 100%; margin: 0 auto; padding: 24px; box-sizing: border-box;">
+
+        <!-- EXPLANATORY HERO BANNER -->
+        <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(168, 85, 247, 0.03)); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 16px;">
+            <span class="material-symbols-outlined" style="font-size: 32px; color: var(--blue); margin-top: 4px;">analytics</span>
+            <div>
+                <h3 style="margin: 0 0 6px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text);">Historical Performance & Event-Driven Attribution</h3>
+                <p style="margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6;">
+                    Track daily net portfolio growth across connected broker accounts (Schwab, E*TRADE, Robinhood, IBKR) overlaid against the S&P 500 (SPY) benchmark.
+                    All controls (**Provider**, **Account**, **Time Period**, **Pre-Tax/After-Tax**, **S&P Benchmark**) are configured at the graph level, automatically updating the timeline and filtering the transaction event ledger.
+                </p>
+            </div>
+        </div>
+
+        <!-- TOP STAT CARDS -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px;">
+            <!-- CARD 1: Portfolio Value -->
+            <div class="kpi-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px;">
+                <div style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">Total Liquidation Value</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--text);" id="statCurrentVal">
+                    ${{ growth.summary.currentValue|number_format(2) }}
+                </div>
+                <div style="font-size: 12px; margin-top: 6px; color: {% if growth.summary.grossReturnPct >= 0 %}var(--green){% else %}var(--red){% endif %}; font-weight: 700;" id="statGrossReturn">
+                    {% if growth.summary.grossReturnPct >= 0 %}+{% endif %}{{ growth.summary.grossReturnPct }}% Gross Growth
+                </div>
+            </div>
+
+            <!-- CARD 2: After-Tax Value -->
+            <div class="kpi-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px;">
+                <div style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">After-Tax Portfolio Value</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--green);" id="statAfterTaxVal">
+                    ${{ growth.summary.currentAfterTax|number_format(2) }}
+                </div>
+                <div style="font-size: 12px; margin-top: 6px; color: var(--green); font-weight: 700;" id="statAfterTaxReturn">
+                    {% if growth.summary.afterTaxReturnPct >= 0 %}+{% endif %}{{ growth.summary.afterTaxReturnPct }}% Net Growth
+                </div>
+            </div>
+
+            <!-- CARD 3: Est. Capital Gains Tax -->
+            <div class="kpi-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px;">
+                <div style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">Est. Tax Liability</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--yellow);" id="statEstTax">
+                    ${{ growth.summary.totalEstTax|number_format(2) }}
+                </div>
+                <div style="font-size: 12px; margin-top: 6px; color: var(--muted);">
+                    Calculated via FIFO Lot Engine
+                </div>
+            </div>
+
+            <!-- CARD 4: Recorded Events -->
+            <div class="kpi-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 18px;">
+                <div style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; margin-bottom: 6px;">Portfolio Events</div>
+                <div style="font-size: 24px; font-weight: 800; color: var(--purple);" id="statTotalEvents">
+                    {{ growth.summary.totalEvents }}
+                </div>
+                <div style="font-size: 12px; margin-top: 6px; color: var(--muted);">
+                    Trades, Options & Dividends
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN CHART CONTAINER & GRAPH-LEVEL CONTROLS -->
+        <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 32px;">
+            
+            <!-- GRAPH CONTROLS TOOLBAR (PROVIDER, ACCOUNT, BENCHMARK, TAX, TIMELINE) -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
+                <div>
+                    <h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 700; color: var(--text);">Portfolio Growth Timeline</h2>
+                    <div style="font-size: 12px; color: var(--muted); margin-top: 2px;">Daily snapshot history vs S&P 500 (SPY) benchmark</div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <!-- GRAPH-LEVEL SCOPE / ACCOUNT FILTER -->
+                    <input type="hidden" id="selectProvider" value="ALL">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase;">Account Scope:</label>
+                        <select id="selectAccount" onchange="applyFiltersAndSort()" style="background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
+                            <option value="ALL">All Accounts (Consolidated)</option>
+                            {% for a in growth.accounts %}
+                                <option value="{{ a }}">{{ a }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- HIDE / SHOW S&P BENCHMARK TOGGLE (DEFAULT OFF) -->
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text); background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="chkShowSpy" onchange="toggleSpyBenchmark()" style="accent-color: var(--blue); width: 15px; height: 15px; cursor: pointer;">
+                        <span>Show S&P 500 Benchmark</span>
+                    </label>
+
+                    <!-- PRE-TAX / AFTER-TAX TOGGLE -->
+                    <div style="display: flex; align-items: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 4px;">
+                        <button id="btnPreTax" onclick="setGrowthView('preTax')" style="background: var(--blue); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">Pre-Tax</button>
+                        <button id="btnAfterTax" onclick="setGrowthView('afterTax')" style="background: transparent; color: var(--muted); border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">After-Tax</button>
+                    </div>
+
+                    <!-- CSV IMPORT BUTTON -->
+                    <button onclick="document.getElementById('csvFileInput').click()" style="background: rgba(168, 85, 247, 0.15); color: var(--purple); border: 1px solid rgba(168, 85, 247, 0.3); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <span class="material-symbols-outlined" style="font-size: 16px;">upload_file</span> Import Schwab CSV
+                    </button>
+                    <input type="file" id="csvFileInput" accept=".csv" onchange="uploadSchwabCsv(this)" style="display: none;">
+
+                    <!-- TIME PERIOD BUTTONS -->
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn-period" onclick="loadPeriod('1M')" id="btn1M" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">1M</button>
+                        <button class="btn-period" onclick="loadPeriod('3M')" id="btn3M" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">3M</button>
+                        <button class="btn-period active-period" onclick="loadPeriod('6M')" id="btn6M" style="background: var(--blue); border: 1px solid var(--blue); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">6M</button>
+                        <button class="btn-period" onclick="loadPeriod('YTD')" id="btnYTD" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">YTD</button>
+                        <button class="btn-period" onclick="loadPeriod('1Y')" id="btn1Y" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">1Y</button>
+                        <button class="btn-period" onclick="loadPeriod('2Y')" id="btn2Y" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">2Y</button>
+                        <button class="btn-period" onclick="loadPeriod('ALL')" id="btnALL" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">ALL</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CANVAS FOR CHART.JS -->
+            <div style="position: relative; height: 420px; width: 100%;">
+                <canvas id="growthChartCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- EVENT ATTRIBUTION LEDGER TABLE -->
+        <div style="background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text);">
+                    <span class="material-symbols-outlined" style="vertical-align: middle; color: var(--purple); font-size: 20px;">event_note</span>
+                    Historical Growth & Dip Event Ledger
+                </h3>
+                <div style="font-size: 12px; color: var(--muted);" id="tableFilterSummary">Showing transactions & orders for selected period</div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="port-table" style="width: 100%; border-collapse: collapse; font-size: 12px;" id="eventsTable">
+                    <thead>
+                        <tr style="background: var(--bg3); color: var(--muted); text-align: left; border-bottom: 1px solid var(--border);">
+                            <th onclick="sortTable('event_date')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Date <span id="sort_event_date">▲</span></th>
+                            <th onclick="sortTable('event_type')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Type <span id="sort_event_type"></span></th>
+                            <th onclick="sortTable('provider')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Provider <span id="sort_provider"></span></th>
+                            <th onclick="sortTable('account_number')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Account <span id="sort_account_number"></span></th>
+                            <th onclick="sortTable('symbol')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Symbol <span id="sort_symbol"></span></th>
+                            <th style="padding: 10px 8px;">Description</th>
+                            <th onclick="sortTable('impact_amount')" style="padding: 10px 8px; text-align: right; cursor: pointer; user-select: none;">Amount <span id="sort_impact_amount"></span></th>
+                            <th onclick="sortTable('cost_basis')" style="padding: 10px 8px; text-align: right; cursor: pointer; user-select: none;">Cost Basis <span id="sort_cost_basis"></span></th>
+                            <th onclick="sortTable('realized_gain')" style="padding: 10px 8px; text-align: right; cursor: pointer; user-select: none;">Realized Gain <span id="sort_realized_gain"></span></th>
+                            <th onclick="sortTable('est_tax')" style="padding: 10px 8px; text-align: right; cursor: pointer; user-select: none;">Est. Tax <span id="sort_est_tax"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsTableBody">
+                        <!-- Dynamically populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let growthRawData = {{ growth|json_encode|raw }};
+    let currentViewMode = 'preTax';
+    let showSpy = false;
+    let currentPeriod = '6M';
+    let chartInstance = null;
+
+    let sortCol = 'event_date';
+    let sortAsc = true;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        populateDropdowns();
+        renderGrowthChart();
+        applyFiltersAndSort();
+    });
+
+    function populateDropdowns() {
+        const provSel = document.getElementById('selectProvider');
+        const accSel = document.getElementById('selectAccount');
+
+        const provs = growthRawData.providers || [];
+        const accs = growthRawData.accounts || [];
+
+        const curAcc = accSel.value || 'ALL';
+        accSel.innerHTML = '<option value="ALL">All Accounts (Consolidated)</option>' + accs.map(a => `<option value="${a}">${a}</option>`).join('');
+        accSel.value = curAcc;
+    }
+
+    function setGrowthView(mode) {
+        currentViewMode = mode;
+        document.getElementById('btnPreTax').style.background = mode === 'preTax' ? 'var(--blue)' : 'transparent';
+        document.getElementById('btnPreTax').style.color = mode === 'preTax' ? '#fff' : 'var(--muted)';
+        document.getElementById('btnAfterTax').style.background = mode === 'afterTax' ? 'var(--green)' : 'transparent';
+        document.getElementById('btnAfterTax').style.color = mode === 'afterTax' ? '#fff' : 'var(--muted)';
+
+        renderGrowthChart();
+    }
+
+    function toggleSpyBenchmark() {
+        showSpy = document.getElementById('chkShowSpy').checked;
+        if (chartInstance) {
+            chartInstance.setDatasetVisibility(1, showSpy);
+            chartInstance.update();
+        }
+    }
+
+    function loadPeriod(period) {
+        currentPeriod = period;
+        document.querySelectorAll('.btn-period').forEach(b => {
+            b.style.background = 'var(--bg3)';
+            b.style.borderColor = 'var(--border)';
+            b.style.color = 'var(--text)';
+        });
+        const activeBtn = document.getElementById('btn' + period);
+        if (activeBtn) {
+            activeBtn.style.background = 'var(--blue)';
+            activeBtn.style.borderColor = 'var(--blue)';
+            activeBtn.style.color = '#fff';
+        }
+
+        fetch('/portfolio/history-api?period=' + period)
+            .then(res => res.json())
+            .then(data => {
+                growthRawData = data;
+                populateDropdowns();
+                updateStatsHeader(data.summary);
+                applyFiltersAndSort();
+                renderGrowthChart();
+            })
+            .catch(err => console.error('Error fetching history period:', err));
+    }
+
+    function uploadSchwabCsv(input) {
+        if (!input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('csv_file', file);
+        formData.append('account_number', document.getElementById('selectAccount').value || 'V-Brokerage');
+
+        const btn = input.previousElementSibling;
+        const origText = btn.innerHTML;
+        btn.innerHTML = '<span class="material-symbols-outlined spin" style="font-size: 16px;">sync</span> Uploading...';
+        btn.disabled = true;
+
+        fetch('/portfolio/import-csv', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(res => {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+            if (res.success) {
+                alert(`CSV Import Complete!\nImported: ${res.imported} new transactions\nSkipped (Duplicates): ${res.skipped}`);
+                loadPeriod(currentPeriod);
+            } else {
+                alert('Import Error: ' + (res.error || 'Failed to import CSV'));
+            }
+        })
+        .catch(err => {
+            btn.innerHTML = origText;
+            btn.disabled = false;
+            alert('Upload failed: ' + err.message);
+        });
+    }
+
+    function updateStatsHeader(s) {
+        if (!s) return;
+        document.getElementById('statCurrentVal').textContent = '$' + s.currentValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('statAfterTaxVal').textContent = '$' + s.currentAfterTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('statEstTax').textContent = '$' + s.totalEstTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('statTotalEvents').textContent = s.totalEvents;
+
+        const grossEl = document.getElementById('statGrossReturn');
+        grossEl.textContent = (s.grossReturnPct >= 0 ? '+' : '') + s.grossReturnPct + '% Gross Growth';
+        grossEl.style.color = s.grossReturnPct >= 0 ? 'var(--green)' : 'var(--red)';
+
+        const netEl = document.getElementById('statAfterTaxReturn');
+        netEl.textContent = (s.afterTaxReturnPct >= 0 ? '+' : '') + s.afterTaxReturnPct + '% Net Growth';
+    }
+
+    function sortTable(column) {
+        if (sortCol === column) {
+            sortAsc = !sortAsc;
+        } else {
+            sortCol = column;
+            sortAsc = true;
+        }
+
+        ['event_date', 'event_type', 'provider', 'account_number', 'symbol', 'impact_amount', 'cost_basis', 'realized_gain', 'est_tax'].forEach(col => {
+            const el = document.getElementById('sort_' + col);
+            if (el) el.textContent = '';
+        });
+
+        const activeIndicator = document.getElementById('sort_' + sortCol);
+        if (activeIndicator) {
+            activeIndicator.textContent = sortAsc ? '▲' : '▼';
+        }
+
+        applyFiltersAndSort();
+    }
+
+    function applyFiltersAndSort() {
+        const selectedProvider = document.getElementById('selectProvider').value;
+        const selectedAccount  = document.getElementById('selectAccount').value;
+
+        let events = (growthRawData.events || []).slice();
+
+        // 1. Filter by Graph Time Period Date Range
+        const dates = growthRawData.dates || [];
+        if (dates.length > 0) {
+            const minDate = dates[0];
+            const maxDate = dates[dates.length - 1];
+            events = events.filter(e => e.event_date >= minDate && e.event_date <= maxDate);
+        }
+
+        // 2. Filter by Provider
+        if (selectedProvider !== 'ALL') {
+            events = events.filter(e => (e.provider || 'Schwab Primary') === selectedProvider);
+        }
+
+        // 3. Filter by Account
+        if (selectedAccount !== 'ALL') {
+            events = events.filter(e => {
+                const acc = (e.account_number || '').trim();
+                const sel = selectedAccount.trim();
+                if (acc === sel) return true;
+                // Match "Account ***1234" pattern only when exact masked number matches
+                const cleanSel = sel.replace('Account ', '').trim();
+                const cleanAcc = acc.replace('Account ', '').trim();
+                return cleanAcc === cleanSel && cleanSel.startsWith('***');
+            });
+        }
+
+        // Compute dynamically filtered stats based on provider + account + timespan selection (NET Tax Liability)
+        let dynamicSTGains = 0.0;
+        let dynamicLTGains = 0.0;
+        events.forEach(ev => {
+            const gain = parseFloat(ev.realized_gain || 0);
+            const evType = (ev.event_type || '').toUpperCase();
+            if (evType === 'LONG_TERM') {
+                dynamicLTGains += gain;
+            } else {
+                dynamicSTGains += gain;
+            }
+        });
+        const dynamicTax = Math.max(0, dynamicSTGains * 0.20) + Math.max(0, dynamicLTGains * 0.15);
+
+        document.getElementById('statEstTax').textContent = '$' + dynamicTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('statTotalEvents').textContent = events.length;
+
+
+        // 4. Sort Events
+        events.sort((a, b) => {
+            let valA = a[sortCol];
+            let valB = b[sortCol];
+
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+
+            if (valA < valB) return sortAsc ? -1 : 1;
+            if (valA > valB) return sortAsc ? 1 : -1;
+            return 0;
+        });
+
+        document.getElementById('tableFilterSummary').textContent = `Showing ${events.length} transactions & orders for ${currentPeriod} timeline`;
+
+        renderEventsTable(events);
+    }
+
+    function renderEventsTable(events) {
+        const tbody = document.getElementById('eventsTableBody');
+        if (!events || events.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="10" style="padding: 24px; text-align: center; color: var(--muted);">No matching events or transactions found for the selected timeline and filters.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = events.map((ev, index) => {
+            const isOpt = ev.event_type === 'OPTION' || ev.event_type === 'OPTION_PREMIUM';
+            const isDiv = ev.event_type === 'DIVIDEND';
+            
+            const badgeClass = isOpt 
+                ? 'background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.3);' 
+                : (isDiv 
+                    ? 'background: rgba(56,189,248,0.12); color: var(--blue); border: 1px solid rgba(56,189,248,0.3);' 
+                    : 'background: rgba(168,85,247,0.12); color: var(--purple); border: 1px solid rgba(168,85,247,0.3);');
+            
+            const badgeText = isOpt ? 'OPTION' : (isDiv ? 'DIVIDEND' : 'EQUITY');
+
+            const impactAmt = parseFloat(ev.impact_amount || 0);
+            const costBasis = parseFloat(ev.cost_basis || 0);
+            const realized = parseFloat(ev.realized_gain || 0);
+            const tax = parseFloat(ev.est_tax || 0);
+
+            // Clean symbol and description parsing
+            let rawSym = ev.symbol || '';
+            let isOptionSymbol = pregOptionCheck(rawSym);
+            let displaySymbol = isOptionSymbol ? rawSym.split(/\s+/)[0] : rawSym;
+
+            let descText = ev.description || ev.title || '';
+            if (descText.startsWith('TRADE:') || descText.startsWith('DIVIDEND:') || descText.startsWith('OPTION:') || descText.startsWith('OPTION_PREMIUM:')) {
+                descText = (ev.description && ev.description !== descText) ? ev.description : '';
+            }
+
+            const rowId = `opt_detail_${index}`;
+
+            return `
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 10px 8px; font-weight: 600; white-space: nowrap;">${ev.event_date}</td>
+                    <td style="padding: 10px 8px; white-space: nowrap;"><span class="rb" style="padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; ${badgeClass}">${badgeText}</span></td>
+                    <td style="padding: 10px 8px; font-weight: 600; color: var(--text); white-space: nowrap;">${ev.provider || 'Schwab'}</td>
+                    <td style="padding: 10px 8px; font-weight: 600; color: var(--muted); white-space: nowrap;">${ev.account_number || 'Account'}</td>
+                    <td style="padding: 10px 8px; font-weight: 700; color: var(--text); white-space: nowrap;">
+                        ${displaySymbol}
+                        ${isOptionSymbol || isOpt ? `<button onclick="toggleRowDetail('${rowId}')" style="background: none; border: none; color: var(--blue); cursor: pointer; padding: 0 4px; font-size: 10px; font-weight: 700;">▸ info</button>` : ''}
+                    </td>
+                    <td style="padding: 10px 8px; text-align: center;">
+                        ${descText ? `
+                            <div class="desc-popover-wrapper" style="position:relative; display:inline-block;">
+                                <span class="material-symbols-outlined desc-info-icon" style="font-size:16px; color:var(--blue); cursor:pointer; vertical-align:middle;">info</span>
+                                <div class="desc-popover-box" style="display:none; position:absolute; left:50%; transform:translateX(-50%); top:22px; background:var(--bg3); border:1px solid var(--border); padding:8px 12px; border-radius:8px; font-size:11px; color:var(--text); width:240px; box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:100; white-space:normal; text-align:left; line-height:1.4;">
+                                    <div style="font-weight:700; color:var(--blue); margin-bottom:2px;">Event Description</div>
+                                    ${descText}
+                                </div>
+                            </div>
+                        ` : '<span style="color:var(--muted);">—</span>'}
+                    </td>
+                    <td style="padding: 10px 8px; text-align: right; font-weight: 700; color: ${impactAmt >= 0 ? 'var(--green)' : 'var(--red)'}; white-space: nowrap;">${impactAmt >= 0 ? '+' : ''}$${impactAmt.toFixed(2)}</td>
+                    <td style="padding: 10px 8px; text-align: right; font-weight: 600; color: var(--muted); white-space: nowrap;">${costBasis > 0 ? '$' + costBasis.toFixed(2) : '—'}</td>
+                    <td style="padding: 10px 8px; text-align: right; font-weight: 600; color: ${realized >= 0 ? 'var(--green)' : 'var(--red)'}; white-space: nowrap;">${realized >= 0 ? '+' : ''}$${realized.toFixed(2)}</td>
+                    <td style="padding: 10px 8px; text-align: right; font-weight: 600; color: var(--yellow); white-space: nowrap;">$${tax.toFixed(2)}</td>
+                </tr>
+                ${isOptionSymbol || isOpt ? `
+                    <tr id="${rowId}" style="display: none; background: rgba(15, 23, 42, 0.4); border-bottom: 1px solid var(--border);">
+                        <td colspan="10" style="padding: 8px 16px; font-size: 11px; color: var(--muted);">
+                            <span style="font-weight: 700; color: var(--text);">Contract Spec:</span> <code style="color: var(--blue);">${rawSym}</code>
+                            ${descText ? `<span style="margin-left: 12px; font-weight: 700; color: var(--text);">Detail:</span> ${descText}` : ''}
+                        </td>
+                    </tr>
+                ` : ''}
+            `;
+        }).join('');
+    }
+
+    function pregOptionCheck(sym) {
+        return /^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/.test(sym) || sym.includes('Call') || sym.includes('Put');
+    }
+
+    function toggleRowDetail(id) {
+        const row = document.getElementById(id);
+        if (row) {
+            row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+        }
+    }
+
+    function renderGrowthChart() {
+        const ctx = document.getElementById('growthChartCanvas').getContext('2d');
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        const labels = growthRawData.dates || [];
+        const portSeries = currentViewMode === 'preTax' 
+            ? (growthRawData.preTaxValues || []) 
+            : (growthRawData.afterTaxValues || []);
+        const spySeries = growthRawData.spyValues || [];
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        if (currentViewMode === 'preTax') {
+            gradient.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+            gradient.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+        } else {
+            gradient.addColorStop(0, 'rgba(34, 197, 94, 0.25)');
+            gradient.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: currentViewMode === 'preTax' ? 'Portfolio Liquidation Value ($)' : 'After-Tax Net Value ($)',
+                        data: portSeries,
+                        borderColor: currentViewMode === 'preTax' ? '#38bdf8' : '#22c55e',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                    },
+                    {
+                        label: 'S&P 500 (SPY) Index Benchmark ($)',
+                        data: spySeries,
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        hidden: !showSpy,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#94a3b8',
+                            font: { family: 'Inter', size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function (context) {
+                                return context.dataset.label + ': $' + context.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2});
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 },
+                            callback: function (val) {
+                                return '$' + val.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

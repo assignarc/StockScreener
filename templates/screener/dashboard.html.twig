@@ -92,27 +92,31 @@
                 </div>
             </div>
         </div>
-        <!-- PORTFOLIO COVERED CALL TRADE ASSISTANT PLAYBOOK -->
-        <div class="dash-widget-green" id="dashSuggestions">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
-                <div>
-                    <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--green); display:flex; align-items:center; gap:8px;">
-                        <span><span class="material-symbols-outlined">auto_awesome</span> Capital Flywheel — Actionable Covered Call Trades</span>
-                        <span class="hbadge" style="background:rgba(21,128,61,0.15); color:var(--green); border-color:rgba(21,128,61,0.3);">Schwab Portfolio Live</span>
-                    </h3>
-                    <div style="font-size:12px; color:var(--muted);">
-                        Scanned your unencumbered 100-share blocks. Executing these suggested Covered Calls generates <strong class="g" id="playbookTotalIncome">+$2,482.00 Instant Cash Premium Income</strong>!
+        <!-- PORTFOLIO COVERED CALL TRADE ASSISTANT PLAYBOOK (COLLAPSIBLE ACCORDION WITH RATIONALE) -->
+        <details class="dash-widget-green" id="dashSuggestions" open style="border:1px solid rgba(0,230,118,0.3); border-radius:12px; padding:16px; margin-bottom:20px;">
+            <summary style="cursor:pointer; list-style:none; outline:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--green); display:flex; align-items:center; gap:8px;">
+                            <span class="material-symbols-outlined">auto_awesome</span> Actionable Covered Call Trades
+                            <span class="hbadge" style="background:rgba(21,128,61,0.15); color:var(--green); border-color:rgba(21,128,61,0.3);">Rationale: Unencumbered 100-Share Blocks Scanned</span>
+                        </h3>
+                        <div style="font-size:12px; color:var(--muted);">
+                            Executing these suggested Covered Calls generates <strong class="g" id="playbookTotalIncome">+$2,482.00 Instant Cash Premium Income</strong>!
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span style="font-size:11px; color:var(--text-muted);">Click header to collapse/expand</span>
+                        <a href="/portfolio" class="hbtn hbtn-green" onclick="event.stopPropagation();"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> Portfolio & Accounts</a>
                     </div>
                 </div>
-                <div style="display:flex; gap:10px;">
-                    <a href="/portfolio" class="hbtn hbtn-green"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> View Portfolio & Accounts</a>
-                </div>
-            </div>
+            </summary>
 
-            <div id="coveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
+            <div id="coveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-top:16px;">
                 <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">Scanning unencumbered stock positions...</div>
             </div>
-        </div>
+        </details>
+
 
         <!-- GEMINI AI PORTFOLIO ASSISTANT WIDGET -->
         <div class="dash-widget-purple" id="dashAiIdeas">

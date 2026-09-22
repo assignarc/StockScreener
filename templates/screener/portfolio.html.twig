@@ -482,7 +482,7 @@
                                         </div>
                                         <div style="font-size:11px; margin-top:2px;">
                                             <span style="color:{% if e.availableShares >= 100 %}var(--green){% elseif e.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; font-weight:600;">
-                                                {{ e.statusBadge }}
+                                                {{ e.statusBadge|raw }}
                                             </span>
                                         </div>
                                     </td>
@@ -518,7 +518,7 @@
                                                     <strong style="font-size:12px; color:var(--text);">{% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}</strong>
                                                     <span class="hbadge" style="font-size:9px;">{{ acc.type }}</span>
                                                     <span class="rb" style="background:{% if acc.canUseForCalls %}rgba(21,128,61,0.15){% elseif acc.availableShares > 0 %}rgba(180,83,9,0.15){% else %}rgba(220,38,38,0.15){% endif %}; color:{% if acc.canUseForCalls %}var(--green){% elseif acc.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; font-size:10px;">
-                                                        {{ acc.statusBadge }}
+                                                        {{ acc.statusBadge|raw }}
                                                     </span>
                                                 </div>
                                             </td>

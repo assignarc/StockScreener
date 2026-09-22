@@ -103,6 +103,11 @@ class IbkrBroker implements BrokerInterface
         return [];
     }
 
+    public function getOrderHistory(int $days = 30, bool $forceRefresh = false): array
+    {
+        return [];
+    }
+
     public function getOpenOrders(bool $forceRefresh = false): array
     {
         return [];

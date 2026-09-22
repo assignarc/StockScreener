@@ -12,6 +12,10 @@ use App\Service\PersistentCacheService;
 
 use App\Service\TaxEngine;
 
+use App\Service\PerformanceHistoryService;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+
 class ScreenerController extends AbstractController
 {
     public function __construct(
@@ -19,7 +23,42 @@ class ScreenerController extends AbstractController
         private BrokerManagerService $brokerManager,
         private PersistentCacheService $cache,
         private TaxEngine $taxEngine,
+        private PerformanceHistoryService $performanceHistory,
     ) {}
+
+    #[Route('/portfolio/history', name: 'app_portfolio_history')]
+    public function portfolioHistory(): Response
+    {
+        $historyData = $this->performanceHistory->getGrowthHistory('6M');
+
+        return $this->render('screener/history.html.twig', [
+            'growth' => $historyData,
+            'activePage' => 'portfolio_history',
+        ]);
+    }
+
+    #[Route('/portfolio/history-api', name: 'app_portfolio_history_api', methods: ['GET'])]
+    public function portfolioHistoryApi(Request $request): JsonResponse
+    {
+        $period = $request->query->get('period', '6M');
+        $historyData = $this->performanceHistory->getGrowthHistory($period);
+
+        return $this->json($historyData);
+    }
+
+    #[Route('/portfolio/import-csv', name: 'app_portfolio_import_csv', methods: ['POST'])]
+    public function importCsv(Request $request, \App\Service\SchwabCsvImporterService $csvImporter): JsonResponse
+    {
+        $file = $request->files->get('csv_file');
+        if (!$file) {
+            return $this->json(['error' => 'No CSV file uploaded'], 400);
+        }
+
+        $account = $request->request->get('account_number', 'V-Brokerage');
+        $result = $csvImporter->importCsv($file->getPathname(), $account);
+
+        return $this->json($result);
+    }
 
     #[Route('/portfolio/tax', name: 'app_portfolio_tax')]
     public function taxCenter(): Response

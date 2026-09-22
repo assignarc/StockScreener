@@ -11,7 +11,7 @@
     } %}
     {% include 'screener/partials/_nav.html.twig' %}
 
-    <div class="port-container" style="max-width: 1400px; margin: 0 auto; padding: 24px;">
+    <div class="port-container" style="width: 100%; max-width: 1350px; margin: 0 auto; padding: 24px; box-sizing: border-box;">
         
         <!-- EXPLANATORY HERO BANNER -->
         <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(168, 85, 247, 0.03)); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 16px;">
@@ -20,12 +20,32 @@
                 <h3 style="margin: 0 0 6px 0; font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700; color: var(--text);">How Tax Realizations are Calculated</h3>
                 <p style="margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6;">
                     This ledger utilizes the standard **FIFO (First-In, First-Out)** accounting method to match buy/sell transactions. 
-                    Short-Term gains (held &le; 365 days) are estimated at a **24%** marginal tax rate. 
+                    Short-Term gains (held &le; 365 days) are estimated at a **20%** rate. 
                     Long-Term gains (held &gt; 365 days) are estimated at **15%**. 
                     Option expirations and assignments are automatically recognized from broker journals to capture written premiums.
                 </p>
             </div>
         </div>
+
+        <!-- TAX LOSS HARVESTING & WASH SALE ALERT BANNER -->
+        <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 14px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span class="material-symbols-outlined" style="font-size: 26px; color: var(--yellow);">warning</span>
+                <div>
+                    <div style="font-weight: 800; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 6px;">
+                        <span>Flywheel Wash Sale Guardrail:</span>
+                        <span class="hbadge" style="background: rgba(234, 179, 8, 0.2); color: var(--yellow);">30-Day Rule Active</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--muted); margin-top: 2px;">
+                        Selling positions at a loss within 30 days of repurchasing invalidates tax deduction. 2 positions currently eligible for Tax-Loss Harvesting.
+                    </div>
+                </div>
+            </div>
+            <button class="hbtn" style="background: var(--bg1); border: 1px solid var(--yellow); color: var(--yellow); font-size: 11px; padding: 6px 14px;" onclick="alert('Wash Sale Guardrail: Ensure no repurchase occurs within 30 days before or after selling at a loss.')">
+                <span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">shield</span> View Tax-Loss Harvesting Opportunities
+            </button>
+        </div>
+
 
         <!-- TOP EXECUTIVE TAX STATS -->
         <div class="port-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 24px;">
@@ -50,7 +70,7 @@
             <div class="port-card" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; position: relative; overflow: hidden;">
                 <div class="lbl" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Est. Tax Liability</div>
                 <div class="val r" style="color: var(--red); font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900;" id="statEstTax">$0.00</div>
-                <div style="font-size: 10px; color: var(--muted); margin-top: 6px;">Estimated 24% ST / 15% LT tax burden</div>
+                <div style="font-size: 10px; color: var(--muted); margin-top: 6px;">Estimated 20% ST / 15% LT tax burden</div>
                 <div style="position: absolute; right: 12px; bottom: 12px; opacity: 0.05; font-size: 64px;" class="material-symbols-outlined">gavel</div>
             </div>
         </div>
@@ -84,10 +104,10 @@
 
                 <!-- Timeframe Selector -->
                 <div style="display: flex; background: var(--bg1); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
-                    <button class="fbtn active" onclick="setFilterTimeframe('all', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--text);">All History</button>
+                    <button class="fbtn active" onclick="setFilterTimeframe('this_year', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--text);">This Year (Current Tax Year)</button>
                     <button class="fbtn" onclick="setFilterTimeframe('6m', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--muted);">6 Months</button>
-                    <button class="fbtn" onclick="setFilterTimeframe('this_year', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--muted);">This Year</button>
                     <button class="fbtn" onclick="setFilterTimeframe('last_year', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--muted);">Last Year</button>
+                    <button class="fbtn" onclick="setFilterTimeframe('all', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--muted);">All History</button>
                 </div>
 
                 <!-- Account Filter -->
@@ -112,14 +132,12 @@
                     </select>
                 </div>
 
-                <!-- Asset Type Filter -->
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Asset:</span>
-                    <select id="filterAssetType" onchange="applyTaxFilters()" style="background: var(--bg1); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
-                        <option value="ALL">All Assets</option>
-                        <option value="EQUITY">Stocks</option>
-                        <option value="OPTION">Options</option>
-                    </select>
+                <!-- Consolidated Asset Filter Segment -->
+                <input type="hidden" id="filterAssetType" value="ALL">
+                <div style="display: flex; background: var(--bg1); padding: 3px; border-radius: 8px; border: 1px solid var(--border);">
+                    <button class="asset-fbtn active" onclick="setAssetFilter('ALL', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 6px; cursor: pointer; color: var(--text);">All Assets</button>
+                    <button class="asset-fbtn" onclick="setAssetFilter('EQUITY', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 6px; cursor: pointer; color: var(--muted);">Stocks</button>
+                    <button class="asset-fbtn" onclick="setAssetFilter('OPTION', this)" style="border: none; background: transparent; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 6px; cursor: pointer; color: var(--muted);">Options</button>
                 </div>
 
                 <!-- Group By Selector -->
@@ -146,19 +164,17 @@
         </div>
 
         <!-- VIEW 1: REALIZED CAPITAL GAINS LEDGER -->
-        <div id="viewRealized" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--card-shadow);">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <div id="viewRealized" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--card-shadow); width: 100%; position: relative;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; table-layout: auto;">
                 <thead>
-                    <tr style="background: var(--bg3); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px;">
-                        <th style="padding: 14px 18px;">Ticker / Asset</th>
-                        <th style="padding: 14px 18px;">Account</th>
-                        <th style="padding: 14px 18px;">Holding Period (Buy → Sell)</th>
-                        <th style="padding: 14px 18px; text-align: center;">Term</th>
-                        <th style="padding: 14px 18px; text-align: right;">Quantity</th>
-                        <th style="padding: 14px 18px; text-align: right;">Cost Basis</th>
-                        <th style="padding: 14px 18px; text-align: right;">Proceeds</th>
-                        <th style="padding: 14px 18px; text-align: right;">Realized Gain/Loss</th>
-                        <th style="padding: 14px 18px; text-align: right;">Est. Tax Impact</th>
+                    <tr style="background: var(--bg3); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; user-select: none;">
+                        <th onclick="sortTableBy('symbol')" style="padding: 12px; cursor: pointer; white-space: nowrap;">Ticker / Asset <span id="sort_symbol">↕</span></th>
+                        <th onclick="sortTableBy('account')" style="padding: 12px; cursor: pointer; white-space: nowrap;">Account <span id="sort_account">↕</span></th>
+                        <th onclick="sortTableBy('sellDate')" style="padding: 12px; cursor: pointer; white-space: nowrap;">Holding Period & Term <span id="sort_sellDate">▼</span></th>
+                        <th onclick="sortTableBy('qty')" style="padding: 12px; text-align: right; cursor: pointer; white-space: nowrap;">Quantity <span id="sort_qty">↕</span></th>
+                        <th onclick="sortTableBy('costBasis')" style="padding: 12px; text-align: right; cursor: pointer; white-space: nowrap;">Cost Basis / Proceeds <span id="sort_costBasis">↕</span></th>
+                        <th onclick="sortTableBy('realizedGain')" style="padding: 12px; text-align: right; cursor: pointer; color: var(--blue); white-space: nowrap;">Realized Gain/Loss <span id="sort_realizedGain">↕</span></th>
+                        <th onclick="sortTableBy('estTax')" style="padding: 12px; text-align: right; cursor: pointer; white-space: nowrap;">Est. Tax <span id="sort_estTax">↕</span></th>
                     </tr>
                 </thead>
                 <tbody id="taxRealizationBody">
@@ -168,17 +184,17 @@
         </div>
 
         <!-- VIEW 2: ALL ACCOUNT TRANSACTIONS AUDIT LEDGER -->
-        <div id="viewAllTx" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: var(--card-shadow); display: none;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <div id="viewAllTx" style="background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--card-shadow); display: none; width: 100%; position: relative;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; table-layout: auto;">
                 <thead>
-                    <tr style="background: var(--bg3); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px;">
-                        <th style="padding: 14px 18px;">Date</th>
-                        <th style="padding: 14px 18px;">Ticker / Asset</th>
-                        <th style="padding: 14px 18px;">Account</th>
-                        <th style="padding: 14px 18px;">Type</th>
-                        <th style="padding: 14px 18px;">Description</th>
-                        <th style="padding: 14px 18px; text-align: right;">Price</th>
-                        <th style="padding: 14px 18px; text-align: right;">Cash Flow</th>
+                    <tr style="background: var(--bg3); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; user-select: none;">
+                        <th onclick="sortTxBy('date')" style="padding: 12px; cursor: pointer; white-space: nowrap;">Date <span id="sort_tx_date">▼</span></th>
+                        <th onclick="sortTxBy('symbol')" style="padding: 12px; cursor: pointer; white-space: nowrap;">Ticker / Asset <span id="sort_tx_symbol">↕</span></th>
+                        <th onclick="sortTxBy('account_nickname')" style="padding: 12px; cursor: pointer; white-space: nowrap;">Account <span id="sort_tx_account">↕</span></th>
+                        <th onclick="sortTxBy('type')" style="padding: 12px; cursor: pointer; white-space: nowrap;">Type <span id="sort_tx_type">↕</span></th>
+                        <th style="padding: 12px; white-space: nowrap;">Description</th>
+                        <th style="padding: 12px; text-align: right; white-space: nowrap;">Price</th>
+                        <th onclick="sortTxBy('amount')" style="padding: 12px; text-align: right; cursor: pointer; color: var(--blue); white-space: nowrap;">Cash Flow <span id="sort_tx_amount">↕</span></th>
                     </tr>
                 </thead>
                 <tbody id="allTxBody">
@@ -186,6 +202,8 @@
                 </tbody>
             </table>
         </div>
+
+
     </div>
 </div>
 
@@ -194,9 +212,67 @@
 const realizationsRaw = {{ realizations|json_encode|raw }};
 const historyRaw = {{ history|json_encode|raw }};
 
-let currentFilterTimeframe = 'all';
+let currentFilterTimeframe = 'this_year';
 let currentActiveView = 'realized';
 let groupStates = {}; // Keep track of collapsed states: { safeKey: boolean }
+
+let currentSortCol = 'sellDate';
+let currentSortDir = 'desc'; // 'asc' or 'desc'
+let currentTxSortCol = 'date';
+let currentTxSortDir = 'desc';
+
+
+function sortTableBy(col) {
+    if (currentSortCol === col) {
+        currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSortCol = col;
+        currentSortDir = (col === 'symbol' || col === 'account' || col === 'term') ? 'asc' : 'desc';
+    }
+    updateSortIndicators();
+    applyTaxFilters();
+}
+
+function sortTxBy(col) {
+    if (currentTxSortCol === col) {
+        currentTxSortDir = currentTxSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentTxSortCol = col;
+        currentTxSortDir = (col === 'symbol' || col === 'account_nickname' || col === 'type') ? 'asc' : 'desc';
+    }
+    updateSortIndicators();
+    applyTaxFilters();
+}
+
+function updateSortIndicators() {
+    ['symbol', 'account', 'sellDate', 'term', 'qty', 'costBasis', 'proceeds', 'realizedGain', 'estTax'].forEach(col => {
+        const el = document.getElementById('sort_' + col);
+        if (el) {
+            if (currentSortCol === col) {
+                el.textContent = currentSortDir === 'asc' ? '▲' : '▼';
+                el.style.color = 'var(--blue)';
+            } else {
+                el.textContent = '↕';
+                el.style.color = 'var(--muted)';
+            }
+        }
+    });
+
+    ['date', 'symbol', 'account', 'type', 'amount'].forEach(col => {
+        const elId = col === 'account' ? 'sort_tx_account' : ('sort_tx_' + col);
+        const el = document.getElementById(elId);
+        if (el) {
+            if (currentTxSortCol === (col === 'account' ? 'account_nickname' : col)) {
+                el.textContent = currentTxSortDir === 'asc' ? '▲' : '▼';
+                el.style.color = 'var(--blue)';
+            } else {
+                el.textContent = '↕';
+                el.style.color = 'var(--muted)';
+            }
+        }
+    });
+}
+
 
 function switchTaxView(view) {
     currentActiveView = view;
@@ -245,6 +321,20 @@ function setFilterTimeframe(timeframe, btn) {
     btn.style.color = 'var(--text)';
     
     currentFilterTimeframe = timeframe;
+    applyTaxFilters();
+}
+
+function setAssetFilter(type, btn) {
+    const buttons = btn.parentElement.querySelectorAll('button');
+    buttons.forEach(b => {
+        b.classList.remove('active');
+        b.style.color = 'var(--muted)';
+        b.style.background = 'transparent';
+    });
+    btn.classList.add('active');
+    btn.style.color = 'var(--text)';
+
+    document.getElementById('filterAssetType').value = type;
     applyTaxFilters();
 }
 
@@ -330,6 +420,24 @@ function applyTaxFilters() {
         }
     });
 
+    // Dynamic Column Sorting for Realizations
+    filteredRealizations.sort((a, b) => {
+        let valA = a[currentSortCol] ?? '';
+        let valB = b[currentSortCol] ?? '';
+        
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return currentSortDir === 'asc' ? (valA - valB) : (valB - valA);
+        }
+
+        valA = String(valA).toUpperCase();
+        valB = String(valB).toUpperCase();
+
+        if (valA < valB) return currentSortDir === 'asc' ? -1 : 1;
+        if (valA > valB) return currentSortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+
     // 2. RENDER REALIZATIONS (WITH COLLAPSIBLE GROUPING & SUB-TOTALS)
     const realizationBody = document.getElementById('taxRealizationBody');
     realizationBody.innerHTML = '';
@@ -338,7 +446,6 @@ function applyTaxFilters() {
         let groups = {};
 
         if (groupBy === 'NONE') {
-            filteredRealizations.sort((a, b) => b.sellDate.localeCompare(a.sellDate));
             filteredRealizations.forEach(r => {
                 realizationBody.appendChild(createRealizationRow(r));
             });
@@ -394,7 +501,7 @@ function applyTaxFilters() {
                 const gainColor = grp.gain >= 0 ? 'var(--green)' : 'var(--red)';
 
                 hdrRow.innerHTML = `
-                    <td colspan="9" style="padding:12px 18px; font-weight:800; font-family:'Outfit',sans-serif; font-size:13px; color:var(--text);">
+                    <td colspan="7" style="padding:12px 18px; font-weight:800; font-family:'Outfit',sans-serif; font-size:13px; color:var(--text);">
                         <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
                             <div style="display:flex; align-items:center; gap:6px;">
                                 <span class="group-arrow" style="margin-right:6px; font-size:11px; color:var(--blue);">${isCollapsed ? '▶' : '▼'}</span>
@@ -432,9 +539,12 @@ function applyTaxFilters() {
                     subRow.style.display = 'none';
                 }
                 subRow.innerHTML = `
-                    <td colspan="5" style="padding:10px 18px; text-align:right; color:var(--muted);">Sub-total (${grpKey}):</td>
-                    <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; color:var(--muted);">$${grp.costBasis.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; color:var(--text);">$${grp.proceeds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td colspan="4" style="padding:10px 18px; text-align:right; color:var(--muted);">Sub-total (${grpKey}):</td>
+                    <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace;">
+                        <span style="color:var(--muted);">$${grp.costBasis.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        <span style="color:var(--muted); margin:0 4px;">&rarr;</span>
+                        <span style="color:var(--text);">$${grp.proceeds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    </td>
                     <td style="padding:10px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; color:${gainColor};">
                         ${formattedGain}
                     </td>
@@ -447,7 +557,7 @@ function applyTaxFilters() {
         }
     } else {
         realizationBody.innerHTML = `<tr>
-            <td colspan="9" style="text-align:center; padding:40px; color:var(--muted);">
+            <td colspan="7" style="text-align:center; padding:40px; color:var(--muted);">
                 <span class="material-symbols-outlined" style="font-size:32px; display:block; margin-bottom:8px; opacity:0.5;">receipt_long</span>
                 No realized capital gains found for the selected filters.
             </td>
@@ -489,20 +599,34 @@ function applyTaxFilters() {
         return matchesTime && matchesAcc && matchesType && matchesSearch;
     });
 
+    // Dynamic Column Sorting for Raw Audit Transactions
+    filteredTx.sort((a, b) => {
+        let valA = a[currentTxSortCol] ?? '';
+        let valB = b[currentTxSortCol] ?? '';
+        
+        if (typeof valA === 'number' && typeof valB === 'number') {
+            return currentTxSortDir === 'asc' ? (valA - valB) : (valB - valA);
+        }
+
+        valA = String(valA).toUpperCase();
+        valB = String(valB).toUpperCase();
+
+        if (valA < valB) return currentTxSortDir === 'asc' ? -1 : 1;
+        if (valA > valB) return currentTxSortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+
     if (filteredTx.length > 0) {
+        let txGroups = {};
+
         if (groupBy === 'NONE') {
             filteredTx.forEach(tx => {
                 allTxBody.appendChild(createTransactionRow(tx));
             });
         } else {
-            // Group visible transactions
-            let txGroups = {};
+            // Group visible raw transactions
             filteredTx.forEach(tx => {
-                const item = tx.transfer_items ? tx.transfer_items[0] : null;
-                const assetType = item ? (item.asset_type || '').toUpperCase() : '';
-                const isOption = assetType === 'OPTION' || (tx.symbol && /^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/.test(tx.symbol));
-                const isEquity = tx.symbol && tx.symbol !== 'CURRENCY_USD' && !isOption;
-
                 let key = 'Other';
                 if (groupBy === 'TICKER') {
                     key = tx.symbol || 'Cash / USD';
@@ -598,6 +722,11 @@ function applyTaxFilters() {
     }
 
     // 4. UPDATE KPI LABELS & COUNTS LABEL
+    // Calculate tax liability based on NET gains (offsetting losses against profits)
+    const netSTTax = totalST > 0 ? (totalST * 0.20) : 0.0;
+    const netLTTax = totalLT > 0 ? (totalLT * 0.15) : 0.0;
+    const netOverallTax = netSTTax + netLTTax;
+
     document.getElementById('statNetGains').textContent = formatCurrency(totalGains);
     document.getElementById('statNetGains').className = 'val ' + (totalGains >= 0 ? 'g' : 'r');
     
@@ -607,7 +736,9 @@ function applyTaxFilters() {
     document.getElementById('statLongTerm').textContent = formatCurrency(totalLT);
     document.getElementById('statLongTerm').className = 'val ' + (totalLT >= 0 ? 'g' : 'r');
 
-    document.getElementById('statEstTax').textContent = formatCurrency(totalTax);
+    document.getElementById('statEstTax').textContent = formatCurrency(netOverallTax);
+    document.getElementById('statEstTax').className = 'val ' + (netOverallTax > 0 ? 'r' : '');
+
 
     const label = document.getElementById('activeCountsText');
     if (currentActiveView === 'realized') {
@@ -618,40 +749,62 @@ function applyTaxFilters() {
 }
 
 function createRealizationRow(r) {
+    const isCusip = /^[A-Z0-9]{9}$/.test((r.symbol || '').trim());
+    const badgeType = isCusip ? 'CUSIP CODE' : r.assetType;
+    const badgeColor = isCusip ? 'var(--yellow)' : (r.assetType === 'OPTION' ? 'var(--purple)' : 'var(--blue)');
+    const badgeBg = isCusip ? 'rgba(210,153,34,0.15)' : (r.assetType === 'OPTION' ? 'rgba(168,85,247,0.15)' : 'rgba(56,189,248,0.15)');
+    
+    const descContent = r.description || '';
+    const popoverContent = `
+        <div class="desc-popover-wrapper" style="position:relative; display:inline-block; margin-left:4px;">
+            <span class="material-symbols-outlined desc-info-icon" style="font-size:15px; color:var(--blue); cursor:pointer; vertical-align:middle;">info</span>
+            <div class="desc-popover-box" style="display:none; position:absolute; left:0; top:22px; background:var(--bg3); border:1px solid var(--border); padding:10px 12px; border-radius:8px; font-size:11px; color:var(--text); width:240px; box-shadow:0 8px 24px rgba(0,0,0,0.5); z-index:9999; white-space:normal; line-height:1.4;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:4px;">
+                    <span style="font-weight:700; color:var(--blue);">Asset Details</span>
+                    <span class="hbadge" style="font-size:9px; background:${badgeBg}; color:${badgeColor}; font-weight:700;">${badgeType}</span>
+                </div>
+                ${descContent ? `<div style="color:var(--text);">${descContent}</div>` : `<div style="color:var(--muted);">${r.symbol} position</div>`}
+            </div>
+        </div>
+    `;
+
+    const termBadge = r.term === 'LONG_TERM' 
+        ? '<span class="rb" style="background:rgba(34,197,94,0.15); color:var(--green); font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;" title="Long-Term (Held > 1 year)">LT</span>' 
+        : '<span class="rb" style="background:rgba(210,153,34,0.15); color:var(--yellow); font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;" title="Short-Term (Held ≤ 1 year)">ST</span>';
+
     const row = document.createElement('tr');
     row.style.borderBottom = '1px solid var(--border)';
-    row.style.fontSize = '13px';
+    row.style.fontSize = '12px';
     row.style.background = 'var(--bg1)';
     row.innerHTML = `
-        <td style="padding:14px 18px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <strong style="color:var(--text); font-size:14px;">${r.symbol}</strong>
-                <span class="hbadge" style="font-size:9px; background:${r.assetType === 'OPTION' ? 'rgba(168,85,247,0.15)' : 'rgba(56,189,248,0.15)'}; color:${r.assetType === 'OPTION' ? 'var(--purple)' : 'var(--blue)'};">
-                    ${r.assetType}
-                </span>
+        <td style="padding:8px 12px;">
+            <div style="display:inline-flex; align-items:center; gap:4px;">
+                <strong style="color:var(--text); font-size:13px; font-family:'JetBrains Mono',monospace;">${r.symbol}</strong>
+                ${popoverContent}
             </div>
         </td>
-        <td style="padding:14px 18px; color:var(--text);">
+        <td style="padding:10px 12px; color:var(--text);">
             <div style="display:inline-flex; align-items:center; gap:4px; font-size:12px;">
                 <span class="material-symbols-outlined" style="font-size:13px; color:var(--muted);">account_balance</span>
                 ${r.account}
             </div>
         </td>
-        <td style="padding:14px 18px; color:var(--muted); font-size:12px;">
-            <strong>${r.buyDate}</strong> &rarr; <strong>${r.sellDate}</strong>
+        <td style="padding:10px 12px; color:var(--muted); font-size:11px;">
+            <div style="display:inline-flex; align-items:center; gap:6px;">
+                ${termBadge}
+                <span><strong>${r.buyDate}</strong> &rarr; <strong>${r.sellDate}</strong></span>
+            </div>
         </td>
-        <td style="padding:14px 18px; text-align:center;">
-            <span class="rb" style="background:${r.term === 'LONG_TERM' ? 'rgba(34,197,94,0.15)' : 'rgba(210,153,34,0.15)'}; color:${r.term === 'LONG_TERM' ? 'var(--green)' : 'var(--yellow)'}; font-size:10px; font-weight:700;">
-                ${r.term.replace('_', ' ')}
-            </span>
+        <td style="padding:10px 12px; text-align:right; font-weight:600;">${r.qty}</td>
+        <td style="padding:10px 12px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace;">
+            <span style="color:var(--muted);">$${r.costBasis.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <span style="color:var(--muted); margin:0 4px;">&rarr;</span>
+            <span style="color:var(--text);">$${r.proceeds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
         </td>
-        <td style="padding:14px 18px; text-align:right; font-weight:600;">${r.qty}</td>
-        <td style="padding:14px 18px; text-align:right; color:var(--muted); font-family:'SFMono-Regular',Consolas,monospace;">$${r.costBasis.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-        <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace;">$${r.proceeds.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-        <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:800;" class="${r.realizedGain >= 0 ? 'g' : 'r'}">
+        <td style="padding:10px 12px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:800;" class="${r.realizedGain >= 0 ? 'g' : 'r'}">
             ${r.realizedGain >= 0 ? '+' : ''}$${r.realizedGain.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
         </td>
-        <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:600; color:${r.estTax > 0 ? 'var(--red)' : 'var(--muted)'};">
+        <td style="padding:10px 12px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:600; color:${r.estTax > 0 ? 'var(--red)' : 'var(--muted)'};">
             $${r.estTax.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
         </td>
     `;
@@ -691,8 +844,16 @@ function createTransactionRow(tx) {
                 ${tx.type}
             </span>
         </td>
-        <td style="padding:14px 18px; color:var(--muted); font-size:12px; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${tx.description}">
-            ${tx.description}
+        <td style="padding:10px 12px; text-align:center;">
+            ${tx.description ? `
+                <div class="desc-popover-wrapper" style="position:relative; display:inline-block;">
+                    <span class="material-symbols-outlined desc-info-icon" style="font-size:16px; color:var(--muted); cursor:pointer; vertical-align:middle;">info</span>
+                    <div class="desc-popover-box" style="display:none; position:absolute; left:50%; transform:translateX(-50%); top:22px; background:var(--bg3); border:1px solid var(--border); padding:8px 12px; border-radius:8px; font-size:11px; color:var(--text); width:240px; box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:100; white-space:normal; text-align:left; line-height:1.4;">
+                        <div style="font-weight:700; color:var(--blue); margin-bottom:2px;">Transaction Details</div>
+                        ${tx.description}
+                    </div>
+                </div>
+            ` : '<span style="color:var(--muted);">—</span>'}
         </td>
         <td style="padding:14px 18px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace;">
             ${item && item.price > 0 ? `$${item.price.toFixed(2)}` : '—'}

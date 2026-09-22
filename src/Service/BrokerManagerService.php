@@ -22,7 +22,8 @@ class BrokerManagerService
         private AppConfigService $appConfig,
         private PersistentCacheService $cache,
         private HttpClientInterface $httpClient,
-        private LoggerInterface $logger
+        private LoggerInterface $logger,
+        private ?\Doctrine\DBAL\Connection $connection = null
     ) {
         $this->initializeBrokers();
     }
@@ -513,15 +514,69 @@ class BrokerManagerService
     }
 
     /**
-     * Aggregates history across all active brokers.
+     * Aggregates history across all active brokers and local imported portfolio events.
      */
     public function getAggregatedHistory(int $days = 30, bool $forceRefresh = false): array
     {
         $allHistory = [];
+        $existingKeys = [];
+
         foreach ($this->brokers as $broker) {
             $h = $broker->getAccountHistory($days, $forceRefresh);
             foreach ($h as $item) {
                 $allHistory[] = $item;
+                $key = ($item['date'] ?? '') . '_' . ($item['symbol'] ?? '') . '_' . round((float)($item['amount'] ?? 0), 2);
+                $existingKeys[$key] = true;
+            }
+        }
+
+        // Merge locally imported CSV portfolio events from DB
+        if ($this->connection) {
+            try {
+                $limitDate = (new \DateTimeImmutable("-{$days} days"))->format('Y-m-d');
+                $rows = $this->connection->fetchAllAssociative(
+                    'SELECT event_date as date, event_type as type, provider, account_number, symbol, impact_amount as amount, quantity, price, fees, action, title, description, cost_basis FROM portfolio_events WHERE event_date >= :limitDate ORDER BY event_date DESC',
+                    ['limitDate' => $limitDate]
+                );
+
+                foreach ($rows as $r) {
+                    $key = ($r['date'] ?? '') . '_' . ($r['symbol'] ?? '') . '_' . round((float)($r['amount'] ?? 0), 2);
+                    if (!isset($existingKeys[$key])) {
+                        $desc = $r['description'] ?? $r['title'] ?? '';
+                        $action = strtoupper($r['action'] ?? '');
+                        $qty = (float) ($r['quantity'] ?? 0.0);
+                        $price = (float) ($r['price'] ?? 0.0);
+                        $amount = (float) ($r['amount'] ?? 0.0);
+                        
+                        // For Sell actions, qty should be negative for FIFO matching in TaxEngine
+                        $isSell = (str_contains($action, 'SELL') || str_contains(strtoupper($desc), 'SELL'));
+                        if ($isSell && $qty > 0) {
+                            $qty = -$qty;
+                        }
+
+                        $allHistory[] = [
+                            'id' => 'db_' . md5($key . $desc),
+                            'date' => $r['date'],
+                            'type' => $r['type'] === 'EQUITY' ? 'TRADE' : $r['type'],
+                            'symbol' => $r['symbol'],
+                            'amount' => $amount,
+                            'fees' => (float) ($r['fees'] ?? 0.0),
+                            'description' => $desc,
+                            'account_number' => $r['account_number'] ?? 'V-Brokerage',
+                            'transfer_items' => [
+                                [
+                                    'symbol' => $r['symbol'],
+                                    'amount' => $qty, // Share quantity (negative for sell, positive for buy)
+                                    'price' => $price > 0 ? $price : abs($amount),
+                                    'asset_type' => $r['type'] === 'OPTION' ? 'OPTION' : 'EQUITY',
+                                    'cost' => (float) ($r['cost_basis'] ?? 0.0),
+                                ]
+                            ]
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning('BrokerManagerService DB events merge error: ' . $e->getMessage());
             }
         }
 
@@ -531,6 +586,27 @@ class BrokerManagerService
         });
 
         return $allHistory;
+    }
+
+    /**
+     * Aggregates order fill history across all active brokers.
+     */
+    public function getAggregatedOrderHistory(int $days = 30, bool $forceRefresh = false): array
+    {
+        $allOrders = [];
+        foreach ($this->brokers as $broker) {
+            if (!$broker->isConfigured()) continue;
+            $orders = $broker->getOrderHistory($days, $forceRefresh);
+            foreach ($orders as $item) {
+                $allOrders[] = $item;
+            }
+        }
+
+        usort($allOrders, function ($a, $b) {
+            return strcmp($b['enteredTime'] ?? '', $a['enteredTime'] ?? '');
+        });
+
+        return $allOrders;
     }
 
     /**

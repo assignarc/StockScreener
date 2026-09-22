@@ -136,6 +136,67 @@ class DatabaseBootstrapService
         $this->connection->executeStatement('
             CREATE UNIQUE INDEX IF NOT EXISTS UNIQ_WATCHLIST_SYMBOL ON watchlist (symbol)
         ');
+
+        // 5. portfolio_snapshots table
+        $this->connection->executeStatement('
+            CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                snapshot_date DATE NOT NULL,
+                total_value DOUBLE PRECISION NOT NULL,
+                cash_balance DOUBLE PRECISION NOT NULL,
+                equity_value DOUBLE PRECISION NOT NULL,
+                option_value DOUBLE PRECISION NOT NULL,
+                unrealized_pl DOUBLE PRECISION NOT NULL,
+                est_tax_owed DOUBLE PRECISION DEFAULT 0.0 NOT NULL,
+                benchmark_spy_price DOUBLE PRECISION DEFAULT NULL,
+                created_at DATETIME NOT NULL
+            )
+        ');
+        $this->connection->executeStatement('
+            CREATE UNIQUE INDEX IF NOT EXISTS UNIQ_PORTFOLIO_SNAPSHOT_DATE ON portfolio_snapshots (snapshot_date)
+        ');
+
+        // 6. portfolio_events table
+        $this->connection->executeStatement('
+            CREATE TABLE IF NOT EXISTS portfolio_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                event_date DATE NOT NULL,
+                event_type VARCHAR(50) NOT NULL,
+                provider VARCHAR(50) DEFAULT "Schwab",
+                account_number VARCHAR(50) DEFAULT "PRIMARY",
+                symbol VARCHAR(20) DEFAULT NULL,
+                impact_amount DOUBLE PRECISION DEFAULT 0.0,
+                impact_pct DOUBLE PRECISION DEFAULT 0.0,
+                cost_basis DOUBLE PRECISION DEFAULT 0.0,
+                realized_gain DOUBLE PRECISION DEFAULT 0.0,
+                est_tax DOUBLE PRECISION DEFAULT 0.0,
+                title VARCHAR(255) NOT NULL,
+                description CLOB DEFAULT NULL,
+                created_at DATETIME NOT NULL
+            )
+        ');
+        try {
+            $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN provider VARCHAR(50) DEFAULT "Schwab"');
+        } catch (\Throwable $e) {}
+        try {
+            $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN account_number VARCHAR(50) DEFAULT "PRIMARY"');
+        } catch (\Throwable $e) {}
+        try {
+            $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN cost_basis DOUBLE PRECISION DEFAULT 0.0');
+        } catch (\Throwable $e) {}
+
+        $this->connection->executeStatement('
+            CREATE INDEX IF NOT EXISTS idx_portfolio_events_date ON portfolio_events (event_date)
+        ');
+        $this->connection->executeStatement('
+            CREATE INDEX IF NOT EXISTS idx_portfolio_events_type ON portfolio_events (event_type)
+        ');
+        $this->connection->executeStatement('
+            CREATE INDEX IF NOT EXISTS idx_portfolio_events_provider ON portfolio_events (provider)
+        ');
+        $this->connection->executeStatement('
+            CREATE UNIQUE INDEX IF NOT EXISTS UNIQ_PORTFOLIO_EVENT_IDENTIFIER ON portfolio_events (event_date, symbol, title, account_number)
+        ');
     }
 
     private function seedInitialData(): void

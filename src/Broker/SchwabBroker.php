@@ -286,7 +286,7 @@ class SchwabBroker implements BrokerInterface
             return [];
         }
 
-        $lastFetchKey = 'b' . $this->id . '.tx_last_fetched';
+        $lastFetchKey = 'b' . $this->id . '.tx_last_fetched.' . $days;
         $lastFetchDate = $this->cache->get($lastFetchKey);
         $todayStr = date('Y-m-d');
         $shouldFetchFromApi = $forceRefresh || ($lastFetchDate !== $todayStr);
@@ -455,6 +455,93 @@ class SchwabBroker implements BrokerInterface
             return $allHistory;
         } catch (\Throwable $e) {
             $this->logger->error('Schwab History Fetch Error (' . $this->id . '): ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getOrderHistory(int $days = 30, bool $forceRefresh = false): array
+    {
+        $cacheTtl = (int) $this->appConfig->get('cache.ttl.broker.history', 86400);
+        $cacheKey = 'b' . $this->id . '.order_history.' . $days;
+
+        if (!$forceRefresh) {
+            $cached = $this->cache->get($cacheKey, isSensitive: true);
+            if ($cached !== null) {
+                return $cached;
+            }
+        }
+
+        $token = $this->getAccessToken();
+        if (!$token) {
+            return [];
+        }
+
+        try {
+            $from = (new \DateTimeImmutable("-{$days} days"))->format('Y-m-d\TH:i:s.000\Z');
+            $to = (new \DateTimeImmutable('+1 day'))->format('Y-m-d\TH:i:s.000\Z');
+
+            $response = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/accounts', [
+                'headers' => ['Authorization' => 'Bearer ' . $token],
+                'timeout' => (float) $this->appConfig->get('api.timeout.broker.default', 8.0),
+            ]);
+
+            if ($response->getStatusCode() !== 200) {
+                return [];
+            }
+
+            $accounts = $response->toArray();
+            $allOrders = [];
+
+            foreach ($accounts as $accountItem) {
+                $acc = $accountItem['securitiesAccount'] ?? [];
+                $accountNumber = (string) ($acc['accountNumber'] ?? '');
+                if (!$accountNumber) continue;
+
+                $orderResponse = $this->httpClient->request('GET', self::TRADING_BASE_URL . "/accounts/{$accountNumber}/orders", [
+                    'headers' => ['Authorization' => 'Bearer ' . $token],
+                    'query'   => [
+                        'fromEnteredTime' => $from,
+                        'toEnteredTime'   => $to,
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.broker.orders', 10.0),
+                ]);
+
+                if ($orderResponse->getStatusCode() === 200) {
+                    $rawOrders = $orderResponse->toArray();
+                    foreach ($rawOrders as $ord) {
+                        $orderId = (string) ($ord['orderId'] ?? '');
+                        $status = $ord['status'] ?? 'UNKNOWN';
+                        $enteredTime = $ord['enteredTime'] ?? $ord['closeTime'] ?? date('c');
+
+                        foreach ($ord['orderLegCollection'] ?? [] as $leg) {
+                            $instruction = $leg['instruction'] ?? '';
+                            $qty = (float) ($leg['quantity'] ?? 0.0);
+                            $instrument = $leg['instrument'] ?? [];
+                            $symbol = $instrument['symbol'] ?? '';
+                            $assetType = strtoupper($instrument['assetType'] ?? '');
+
+                            $allOrders[] = [
+                                'id' => 'ord_' . $this->id . '_' . $orderId,
+                                'brokerId' => $this->id,
+                                'accountNumber' => $accountNumber,
+                                'status' => $status,
+                                'enteredTime' => $enteredTime,
+                                'symbol' => $symbol,
+                                'assetType' => $assetType,
+                                'instruction' => $instruction,
+                                'quantity' => $qty,
+                                'price' => (float) ($ord['price'] ?? 0.0),
+                                'totalAmount' => (float) ($ord['price'] ?? 0.0) * $qty,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $this->cache->set($cacheKey, $allOrders, $cacheTtl, true);
+            return $allOrders;
+        } catch (\Throwable $e) {
+            $this->logger->warning("Schwab getOrderHistory Error ({$this->id}): " . $e->getMessage());
             return [];
         }
     }
