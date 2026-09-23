@@ -3,299 +3,7 @@
 {% block title %}System Settings & Rules — KHAPRE MoonShot Portfolio{% endblock %}
 
 {% block stylesheets %}
-<style>
-/* ── Settings Page Layout ─────────────────────────────────────────────── */
-.settings-wrap {
-    min-height: 100vh;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    display: flex;
-    flex-direction: column;
-}
-
-/* ── Page Hero ──────────────────────────────────────────────────────── */
-.settings-hero {
-    padding: 28px 32px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg2);
-}
-.settings-hero h2 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 24px;
-    font-weight: 800;
-    margin: 0 0 6px 0;
-    color: var(--text);
-}
-.settings-hero p { color: var(--muted); font-size: 13px; margin: 0; }
-
-/* ── Content Grid ────────────────────────────────────────────────────── */
-.settings-content {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 28px 32px 60px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    width: 100%;
-}
-
-/* ── Config Section Card ─────────────────────────────────────────────── */
-.cfg-section {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-.cfg-section-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 18px 24px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg3);
-}
-.cfg-section-header .sec-icon { font-size: 22px; }
-.cfg-section-header h2 {
-    font-family: 'Outfit', sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    margin: 0;
-    color: var(--text);
-}
-.cfg-section-header p {
-    font-size: 12px;
-    color: var(--muted);
-    margin: 2px 0 0 0;
-}
-.cfg-rows { padding: 0; }
-
-/* ── Config Row ─────────────────────────────────────────────────────── */
-.cfg-row {
-    display: grid;
-    grid-template-columns: 1fr 180px;
-    align-items: center;
-    gap: 16px;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.15s;
-}
-.cfg-row:last-child { border-bottom: none; }
-.cfg-row:hover { background: var(--bg3); }
-.cfg-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 3px;
-}
-.cfg-desc {
-    font-size: 11px;
-    color: var(--muted);
-    line-height: 1.5;
-}
-.cfg-key {
-    font-size: 10px;
-    color: var(--blue);
-    font-family: 'Courier New', monospace;
-    margin-top: 4px;
-    opacity: 0.8;
-}
-
-/* ── Config Input ────────────────────────────────────────────────────── */
-.cfg-input {
-    background: var(--bg1);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-size: 14px;
-    font-weight: 600;
-    padding: 8px 12px;
-    text-align: right;
-    width: 100%;
-    transition: border-color 0.15s, box-shadow 0.15s;
-    box-sizing: border-box;
-}
-.cfg-input:focus {
-    outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(88,166,255,0.15);
-}
-.cfg-input.modified { border-color: var(--yellow); }
-.cfg-input.saved    { border-color: var(--green);  }
-
-/* ── Wide Key Input row — spans full width ─────────────────────────── */
-.cfg-row-wide {
-    display: block;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.15s;
-}
-.cfg-row-wide:last-child { border-bottom: none; }
-.cfg-row-wide:hover { background: var(--bg3); }
-.cfg-row-wide-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-/* ── Key Input (monospace, obsidian-black focus) ─────────────────────── */
-.large-key-input {
-    width: 100%;
-    height: 42px;
-    min-height: 42px;
-    background: var(--bg1);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0 14px;
-    border-radius: 8px;
-    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', Monaco, monospace;
-    font-size: 13px;
-    letter-spacing: 0.5px;
-    outline: none;
-    box-sizing: border-box;
-    transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s;
-}
-.large-key-input:hover { border-color: rgba(56,189,248,0.5); }
-.large-key-input:focus, .large-key-input:active {
-    background: #000000 !important;
-    color: #ffffff !important;
-    border-color: #38bdf8 !important;
-    box-shadow: 0 0 16px rgba(56,189,248,0.4) !important;
-}
-
-/* ── Stylized Custom Select ──────────────────────────────────────────── */
-.styled-select-input {
-    width: 100%;
-    height: 42px;
-    background-color: var(--bg1);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 16px;
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 0 38px 0 14px;
-    border-radius: 8px;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    outline: none;
-    cursor: pointer;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    transition: background 0.25s, color 0.25s, border-color 0.25s, box-shadow 0.25s;
-    box-sizing: border-box;
-}
-.styled-select-input:hover { border-color: var(--blue); background-color: var(--bg2); }
-.styled-select-input:focus {
-    border-color: #38bdf8;
-    background-color: #000000;
-    color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(56,189,248,0.25);
-}
-
-/* ── Pill Action Chips ───────────────────────────────────────────────── */
-.slick-pill-btn {
-    border-radius: 20px;
-    font-size: 11px;
-    padding: 4px 12px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.slick-pill-btn:hover {
-    background: var(--blue);
-    border-color: var(--blue);
-    color: #ffffff;
-    box-shadow: 0 0 10px rgba(2,132,199,0.3);
-}
-
-.material-symbols-outlined {
-    font-size: 18px;
-    vertical-align: middle;
-    line-height: 1;
-}
-
-/* ── hbtn-purple variant ─────────────────────────────────────────────── */
-.hbtn-purple {
-    background: linear-gradient(135deg, #7c3aed, #9d4edd);
-    color: #fff;
-    border: none;
-}
-.hbtn-purple:hover { opacity: 0.88; }
-
-/* ── Broker instance card ───────────────────────────────────────────── */
-.broker-instance-card {
-    background: var(--bg1);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
-    transition: border-color 0.2s;
-}
-.broker-instance-card:hover { border-color: rgba(56,189,248,0.35); }
-
-/* ── Save Bar ────────────────────────────────────────────────────────── */
-.save-bar {
-    position: sticky;
-    bottom: 0;
-    background: var(--bg2);
-    border-top: 1px solid var(--border);
-    padding: 16px 40px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    z-index: 50;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-}
-.save-bar .save-status {
-    font-size: 13px;
-    color: var(--muted);
-    flex: 1;
-}
-.save-bar .save-status.success { color: var(--green); }
-.save-bar .save-status.error   { color: var(--red); }
-
-.btn-save {
-    background: linear-gradient(135deg, var(--blue), var(--green));
-    color: #000;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 28px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
-    font-family: 'Outfit', sans-serif;
-}
-.btn-save:hover   { opacity: 0.9; transform: translateY(-1px); }
-.btn-save:active  { transform: translateY(0); }
-.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-
-.btn-reset {
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 20px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
-}
-.btn-reset:hover { color: var(--text); border-color: var(--text); }
-
-/* ── Pct display ─────────────────────────────────────────────────────── */
-.pct-suffix { font-size: 11px; color: var(--muted); margin-top: 3px; text-align: right; }
-</style>
+    <link rel="stylesheet" href="{{ asset('css/settings.css') }}">
 {% endblock %}
 
 {% block body %}
@@ -837,7 +545,7 @@ async function saveSettings() {
     const btn = document.getElementById('btnSave');
     const status = document.getElementById('saveStatus');
     btn.disabled = true;
-    btn.textContent = '⏳ Saving…';
+    btn.innerHTML = '<span class="material-symbols-outlined spin" style="font-size:14px;">sync</span> Saving…';
 
     try {
         const res  = await fetch('/api/config', {
@@ -858,17 +566,17 @@ async function saveSettings() {
             });
 
             pendingChanges = {};
-            status.textContent = '✅ All changes saved to data.db successfully!';
+            status.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;color:var(--green);margin-right:4px;">check_circle</span> All changes saved to data.db successfully!';
             status.className = 'save-status success';
-            btn.textContent = '💾 Save All Changes';
+            btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;">save</span> Save All Changes';
         } else {
             throw new Error(json.message ?? 'Unknown error');
         }
     } catch (e) {
-        status.textContent = '❌ Save failed: ' + e.message;
+        status.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;color:var(--red);margin-right:4px;">error</span> Save failed: ' + e.message;
         status.className = 'save-status error';
         btn.disabled = false;
-        btn.textContent = '💾 Save All Changes';
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;">save</span> Save All Changes';
     }
 }
 
@@ -891,7 +599,7 @@ async function resetToDefaults() {
 
 async function purgeCache(type = 'all') {
     const msg = document.getElementById('cachePurgeMsg');
-    if (msg) msg.textContent = '⏳ Purging cache…';
+    if (msg) msg.innerHTML = '<span class="material-symbols-outlined spin" style="font-size:14px;vertical-align:middle;margin-right:4px;">sync</span> Purging cache…';
 
     try {
         const res = await fetch('/api/config/cache/clear', {
@@ -903,7 +611,7 @@ async function purgeCache(type = 'all') {
 
         if (json.status === 'success') {
             if (msg) {
-                msg.textContent = `✅ ${json.message}`;
+                msg.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;color:var(--green);margin-right:4px;">check_circle</span> ' + json.message;
                 setTimeout(() => { msg.textContent = ''; }, 4000);
             }
             if (json.stats) {
@@ -919,7 +627,7 @@ async function purgeCache(type = 'all') {
         }
     } catch (e) {
         if (msg) {
-            msg.textContent = `❌ Purge error: ${e.message}`;
+            msg.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;color:var(--red);margin-right:4px;">error</span> Purge error: ' + e.message;
             msg.style.color = 'var(--red)';
         }
     }

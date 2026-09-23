@@ -6,8 +6,22 @@ use App\Service\AppConfigService;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class OpenAiLlmService
+ *
+ * Implements LlmServiceInterface for OpenAI GPT models and local OpenAI-compatible endpoints (e.g. Ollama, vLLM).
+ * Provides option chain evaluation, pre-trade risk verification, and macroeconomic news analysis.
+ *
+ * Design Reference: doc/llm-analysis.md
+ */
 class OpenAiLlmService implements LlmServiceInterface
 {
+    /**
+     * @param HttpClientInterface $httpClient HTTP client for API transport.
+     * @param LoggerInterface $logger Application logger.
+     * @param AppConfigService $appConfig Application configuration service.
+     * @param string $openAiApiUrl Default base URL for OpenAI REST API.
+     */
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
@@ -15,6 +29,9 @@ class OpenAiLlmService implements LlmServiceInterface
         private string $openAiApiUrl = 'https://api.openai.com/v1'
     ) {}
 
+    /**
+     * {@inheritdoc}
+     */
     public function getProviderName(): string
     {
         $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
@@ -24,6 +41,11 @@ class OpenAiLlmService implements LlmServiceInterface
         return 'OpenAI (' . $this->getEffectiveModel() . ')';
     }
 
+    /**
+     * Determine active API base endpoint URL (OpenAI vs local server).
+     *
+     * @return string Normalized base URL.
+     */
     private function getEffectiveBaseUrl(): string
     {
         $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
@@ -33,6 +55,11 @@ class OpenAiLlmService implements LlmServiceInterface
         return rtrim($this->openAiApiUrl, '/');
     }
 
+    /**
+     * Retrieve active API key.
+     *
+     * @return string|null API key string or null.
+     */
     private function getEffectiveApiKey(): ?string
     {
         $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
@@ -44,6 +71,11 @@ class OpenAiLlmService implements LlmServiceInterface
         return !empty($key) ? (string) $key : null;
     }
 
+    /**
+     * Retrieve configured model identifier.
+     *
+     * @return string Model name string.
+     */
     private function getEffectiveModel(): string
     {
         $provider = (string) $this->appConfig->get('llm.provider', 'gemini');
@@ -53,6 +85,13 @@ class OpenAiLlmService implements LlmServiceInterface
         return (string) $this->appConfig->get('openai.model', 'gpt-4o-mini');
     }
 
+    /**
+     * Dispatch chat completion request to OpenAI API.
+     *
+     * @param string $prompt Prompt string.
+     * @param bool $jsonMode When true, enforces JSON response format.
+     * @return string|null Response text or null on failure.
+     */
     private function callChatCompletion(string $prompt, bool $jsonMode = false): ?string
     {
         $apiKey = $this->getEffectiveApiKey();
@@ -97,6 +136,9 @@ class OpenAiLlmService implements LlmServiceInterface
         return null;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = [], array $marketIntelligence = []): array
     {
         $cashAvailable = $portfolio['cashBalance'] ?? 0.0;
@@ -167,11 +209,18 @@ Output strictly JSON formatting. The JSON must be an array of strategy objects u
         ];
     }
 
+    /**
+     * Parse decoded JSON strategy ideas from OpenAI API.
+     *
+     * @param string $aiText Response JSON string.
+     * @param float $cash Cash balance.
+     * @param array $equities Equities list.
+     * @return array Decoded strategy ideas array.
+     */
     private function parseOpenAiIdeas(string $aiText, float $cash, array $equities): array
     {
         try {
             $decoded = json_decode($aiText, true);
-            // OpenAI returns direct json or wrapped. Handles both.
             if (is_array($decoded)) {
                 $ideas = $decoded['ideas'] ?? $decoded;
                 if (is_array($ideas)) {
@@ -183,6 +232,13 @@ Output strictly JSON formatting. The JSON must be an array of strategy objects u
         return $this->generateDefaultAiIdeas($cash, $equities);
     }
 
+    /**
+     * Provide baseline options strategy ideas in offline or unconfigured environments.
+     *
+     * @param float $cash Available cash collateral.
+     * @param array $equities Portfolio equities.
+     * @return array List of default strategy suggestion arrays.
+     */
     private function generateDefaultAiIdeas(float $cash, array $equities): array
     {
         return [
@@ -240,13 +296,15 @@ Output strictly JSON formatting. The JSON must be an array of strategy objects u
         ];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function analyzeOptionChain(string $symbol, float $currentPrice, array $chain): array
     {
         $symbol = strtoupper($symbol);
         $calls = $chain['calls'] ?? [];
         $puts = $chain['puts'] ?? [];
 
-        // Simple default parsing identical to GeminiService logic
         $bestCall = ['strike' => $currentPrice * 1.06, 'delta' => 0.30, 'midPrice' => 3.50, 'otmPct' => 6.0, 'estIncomePerContract' => 350.0, 'annualizedYield' => 29.2];
         $bestPut = ['strike' => $currentPrice * 0.93, 'delta' => -0.25, 'midPrice' => 2.80, 'discountPct' => 7.0, 'estIncomePerContract' => 280.0, 'annualizedYield' => 24.5];
 
@@ -289,6 +347,9 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
         ];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function verifyTradePreExecution(array $trade): array
     {
         $symbol = $trade['symbol'] ?? 'NVDA';
@@ -324,6 +385,9 @@ Perform a 3-point sanity check:
         ];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function reviewOptionPosition(string $symbol, array $contractData, array $liveChain): array
     {
         $type = strtoupper($contractData['type'] ?? 'CALL');
@@ -378,10 +442,12 @@ Provide a STRICT JSON response with exactly these fields:
             }
         }
 
-      
         return [];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function analyzeMarketNews(array $newsItems): array
     {
         if (empty($newsItems)) {

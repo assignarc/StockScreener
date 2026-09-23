@@ -46,8 +46,8 @@
         </div>
 
         <div id="plannerPageContent" style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="lm" style="text-align:center; padding:40px; background:var(--bg2); border-radius:12px; border:1px solid var(--border);">
-                <span class="spin">⟳</span> Loading your personalized Daily Morning Trade Package...
+            <div class="lm" style="text-align:center; padding:40px; background:var(--bg2); border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:8px;">
+                <span class="material-symbols-outlined spin" style="font-size:20px; color:var(--blue);">sync</span> Loading your personalized Daily Morning Trade Package...
             </div>
         </div>
     </div>
@@ -78,7 +78,7 @@
         const cnt = document.getElementById('plannerPageContent');
         if (!cnt) return;
 
-        cnt.innerHTML = '<div class="lm" style="text-align:center; padding:40px; background:var(--bg2); border-radius:12px; border:1px solid var(--border);"><span class="spin">⟳</span> Fetching Daily Morning Trade Package & Market Risk Intelligence...</div>';
+        cnt.innerHTML = '<div class="lm" style="text-align:center; padding:40px; background:var(--bg2); border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:8px;"><span class="material-symbols-outlined spin" style="font-size:20px; color:var(--blue);">sync</span> Fetching Daily Morning Trade Package & Market Risk Intelligence...</div>';
 
         try {
             const res = await fetch(`/api/flywheel/daily-planner?riskCap=${userRiskCap}`);

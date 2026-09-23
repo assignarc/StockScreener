@@ -11,12 +11,23 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+/**
+ * BackfillHistoryCommand
+ *
+ * CLI console command to backfill and synchronize historical broker transactions into SQLite.
+ */
 #[AsCommand(
     name: 'app:broker:backfill-history',
     description: 'Backfills transaction history for all configured brokers for a given number of days.'
 )]
 class BackfillHistoryCommand extends Command
 {
+    /**
+     * Initializes the command with broker manager and logger services.
+     *
+     * @param BrokerManagerService $brokerManager Multi-broker management service.
+     * @param LoggerInterface      $logger        PSR-3 logger instance.
+     */
     public function __construct(
         private BrokerManagerService $brokerManager,
         private LoggerInterface $logger,
@@ -24,6 +35,11 @@ class BackfillHistoryCommand extends Command
         parent::__construct();
     }
 
+    /**
+     * Configures command options and flags.
+     *
+     * @return void
+     */
     protected function configure(): void
     {
         $this->addOption(
@@ -35,6 +51,13 @@ class BackfillHistoryCommand extends Command
         );
     }
 
+    /**
+     * Executes the transaction backfill process across all authorized brokers.
+     *
+     * @param InputInterface  $input  Console input.
+     * @param OutputInterface $output Console output.
+     * @return int Command exit status code.
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);

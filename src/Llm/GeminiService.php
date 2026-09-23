@@ -6,10 +6,25 @@ use App\Service\AppConfigService;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class GeminiService
+ *
+ * Implements LlmServiceInterface for Google Gemini generative artificial intelligence models.
+ * Manages dynamic model discovery, automatic version failover, prompt construction for Capital
+ * Flywheel options strategies, option chain evaluations, and macroeconomic news synthesis.
+ *
+ * Design Reference: doc/llm-analysis.md
+ */
 class GeminiService implements LlmServiceInterface
 {
     private string $apiUrl;
 
+    /**
+     * @param HttpClientInterface $httpClient HTTP client for API transport.
+     * @param LoggerInterface $logger Application logger.
+     * @param AppConfigService $appConfig Key-value application configuration service.
+     * @param string $geminiApiUrl Base endpoint URL for Google Gemini models API.
+     */
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
@@ -19,6 +34,12 @@ class GeminiService implements LlmServiceInterface
 
     private ?array $cachedDynamicModels = null;
 
+    /**
+     * Resolve ordered list of candidate model identifiers, starting with user configuration,
+     * followed by live available models discovered from the API, and known robust fallbacks.
+     *
+     * @return array List of model name strings.
+     */
     private function getModelCandidates(): array
     {
         $candidates = [];
@@ -58,6 +79,11 @@ class GeminiService implements LlmServiceInterface
         return array_values($candidates);
     }
 
+    /**
+     * Query Gemini API to list all models supporting generateContent, sorted by capability score.
+     *
+     * @return array List of clean model identifiers.
+     */
     private function fetchAvailableModelsFromApi(): array
     {
         if ($this->cachedDynamicModels !== null) {
@@ -89,7 +115,6 @@ class GeminiService implements LlmServiceInterface
 
                 // Sort models so Pro & Flash top versions come first
                 usort($models, function ($a, $b) {
-                    // Prefer 2.5 > 2.0 > 1.5 > others, prefer pro/flash over lite/exp
                     $scoreA = $this->calculateModelScore($a);
                     $scoreB = $this->calculateModelScore($b);
                     return $scoreB <=> $scoreA;
@@ -105,6 +130,12 @@ class GeminiService implements LlmServiceInterface
         return [];
     }
 
+    /**
+     * Calculate relative priority score for a given model identifier.
+     *
+     * @param string $model Model identifier string.
+     * @return int Numerical score representing preference weighting.
+     */
     private function calculateModelScore(string $model): int
     {
         $score = 0;
@@ -121,6 +152,14 @@ class GeminiService implements LlmServiceInterface
         return $score;
     }
 
+    /**
+     * Dispatch payload to Gemini API across candidate models in sequential priority order.
+     *
+     * @param array $payload JSON payload for Gemini generateContent endpoint.
+     * @param int $usedModelIndex Output reference indicating which model index succeeded.
+     * @return array Associative array containing decoded response and the winning model name.
+     * @throws \RuntimeException If all model candidates fail.
+     */
     private function postWithModelFallback(array $payload, int &$usedModelIndex = 0): array
     {
         $key = $this->getEffectiveApiKey();
@@ -195,6 +234,11 @@ class GeminiService implements LlmServiceInterface
         throw $lastException ?? new \RuntimeException("All Gemini model candidates failed.");
     }
 
+    /**
+     * Retrieve active Gemini API key from application configuration store.
+     *
+     * @return string|null API key string or null.
+     */
     public function getEffectiveApiKey(): ?string
     {
         $key = $this->appConfig->get('gemini.api_key');
@@ -202,7 +246,7 @@ class GeminiService implements LlmServiceInterface
     }
 
     /**
-     * Calls Gemini API to generate AI-driven Capital Flywheel strategy ideas
+     * {@inheritdoc}
      */
     public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = [], array $marketIntelligence = []): array
     {
@@ -289,9 +333,16 @@ Output clear JSON formatting with exactly these keys: title, ticker, strategyTyp
         }
     }
 
+    /**
+     * Decode JSON text payload containing Gemini strategy recommendations.
+     *
+     * @param string $aiText Raw response text.
+     * @param float $cash Available cash collateral.
+     * @param array $equities Equity positions.
+     * @return array Decoded ideas list.
+     */
     private function parseGeminiIdeas(string $aiText, float $cash, array $equities): array
     {
-        // If Gemini returned JSON, decode it, otherwise fallback
         if (preg_match('/\[.*\]/s', $aiText, $match)) {
             $decoded = json_decode($match[0], true);
             if (is_array($decoded)) {
@@ -303,7 +354,7 @@ Output clear JSON formatting with exactly these keys: title, ticker, strategyTyp
     }
 
     /**
-     * Evaluates a live option chain and uses Gemini AI to determine optimal target strikes for Covered Calls & Cash-Secured Puts
+     * {@inheritdoc}
      */
     public function analyzeOptionChain(string $symbol, float $currentPrice, array $chain): array
     {
@@ -436,7 +487,7 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
     }
 
     /**
-     * Conducts a real-time final pre-execution verification of a staged trade against intraday news & market data
+     * {@inheritdoc}
      */
     public function verifyTradePreExecution(array $trade): array
     {
@@ -481,6 +532,9 @@ Return structured response.";
         ];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function reviewOptionPosition(string $symbol, array $contractData, array $liveChain): array
     {
         $type = strtoupper($contractData['type'] ?? 'CALL');
@@ -552,6 +606,9 @@ Provide a STRICT JSON response with exactly these fields:
         ];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function analyzeMarketNews(array $newsItems): array
     {
         if (empty($newsItems)) {
@@ -611,6 +668,13 @@ Output strictly JSON formatting with the following structure:
         return ['error' => $this->parseErrorResponse(null)];
     }
 
+    /**
+     * Format a descriptive error message from HTTP response or exception object.
+     *
+     * @param mixed $response Response instance or null.
+     * @param \Throwable|null $exception Exception instance or null.
+     * @return string Human-readable error message.
+     */
     private function parseErrorResponse($response, ?\Throwable $exception = null): string
     {
         $provider = $this->getProviderName();
@@ -636,6 +700,9 @@ Output strictly JSON formatting with the following structure:
         return "Failed to query " . $provider . ": API key missing or invalid.";
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getProviderName(): string
     {
         return 'Google Gemini';

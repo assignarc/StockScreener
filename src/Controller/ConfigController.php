@@ -10,13 +10,30 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
+/**
+ * ConfigController
+ *
+ * Web and API controller for application settings management,
+ * broker configuration, and persistent cache inspection / eviction.
+ */
 class ConfigController extends AbstractController
 {
+    /**
+     * Initializes the config controller.
+     *
+     * @param AppConfigService       $appConfig Application configuration service.
+     * @param PersistentCacheService $cache     Persistent cache service.
+     */
     public function __construct(
         private AppConfigService $appConfig,
         private PersistentCacheService $cache,
     ) {}
 
+    /**
+     * Renders the settings web UI page.
+     *
+     * @return Response Rendered settings page template.
+     */
     #[Route('/settings', name: 'app_settings')]
     public function settings(): Response
     {
@@ -28,6 +45,11 @@ class ConfigController extends AbstractController
         ]);
     }
 
+    /**
+     * Retrieves all active application configuration keys and broker instance definitions.
+     *
+     * @return JsonResponse JSON configuration payload.
+     */
     #[Route('/api/config', name: 'api_config_get', methods: ['GET'])]
     public function getConfig(): JsonResponse
     {
@@ -38,6 +60,12 @@ class ConfigController extends AbstractController
         ]);
     }
 
+    /**
+     * Saves application configuration keys and broker instances into SQLite.
+     *
+     * @param Request $request HTTP request containing key-value configurations.
+     * @return JsonResponse JSON response confirming save status.
+     */
     #[Route('/api/config', name: 'api_config_save', methods: ['POST'])]
     public function saveConfig(Request $request): JsonResponse
     {
@@ -62,6 +90,11 @@ class ConfigController extends AbstractController
         ]);
     }
 
+    /**
+     * Retrieves persistent cache size and entry statistics.
+     *
+     * @return JsonResponse JSON cache statistics.
+     */
     #[Route('/api/config/cache/stats', name: 'api_cache_stats', methods: ['GET'])]
     public function getCacheStats(): JsonResponse
     {
@@ -71,6 +104,12 @@ class ConfigController extends AbstractController
         ]);
     }
 
+    /**
+     * Clears persistent cache entries by namespace prefix or entirely.
+     *
+     * @param Request $request HTTP request containing cache clear type parameter.
+     * @return JsonResponse JSON response with count of cleared entries and updated stats.
+     */
     #[Route('/api/config/cache/clear', name: 'api_cache_clear', methods: ['POST'])]
     public function clearCache(Request $request): JsonResponse
     {

@@ -9,8 +9,25 @@ use App\Service\TaxEngine;
 use App\Service\FinnhubService;
 use App\Service\AppConfigService;
 
+/**
+ * PerformanceHistoryService
+ *
+ * Tracks, snapshots, and analyzes portfolio performance metrics over time.
+ * Calculates daily portfolio equity, option values, cash balances, unrealized
+ * gains, tax liability estimates, and benchmark performance comparison (SPY).
+ */
 class PerformanceHistoryService
 {
+    /**
+     * Initializes the performance history service with required database and market data services.
+     *
+     * @param Connection           $connection    Doctrine DBAL database connection.
+     * @param BrokerManagerService $brokerManager Multi-broker management service.
+     * @param TaxEngine            $taxEngine     Tax calculation engine.
+     * @param FinnhubService       $finnhub       Market data provider for benchmark pricing.
+     * @param AppConfigService     $appConfig     Application configuration service.
+     * @param LoggerInterface      $logger        PSR-3 logger instance.
+     */
     public function __construct(
         private Connection $connection,
         private BrokerManagerService $brokerManager,
@@ -53,7 +70,8 @@ class PerformanceHistoryService
             $netLTGains = 0.0;
             foreach ($taxRealizations as $r) {
                 $sellYear = substr($r['sellDate'] ?? '', 0, 4);
-                if ($sellYear === $currentYear) {
+                $isTaxable = (($r['taxStatus'] ?? 'TAXABLE') !== 'RETIREMENT_IRA');
+                if ($sellYear === $currentYear && $isTaxable) {
                     if (($r['term'] ?? '') === 'LONG_TERM') {
                         $netLTGains += (float) ($r['realizedGain'] ?? 0.0);
                     } else {
@@ -104,6 +122,7 @@ class PerformanceHistoryService
 
             // Sync trade/dividend/option events from transaction history into portfolio_events
             $this->syncEventsFromHistory($history, $taxRealizations);
+            $this->reclassifyHistoricalEvents();
 
             return [
                 'success'    => true,
@@ -138,16 +157,28 @@ class PerformanceHistoryService
             }
 
             foreach ($history as $tx) {
+                if (!isset($tx['category'])) {
+                    $tx = BrokerManagerService::normalizeTransaction($tx);
+                }
+
                 $date = substr($tx['date'] ?? date('Y-m-d'), 0, 10);
-                $symbol = $tx['symbol'] ?? '';
+                $symbol = $tx['display_symbol'] ?? $tx['symbol'] ?? '';
                 if (!$symbol || $symbol === 'CURRENCY_USD') continue;
 
                 $provider = $tx['broker_nickname'] ?? $tx['broker_id'] ?? 'Schwab Primary';
                 $accNum   = $tx['account_nickname'] ?? $tx['account_number'] ?? 'Account';
 
-                $type = strtoupper($tx['type'] ?? 'TRADE');
-                $desc = $tx['description'] ?? 'Account Activity';
+                $desc = !empty($tx['display_detail']) 
+                    ? ($tx['display_main'] . ' • ' . $tx['display_detail']) 
+                    : ($tx['display_main'] ?? $tx['description'] ?? 'Account Activity');
                 $amount = (float) ($tx['amount'] ?? 0.0);
+
+                $category = $tx['category'] ?? 'TRADE';
+                $eventType = match($category) {
+                    'OPTION' => 'OPTION',
+                    'DIVIDEND' => 'DIVIDEND',
+                    default => 'EQUITY',
+                };
 
                 $item = null;
                 foreach ($tx['transfer_items'] ?? [] as $ti) {
@@ -155,23 +186,6 @@ class PerformanceHistoryService
                         $item = $ti;
                         break;
                     }
-                }
-                $itemAssetType = strtoupper($item['asset_type'] ?? '');
-                $itemDesc = $item['description'] ?? '';
-
-                $eventType = 'EQUITY';
-                if ($type === 'DIVIDEND' || $type === 'DIVIDEND_OR_INTEREST' || str_contains($type, 'DIV')) {
-                    $eventType = 'DIVIDEND';
-                } elseif (
-                    $itemAssetType === 'OPTION' 
-                    || preg_match('/^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/', $symbol) 
-                    || str_contains($desc, 'OPTION') 
-                    || str_contains($desc, 'CALL') 
-                    || str_contains($desc, 'PUT')
-                    || str_contains($itemDesc, 'Call')
-                    || str_contains($itemDesc, 'Put')
-                ) {
-                    $eventType = 'OPTION';
                 }
 
                 $taxKey = $symbol . '_' . $date . '_' . $accNum;
@@ -187,12 +201,26 @@ class PerformanceHistoryService
                     $estTax = (float) ($taxInfo['estTax'] ?? 0.0);
                 }
 
+                $qty = $item ? (float) ($item['amount'] ?? 0.0) : 0.0;
+                $price = $item ? (float) ($item['price'] ?? 0.0) : 0.0;
+                $fees = (float) ($tx['fees'] ?? 0.0);
+                $action = strtoupper($tx['action'] ?? '');
+                if (!$action) {
+                    if ($eventType === 'DIVIDEND') {
+                        $action = 'DIVIDEND';
+                    } elseif ($amount < 0) {
+                        $action = 'BUY';
+                    } elseif ($amount > 0) {
+                        $action = 'SELL';
+                    }
+                }
+
                 $title = "{$eventType}: {$symbol} (" . ($amount >= 0 ? '+' : '') . '$' . number_format($amount, 2) . ')';
 
                 $this->connection->executeStatement('
                     INSERT INTO portfolio_events 
-                    (event_date, event_type, provider, account_number, symbol, impact_amount, impact_pct, cost_basis, realized_gain, est_tax, title, description, created_at)
-                    VALUES (:date, :type, :provider, :accNum, :symbol, :amount, 0.0, :costBasis, :gain, :tax, :title, :desc, :createdAt)
+                    (event_date, event_type, provider, account_number, symbol, impact_amount, quantity, price, fees, action, impact_pct, cost_basis, realized_gain, est_tax, title, description, created_at)
+                    VALUES (:date, :type, :provider, :accNum, :symbol, :amount, :qty, :price, :fees, :action, 0.0, :costBasis, :gain, :tax, :title, :desc, :createdAt)
                     ON CONFLICT DO NOTHING
                 ', [
                     'date'      => $date,
@@ -201,6 +229,10 @@ class PerformanceHistoryService
                     'accNum'    => $accNum,
                     'symbol'    => $symbol,
                     'amount'    => $amount,
+                    'qty'       => $qty,
+                    'price'     => $price,
+                    'fees'      => $fees,
+                    'action'    => $action,
                     'costBasis' => $costBasis,
                     'gain'      => $realizedGain,
                     'tax'       => $estTax,
@@ -209,18 +241,29 @@ class PerformanceHistoryService
                     'createdAt' => $now,
                 ]);
 
-                // Update cost basis and tax calculations on existing matched event
+                // Update cost basis, tax calculations, and canonical type on existing matched event
                 $this->connection->executeStatement('
                     UPDATE portfolio_events 
-                    SET cost_basis = :costBasis, realized_gain = :gain, est_tax = :tax
-                    WHERE event_date = :date AND symbol = :symbol AND title = :title
+                    SET event_type = :type,
+                        cost_basis = :costBasis, realized_gain = :gain, est_tax = :tax,
+                        quantity = CASE WHEN quantity = 0.0 THEN :qty ELSE quantity END,
+                        price = CASE WHEN price = 0.0 THEN :price ELSE price END,
+                        fees = CASE WHEN fees = 0.0 THEN :fees ELSE fees END,
+                        action = CASE WHEN action IS NULL OR action = "" THEN :action ELSE action END,
+                        title = :title
+                    WHERE event_date = :date AND symbol = :symbol
                 ', [
                     'date'      => $date,
                     'symbol'    => $symbol,
+                    'type'      => $eventType,
                     'title'     => $title,
                     'costBasis' => $costBasis,
                     'gain'      => $realizedGain,
                     'tax'       => $estTax,
+                    'qty'       => $qty,
+                    'price'     => $price,
+                    'fees'      => $fees,
+                    'action'    => $action,
                 ]);
             }
 
@@ -273,26 +316,37 @@ class PerformanceHistoryService
     /**
      * Fetches historical growth curve data, pre-tax/after-tax series, benchmark comparison, and event markers.
      */
-    public function getGrowthHistory(string $period = '6M'): array
+    public function getGrowthHistory(string $period = 'THIS_YEAR'): array
     {
         // Auto-record today's snapshot on query guarantee
         $this->recordDailySnapshot();
 
-        $periodUpper = strtoupper($period);
+        $periodUpper = strtoupper(trim($period));
         $todayObj = new \DateTimeImmutable();
+        $currentYear = (int) $todayObj->format('Y');
 
-        if ($periodUpper === 'YTD') {
-            $startDate = $todayObj->format('Y') . '-01-01';
-            $days = (int) $todayObj->diff(new \DateTimeImmutable($startDate))->format('%a');
-            if ($days < 1) $days = 1;
+        $endDate = $todayObj->format('Y-m-d');
+        if ($periodUpper === 'THIS_YEAR' || $periodUpper === 'YTD') {
+            $startDate = $currentYear . '-01-01';
+            $days = max(1, (int) $todayObj->diff(new \DateTimeImmutable($startDate))->format('%a'));
+        } elseif ($periodUpper === 'LAST_YEAR') {
+            $lastYear = $currentYear - 1;
+            $startDate = $lastYear . '-01-01';
+            $endDate = $lastYear . '-12-31';
+            $days = 365;
+        } elseif ($periodUpper === 'ALL') {
+            $days = 3650;
+            $startDate = $todayObj->modify("-{$days} days")->format('Y-m-d');
         } else {
+            // Support 30, 30D, 1M, 60, 60D, 90, 90D, 3M, 6M, 1Y, 2Y
             $days = match($periodUpper) {
-                '1M'  => 30,
-                '3M'  => 90,
-                '1Y'  => 365,
-                '2Y'  => 730,
-                'ALL' => 730,
-                default => 180, // 6M default
+                '30', '30D', '1M' => 30,
+                '60', '60D'       => 60,
+                '90', '90D', '3M' => 90,
+                '6M', '180'       => 180,
+                '1Y', '365'       => 365,
+                '2Y', '730'       => 730,
+                default           => 30,
             };
             $startDate = $todayObj->modify("-{$days} days")->format('Y-m-d');
         }
@@ -300,24 +354,49 @@ class PerformanceHistoryService
         $snapshots = $this->connection->fetchAllAssociative('
             SELECT snapshot_date, total_value, cash_balance, equity_value, option_value, unrealized_pl, est_tax_owed, benchmark_spy_price
             FROM portfolio_snapshots
-            WHERE snapshot_date >= :start
+            WHERE snapshot_date >= :start AND snapshot_date <= :end
             ORDER BY snapshot_date ASC
-        ', ['start' => $startDate]);
+        ', [
+            'start' => $startDate,
+            'end'   => $endDate,
+        ]);
 
         // If database has fewer than $days snapshots, ensure immutable historical baseline dates are populated
-        if (count($snapshots) < ($days - 5)) {
+        if (count($snapshots) < ($days - 5) && $periodUpper !== 'LAST_YEAR') {
             $snapshots = $this->ensureImmutableHistoricalSnapshots($days);
         }
 
         // Fetch ALL events to allow client-side time span filtering without missing accounts/events
-        $allEvents = $this->connection->fetchAllAssociative('
+        $rawEvents = $this->connection->fetchAllAssociative('
             SELECT id, event_date, event_type, provider, account_number, symbol, impact_amount, cost_basis, realized_gain, est_tax, title, description
             FROM portfolio_events
             ORDER BY event_date ASC
         ');
 
+        // Canonical enrichment to guarantee uniform data model across views
+        $allEvents = [];
+        foreach ($rawEvents as $ev) {
+            $sym = trim((string)($ev['symbol'] ?? ''));
+            $isOption = ($ev['event_type'] === 'OPTION' || TaxEngine::isOptionSymbol($sym));
+            $underlying = $sym;
+            $displaySym = $sym;
+            if ($isOption) {
+                $parts = preg_split('/\s+/', $sym);
+                $underlying = $parts[0] ?? $sym;
+                $displaySym = $underlying;
+            }
+            $ev['category'] = $ev['event_type'];
+            $ev['is_option'] = $isOption;
+            $ev['underlying_symbol'] = $underlying;
+            $ev['display_symbol'] = $displaySym;
+            $allEvents[] = $ev;
+        }
+
         // Filter events for active timespan response
-        $events = array_values(array_filter($allEvents, fn($e) => ($e['event_date'] ?? '') >= $startDate));
+        $events = array_values(array_filter($allEvents, function ($e) use ($startDate, $endDate) {
+            $evDate = $e['event_date'] ?? '';
+            return $evDate >= $startDate && $evDate <= $endDate;
+        }));
 
         // Fetch accounts that have actual recorded transactions or non-zero balances
         $activeAccountMap = [];
@@ -502,5 +581,55 @@ class PerformanceHistoryService
 
         usort($syntheticRows, fn($a, $b) => strcmp($a['snapshot_date'], $b['snapshot_date']));
         return $syntheticRows;
+    }
+
+    /**
+     * Scans all records in portfolio_events and re-evaluates event_type and title prefixes
+     * to eliminate misclassifications (e.g. options classified as EQUITY, or called bonds classified as OPTION).
+     *
+     * @return int Number of rows updated.
+     */
+    public function reclassifyHistoricalEvents(): int
+    {
+        $events = $this->connection->fetchAllAssociative('SELECT id, symbol, description, title, event_type FROM portfolio_events');
+        $updated = 0;
+        foreach ($events as $ev) {
+            $sym = trim($ev['symbol'] ?? '');
+            $desc = trim($ev['description'] ?? '');
+            $title = trim($ev['title'] ?? '');
+            $currentType = $ev['event_type'] ?? '';
+
+            $isBond = str_contains($desc, '**CALLED**') 
+                || str_contains($desc, 'BOND INTEREST') 
+                || str_contains($desc, 'CD INTEREST') 
+                || str_contains($desc, '%CD');
+
+            $isOpt = !$isBond && (
+                TaxEngine::isOptionSymbol($sym, $desc)
+                || preg_match('/\b(CALL|PUT)\b/i', $desc)
+                || preg_match('/\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d+(\.\d+)?\s+[CP]\b/i', $sym)
+                || preg_match('/^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/i', $sym)
+            );
+
+            $newType = $currentType;
+            if ($isOpt && $currentType !== 'OPTION' && $currentType !== 'OPTION_PREMIUM') {
+                $newType = 'OPTION';
+            } elseif ($isBond && ($currentType === 'OPTION' || $currentType === 'OPTION_PREMIUM')) {
+                $newType = 'EQUITY';
+            }
+
+            if ($newType !== $currentType) {
+                $newTitle = preg_replace('/^(EQUITY|OPTION|TRADE):/', "{$newType}:", $title);
+                $this->connection->executeStatement('
+                    UPDATE portfolio_events SET event_type = :type, title = :title WHERE id = :id
+                ', [
+                    'type'  => $newType,
+                    'title' => $newTitle,
+                    'id'    => $ev['id'],
+                ]);
+                $updated++;
+            }
+        }
+        return $updated;
     }
 }

@@ -7,6 +7,15 @@ use App\Repository\PersistentCacheRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class PersistentCacheService
+ *
+ * Provides a resilient multi-tier persistent caching system backed by memory and SQLite database.
+ * Supports configurable TTLs, cache-stampede mitigation locks, AES-256-GCM encryption for sensitive
+ * broker balances, opportunistic eviction, and strict PII data sanitization.
+ *
+ * Design Reference: doc/database-caching.md
+ */
 class PersistentCacheService
 {
     /** @var array<string, mixed> Runtime static memory cache */
@@ -18,6 +27,12 @@ class PersistentCacheService
     /** @var string Cache encryption key */
     private string $encryptionKey;
 
+    /**
+     * @param EntityManagerInterface $em Doctrine entity manager.
+     * @param PersistentCacheRepository $cacheRepo PersistentCache repository.
+     * @param LoggerInterface $logger Application logger.
+     * @param string $projectDir Application root directory path.
+     */
     public function __construct(
         private EntityManagerInterface $em,
         private PersistentCacheRepository $cacheRepo,
@@ -31,7 +46,10 @@ class PersistentCacheService
     }
 
     /**
-     * Encrypts a serialized value using AES-256-GCM.
+     * Encrypt a serialized value using AES-256-GCM.
+     *
+     * @param mixed $value Payload to encrypt.
+     * @return string Base64-encoded initialization vector, tag, and ciphertext.
      */
     private function encryptValue(mixed $value): string
     {
@@ -43,7 +61,10 @@ class PersistentCacheService
     }
 
     /**
-     * Decrypts a value using AES-256-GCM.
+     * Decrypt a value using AES-256-GCM.
+     *
+     * @param string $payload Base64-encoded encrypted payload.
+     * @return mixed Unserialized payload or null on failure.
      */
     private function decryptValue(string $payload): mixed
     {
@@ -67,7 +88,13 @@ class PersistentCacheService
     }
 
     /**
-     * Retrieves a cached value, or executes fallback, persists result in data.db, and returns it.
+     * Retrieve cached value from memory or SQLite, or execute fallback callback to populate cache.
+     *
+     * @param string $key Cache key string.
+     * @param callable|null $fallback Optional computation callback.
+     * @param int $ttlSeconds Time to live in seconds.
+     * @param bool $isSensitive When true, encrypts payload using AES-256-GCM.
+     * @return mixed Cached or computed value.
      */
     public function get(string $key, ?callable $fallback = null, int $ttlSeconds = 3600, bool $isSensitive = false): mixed
     {
@@ -127,7 +154,9 @@ class PersistentCacheService
     }
 
     /**
-     * Safely prunes expired cache entries to prevent SQLite storage bloat
+     * Prune expired cache records from SQLite to prevent database bloat.
+     *
+     * @return int Number of purged rows.
      */
     public function pruneExpiredSafely(): int
     {
@@ -140,7 +169,12 @@ class PersistentCacheService
     }
 
     /**
-     * Persists a key-value pair into SQLite data.db with TTL
+     * Persist key-value pair into memory and SQLite persistent cache with TTL.
+     *
+     * @param string $key Cache key string.
+     * @param mixed $value Value to store.
+     * @param int $ttlSeconds Time to live in seconds.
+     * @param bool $isSensitive When true, sanitizes PII and encrypts payload.
      */
     public function set(string $key, mixed $value, int $ttlSeconds = 3600, bool $isSensitive = false): void
     {
@@ -173,7 +207,9 @@ class PersistentCacheService
     }
 
     /**
-     * Deletes a specific cache key
+     * Remove a specific key from memory and SQLite cache.
+     *
+     * @param string $key Cache key string.
      */
     public function delete(string $key): void
     {
@@ -190,7 +226,10 @@ class PersistentCacheService
     }
 
     /**
-     * Purges keys matching a prefix (e.g. 'finnhub.' or 'broker.')
+     * Purge all cache keys matching a specific prefix (e.g., 'finnhub.', 'broker.').
+     *
+     * @param string $prefix Key prefix string.
+     * @return int Number of deleted rows.
      */
     public function clearPrefix(string $prefix): int
     {
@@ -208,13 +247,21 @@ class PersistentCacheService
         }
     }
 
+    /**
+     * Alias for clearPrefix().
+     *
+     * @param string $prefix Key prefix string.
+     * @return int Number of deleted rows.
+     */
     public function purgeByPrefix(string $prefix): int
     {
         return $this->clearPrefix($prefix);
     }
 
     /**
-     * Clears all persistent cache entries
+     * Clear all persistent and in-memory cache entries.
+     *
+     * @return int Number of purged rows.
      */
     public function clearAll(): int
     {
@@ -228,7 +275,9 @@ class PersistentCacheService
     }
 
     /**
-     * Returns cache usage statistics
+     * Retrieve cache usage metrics and database storage stats.
+     *
+     * @return array Cache diagnostics metrics.
      */
     public function getStats(): array
     {
@@ -256,10 +305,13 @@ class PersistentCacheService
     }
 
     /**
-     * Strict Non-PII Sanitizer for Brokerage Data:
+     * Redact Personally Identifiable Information (PII) from brokerage portfolios:
      * - Masks account numbers to last 4 digits (***1234).
-     * - Strips full account numbers, authorization tokens, personal names, SSNs, routing numbers, and contact details.
-     * - Retains only structural financial aggregates (symbols, quantities, strikes, expirations, market values).
+     * - Strips tokens, personal names, SSNs, routing numbers, and contact details.
+     * - Retains structural financial data (symbols, quantities, strikes, market values).
+     *
+     * @param array $portfolio Raw portfolio dictionary.
+     * @return array Sanitized portfolio dictionary.
      */
     public function sanitizeBrokerData(array $portfolio): array
     {

@@ -102,9 +102,19 @@
                     </label>
 
                     <!-- PRE-TAX / AFTER-TAX TOGGLE -->
-                    <div style="display: flex; align-items: center; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 4px;">
-                        <button id="btnPreTax" onclick="setGrowthView('preTax')" style="background: var(--blue); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">Pre-Tax</button>
-                        <button id="btnAfterTax" onclick="setGrowthView('afterTax')" style="background: transparent; color: var(--muted); border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">After-Tax</button>
+                    <div class="seg-track">
+                        <button id="btnPreTax" onclick="setGrowthView('preTax')" class="seg-btn active">Pre-Tax</button>
+                        <button id="btnAfterTax" onclick="setGrowthView('afterTax')" class="seg-btn">After-Tax</button>
+                    </div>
+
+                    <!-- TIME PERIOD BUTTONS -->
+                    <div class="seg-track">
+                        <button class="btn-period" onclick="loadPeriod('30D')" id="btn30D">30 Days</button>
+                        <button class="btn-period" onclick="loadPeriod('60D')" id="btn60D">60 Days</button>
+                        <button class="btn-period" onclick="loadPeriod('90D')" id="btn90D">90 Days</button>
+                        <button class="btn-period active" onclick="loadPeriod('THIS_YEAR')" id="btnTHIS_YEAR">This Year</button>
+                        <button class="btn-period" onclick="loadPeriod('LAST_YEAR')" id="btnLAST_YEAR">Last Year</button>
+                        <button class="btn-period" onclick="loadPeriod('ALL')" id="btnALL">All</button>
                     </div>
 
                     <!-- CSV IMPORT BUTTON -->
@@ -112,17 +122,6 @@
                         <span class="material-symbols-outlined" style="font-size: 16px;">upload_file</span> Import Schwab CSV
                     </button>
                     <input type="file" id="csvFileInput" accept=".csv" onchange="uploadSchwabCsv(this)" style="display: none;">
-
-                    <!-- TIME PERIOD BUTTONS -->
-                    <div style="display: flex; gap: 6px;">
-                        <button class="btn-period" onclick="loadPeriod('1M')" id="btn1M" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">1M</button>
-                        <button class="btn-period" onclick="loadPeriod('3M')" id="btn3M" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">3M</button>
-                        <button class="btn-period active-period" onclick="loadPeriod('6M')" id="btn6M" style="background: var(--blue); border: 1px solid var(--blue); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">6M</button>
-                        <button class="btn-period" onclick="loadPeriod('YTD')" id="btnYTD" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">YTD</button>
-                        <button class="btn-period" onclick="loadPeriod('1Y')" id="btn1Y" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">1Y</button>
-                        <button class="btn-period" onclick="loadPeriod('2Y')" id="btn2Y" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">2Y</button>
-                        <button class="btn-period" onclick="loadPeriod('ALL')" id="btnALL" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">ALL</button>
-                    </div>
                 </div>
             </div>
 
@@ -146,7 +145,7 @@
                 <table class="port-table" style="width: 100%; border-collapse: collapse; font-size: 12px;" id="eventsTable">
                     <thead>
                         <tr style="background: var(--bg3); color: var(--muted); text-align: left; border-bottom: 1px solid var(--border);">
-                            <th onclick="sortTable('event_date')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Date <span id="sort_event_date">▲</span></th>
+                            <th onclick="sortTable('event_date')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Date <span id="sort_event_date"><span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle;">arrow_upward</span></span></th>
                             <th onclick="sortTable('event_type')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Type <span id="sort_event_type"></span></th>
                             <th onclick="sortTable('provider')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Provider <span id="sort_provider"></span></th>
                             <th onclick="sortTable('account_number')" style="padding: 10px 8px; cursor: pointer; user-select: none;">Account <span id="sort_account_number"></span></th>
@@ -174,7 +173,7 @@
     let growthRawData = {{ growth|json_encode|raw }};
     let currentViewMode = 'preTax';
     let showSpy = false;
-    let currentPeriod = '6M';
+    let currentPeriod = 'THIS_YEAR';
     let chartInstance = null;
 
     let sortCol = 'event_date';
@@ -200,10 +199,17 @@
 
     function setGrowthView(mode) {
         currentViewMode = mode;
-        document.getElementById('btnPreTax').style.background = mode === 'preTax' ? 'var(--blue)' : 'transparent';
-        document.getElementById('btnPreTax').style.color = mode === 'preTax' ? '#fff' : 'var(--muted)';
-        document.getElementById('btnAfterTax').style.background = mode === 'afterTax' ? 'var(--green)' : 'transparent';
-        document.getElementById('btnAfterTax').style.color = mode === 'afterTax' ? '#fff' : 'var(--muted)';
+        const btnPre = document.getElementById('btnPreTax');
+        const btnAfter = document.getElementById('btnAfterTax');
+        if (btnPre && btnAfter) {
+            if (mode === 'preTax') {
+                btnPre.classList.add('active');
+                btnAfter.classList.remove('active');
+            } else {
+                btnAfter.classList.add('active');
+                btnPre.classList.remove('active');
+            }
+        }
 
         renderGrowthChart();
     }
@@ -217,17 +223,16 @@
     }
 
     function loadPeriod(period) {
+        if (currentPeriod === period && period !== 'ALL') {
+            period = 'ALL';
+        }
         currentPeriod = period;
         document.querySelectorAll('.btn-period').forEach(b => {
-            b.style.background = 'var(--bg3)';
-            b.style.borderColor = 'var(--border)';
-            b.style.color = 'var(--text)';
+            b.classList.remove('active', 'active-period');
         });
         const activeBtn = document.getElementById('btn' + period);
         if (activeBtn) {
-            activeBtn.style.background = 'var(--blue)';
-            activeBtn.style.borderColor = 'var(--blue)';
-            activeBtn.style.color = '#fff';
+            activeBtn.classList.add('active');
         }
 
         fetch('/portfolio/history-api?period=' + period)
@@ -240,6 +245,16 @@
                 renderGrowthChart();
             })
             .catch(err => console.error('Error fetching history period:', err));
+    }
+
+    function formatPeriodLabel(p) {
+        if (p === '30D' || p === '30') return '30 Days';
+        if (p === '60D' || p === '60') return '60 Days';
+        if (p === '90D' || p === '90') return '90 Days';
+        if (p === 'THIS_YEAR' || p === 'YTD') return 'This Year';
+        if (p === 'LAST_YEAR') return 'Last Year';
+        if (p === 'ALL') return 'All';
+        return p;
     }
 
     function uploadSchwabCsv(input) {
@@ -306,7 +321,7 @@
 
         const activeIndicator = document.getElementById('sort_' + sortCol);
         if (activeIndicator) {
-            activeIndicator.textContent = sortAsc ? '▲' : '▼';
+            activeIndicator.innerHTML = sortAsc ? '<span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle;">arrow_upward</span>' : '<span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle;">arrow_downward</span>';
         }
 
         applyFiltersAndSort();
@@ -321,9 +336,12 @@
         // 1. Filter by Graph Time Period Date Range
         const dates = growthRawData.dates || [];
         if (dates.length > 0) {
-            const minDate = dates[0];
-            const maxDate = dates[dates.length - 1];
-            events = events.filter(e => e.event_date >= minDate && e.event_date <= maxDate);
+            const minDate = dates[0].substring(0, 10);
+            const maxDate = dates[dates.length - 1].substring(0, 10);
+            events = events.filter(e => {
+                const ed = (e.event_date || '').substring(0, 10);
+                return ed >= minDate && ed <= maxDate;
+            });
         }
 
         // 2. Filter by Provider
@@ -375,7 +393,7 @@
             return 0;
         });
 
-        document.getElementById('tableFilterSummary').textContent = `Showing ${events.length} transactions & orders for ${currentPeriod} timeline`;
+        document.getElementById('tableFilterSummary').textContent = `Showing ${events.length} transactions & orders for ${formatPeriodLabel(currentPeriod)} timeline`;
 
         renderEventsTable(events);
     }
@@ -406,8 +424,8 @@
 
             // Clean symbol and description parsing
             let rawSym = ev.symbol || '';
-            let isOptionSymbol = pregOptionCheck(rawSym);
-            let displaySymbol = isOptionSymbol ? rawSym.split(/\s+/)[0] : rawSym;
+            let isOptionSymbol = (ev.is_option === true) || (ev.event_type === 'OPTION') || pregOptionCheck(rawSym);
+            let displaySymbol = ev.display_symbol || (isOptionSymbol ? rawSym.split(/\s+/)[0] : rawSym);
 
             let descText = ev.description || ev.title || '';
             if (descText.startsWith('TRADE:') || descText.startsWith('DIVIDEND:') || descText.startsWith('OPTION:') || descText.startsWith('OPTION_PREMIUM:')) {
@@ -424,7 +442,7 @@
                     <td style="padding: 10px 8px; font-weight: 600; color: var(--muted); white-space: nowrap;">${ev.account_number || 'Account'}</td>
                     <td style="padding: 10px 8px; font-weight: 700; color: var(--text); white-space: nowrap;">
                         ${displaySymbol}
-                        ${isOptionSymbol || isOpt ? `<button onclick="toggleRowDetail('${rowId}')" style="background: none; border: none; color: var(--blue); cursor: pointer; padding: 0 4px; font-size: 10px; font-weight: 700;">▸ info</button>` : ''}
+                        ${isOptionSymbol || isOpt ? `<button onclick="toggleRowDetail('${rowId}')" style="background: none; border: none; color: var(--blue); cursor: pointer; padding: 0 4px; font-size: 10px; font-weight: 700; display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:12px;">info</span> info</button>` : ''}
                     </td>
                     <td style="padding: 10px 8px; text-align: center;">
                         ${descText ? `
@@ -455,7 +473,10 @@
     }
 
     function pregOptionCheck(sym) {
-        return /^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/.test(sym) || sym.includes('Call') || sym.includes('Put');
+        if (!sym) return false;
+        return /^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/.test(sym) 
+            || /\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d+(\.\d+)?\s+[CP]\b/i.test(sym)
+            || /\b(Call|Put)\b/i.test(sym);
     }
 
     function toggleRowDetail(id) {

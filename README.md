@@ -1,34 +1,55 @@
-# StockScreener & Capital Flywheel Compounding Hub
+# StockScreener and Capital Flywheel Compounding Hub
 
-An options analysis, compounding flywheel, and live multi-account portfolio tracker built on Symfony 7 and integrated with the Schwab API, Finnhub, and Google Gemini AI.
-
----
-
-## 📖 Table of Contents
-
-1. [Overview &amp; Industry Context](#-overview--industry-context)
-2. [Getting Started (Local Setup)](#-getting-started-local-setup)
-3. [System Architecture &amp; Multi-Broker Interface](#-system-architecture--multi-broker-interface)
-4. [Data Provenance &amp; Integration Flow](#-data-provenance--integration-flow)
-5. [Capital Flywheel Compounding Engine](#-capital-flywheel-compounding-engine)
-6. [Gemini AI Analysis &amp; Option Signals](#-gemini-ai-analysis--option-signals)
-7. [Security &amp; Strict Read-Only Guardrails](#-security--strict-read-only-guardrails)
-8. [Implementation Status (Completed vs. Mocked)](#-implementation-status-completed-vs-mocked)
+An options analysis, compounding flywheel, and live multi-account portfolio tracker built on Symfony 8.1 and integrated with Charles Schwab API, Finnhub, and multi-provider Large Language Models (Google Gemini, OpenAI, Anthropic Claude).
 
 ---
 
-## 🌟 Overview & Industry Context
+## Table of Contents
+
+1. [Overview and Industry Context](#overview-and-industry-context)
+2. [Design and Architecture Documentation](#design-and-architecture-documentation)
+3. [Getting Started (Local Setup)](#getting-started-local-setup)
+4. [System Architecture and Multi-Broker Interface](#system-architecture-and-multi-broker-interface)
+5. [Data Provenance and Integration Flow](#data-provenance-and-integration-flow)
+6. [Capital Flywheel Compounding Engine](#capital-flywheel-compounding-engine)
+7. [Tax Engine and Portfolio Performance Accounting](#tax-engine-and-portfolio-performance-accounting)
+8. [LLM AI Analysis and Option Signals](#llm-ai-analysis-and-option-signals)
+9. [Security and Strict Read-Only Guardrails](#security-and-strict-read-only-guardrails)
+10. [Signal Calculation Logic and Covered Call Rules](#signal-calculation-logic-and-covered-call-rules)
+11. [Configuration Parameters and System Impact](#configuration-parameters-and-system-impact)
+12. [Implementation Status (Completed vs. Mocked)](#implementation-status-completed-vs-mocked)
+
+---
+
+## Overview and Industry Context
 
 The **Capital Flywheel** is an options-based capital generation engine that compounds premium yields by systematically cycling between two primary cash-flow strategies:
 
-1. **Cash-Secured Puts (CSP):** Selling puts below the market price on high-conviction equities to collect upfront cash premium. If assigned, you acquire shares at a discount.
-2. **Covered Calls (CC):** Selling call options against your accumulated stock blocks. This generates ongoing cash premium. If called away, you lock in capital gains and redeploy the cash back into CSPs.
+1. **Cash-Secured Puts (CSP):** Selling puts below the market price on high-conviction equities to collect upfront cash premium. If assigned, shares are acquired at a net discount.
+2. **Covered Calls (CC):** Selling call options against accumulated stock blocks. This generates ongoing cash premium. If called away, capital gains are locked in and cash is redeployed back into CSPs.
 
-This application connects to **live brokerage account balances and positions**, aggregates forward-looking calendar cash releases, tracks historical transactions, and leverages **Google Gemini LLM** to analyze options chains and offer risk-adjusted trade suggestions.
+This application connects to **live brokerage account balances and positions**, aggregates forward-looking calendar cash releases, tracks historical transactions, calculates pre-tax and after-tax growth curves, and leverages **Large Language Models** to analyze options chains and offer risk-adjusted trade suggestions.
+
+For a detailed technical and algorithmic exploration of the strategy, refer to the [Capital Flywheel Engine Specification](doc/flywheel-engine.md).
 
 ---
 
-## 🚀 Getting Started (Local Setup)
+## Design and Architecture Documentation
+
+Detailed technical design documents covering all aspects of the system are available in the `doc/` directory:
+
+- [Design Documentation Hub](doc/README.md): Index and architectural component overview.
+- [System Architecture and High-Level Design](doc/architecture.md): Symfony 8.1 framework design, layered service architecture, and daemon execution.
+- [Capital Flywheel Compounding Engine](doc/flywheel-engine.md): Mathematical formulations, unencumbered share discovery, DTE targeting, and BTC early profit exit thresholds.
+- [Tax Engine and Portfolio Performance Accounting](doc/tax-engine.md): FIFO lot matching, holding period determination, taxable vs. retirement IRA classification, option premium tax realization, and pre-tax/after-tax growth curves relative to SPY.
+- [Broker Integrations and Data Ingestion Flow](doc/broker-integrations.md): Multi-broker adapter pattern, Schwab OAuth 2.0 flow, nickname resolution, and transaction deduplication.
+- [LLM Strategy Router and Signal Analysis](doc/llm-analysis.md): Multi-provider AI router, prompt engineering, and options chain evaluation.
+- [Database Schema and Persistent Caching](doc/database-caching.md): SQLite relational schema, Doctrine entity mappings, and multi-tier persistent caching.
+- [Security Architecture and Guardrails](doc/security-guardrails.md): Read-only design principles, token isolation, credential management, and PII masking.
+
+---
+
+## Getting Started (Local Setup)
 
 Follow these steps to run the application locally on macOS or Linux:
 
@@ -38,16 +59,16 @@ Follow these steps to run the application locally on macOS or Linux:
 - **Composer** (PHP dependency manager).
 - **Symfony CLI** (recommended for local web server).
 
-### 🛠 Technology Stack
+### Technology Stack
 
 - **Backend Framework:** Symfony 8.1
 - **Language Runtime:** PHP 8.4+
 - **Database Engine:** SQLite (Local storage file `var/data.db`)
-- **ORM / Database Migrations:** Doctrine ORM (v3.6) & Doctrine Migrations
+- **ORM / Database Migrations:** Doctrine ORM (v3.6) and Doctrine Migrations
 - **Template System:** Twig Templating Engine
-- **Frontend CSS/Layout:** Custom Vanilla CSS (Sleek dark theme, custom responsive grid layouts in `public/css/screener.css`)
+- **Frontend CSS / Layout:** Custom Vanilla CSS (Dark theme, responsive grid layouts in `public/css/screener.css`)
 - **Frontend Charting:** Chart.js (v4.4.1) via CDN
-- **Typography & Assets:** Google Fonts (Outfit, Inter) and Google Material Symbols Outlined icons
+- **Typography and Assets:** Google Fonts (Outfit, Inter) and Google Material Symbols Outlined icons
 
 ### 2. Installation Steps
 
@@ -58,13 +79,13 @@ Clone the repository and navigate to the project root directory:
 composer install
 
 # Set up local environment variables
-cp .env.local .env.local
+cp .env .env.local
 ```
 
-Open `.env.local` and review operational runtime configurations (e.g. the trading-enabled kill switch set to false). 
+Open `.env.local` and review operational runtime configurations (such as the trading-enabled kill switch).
 
 > [!NOTE]
-> All API credentials (Schwab Developer App Key/Secret, Finnhub API Key, Gemini API Key) are **not** stored in `.env.local`. They are configured securely via the Web Setup Wizard page (`/setup`) or the Settings page (`/settings`) during first-run and stored directly in the local SQLite database (`var/data.db`).
+> API credentials (Schwab Developer App Key/Secret, Finnhub API Key, LLM API Keys) are not stored in `.env.local`. They are configured securely via the Web Setup Wizard page (`/setup`) or the Settings page (`/settings`) during first-run and stored directly in the local SQLite database (`var/data.db`).
 
 ### 3. Initialize Local Database
 
@@ -86,51 +107,53 @@ Start the local web server using the Symfony CLI:
 symfony server:start -d
 ```
 
-Your local application will be available at **`https://127.0.0.1:8000`** with local TLS certificates.
+Your local application will be available at `https://127.0.0.1:8000` with local TLS certificates.
 
 ---
 
-## ⚙️ System Architecture & Multi-Broker Interface
+## System Architecture and Multi-Broker Interface
 
 The application utilizes a polymorphic, decoupled **Multi-Broker Interface** structured around [BrokerInterface](src/Broker/BrokerInterface.php). This design supports registering multiple distinct brokerage accounts side-by-side:
 
 ```
-                  ┌──────────────────────┐
-                  │ BrokerManagerService │
-                  └──────────┬───────────┘
-                             │
-            ┌────────────────┼────────────────┐
-            ▼                ▼                ▼
-   ┌─────────────────┐ ┌──────────────┐ ┌──────────────┐
-   │  SchwabBroker   │ │ AlpacaBroker │ │  IbkrBroker  │ ...
-   └─────────────────┘ └──────────────┘ └──────────────┘
+                  +----------------------+
+                  | BrokerManagerService |
+                  +----------+-----------+
+                             |
+            +----------------+----------------+
+            v                v                v
+    +-----------------+ +--------------+ +--------------+
+    |  SchwabBroker   | | AlpacaBroker | |  IbkrBroker  | ...
+    +-----------------+ +--------------+ +--------------+
 ```
 
 All broker adapters implement the same interface signature, ensuring the application core remains broker-agnostic:
 
-- **`getAccountPortfolio()`**: Fetches account balances, buying power, and active positions.
-- **`getAccountHistory(int $days, bool $forceRefresh)`**: Fetches settlement records and cash flow impacts.
-- **`getOptionChain(string $symbol, float $currentPrice)`**: Queries option strikes, bid/ask spreads, and open interest.
+- `getAccountPortfolio()`: Fetches account balances, buying power, and active positions.
+- `getAccountHistory(int $days, bool $forceRefresh)`: Fetches settlement records and cash flow impacts.
+- `getOptionChain(string $symbol, float $currentPrice)`: Queries option strikes, bid/ask spreads, and open interest.
+
+For full implementation details, see [Broker Integrations Documentation](doc/broker-integrations.md).
 
 ---
 
-## 📊 Data Provenance & Integration Flow
+## Data Provenance and Integration Flow
 
 The application pulls structural, market, and intelligence data from three distinct integration layers:
 
-| Data Layer                              | Integration Endpoint                  | Provider / Origin       | Details                                                                                                   |
-| :-------------------------------------- | :------------------------------------ | :---------------------- | :-------------------------------------------------------------------------------------------------------- |
-| **Brokerage Balance & Positions** | `GET /trader/v1/accounts`           | **Schwab API**    | Returns live balances, margins, positions, and average cost basis.                                        |
-| **Account Custom Nicknames**      | `GET /trader/v1/userPreference`     | **Schwab API**    | Queries nickname preferences to replace raw account numbers with labels (e.g.`V-Brokerage`, `V-HSA`). |
-| **Brokerage Account History**     | `GET /accounts/{hash}/transactions` | **Schwab API**    | Gathers trade execution logs, cash inflows, and fees.                                                     |
-| **Equity Price Quotes**           | `GET /api/v1/quote`                 | **Finnhub API**   | Fetches active real-time ticker prices.                                                                   |
-| **Company Payout Calendars**      | `GET /api/v1/stock/dividend2`       | **Finnhub API**   | Retrieves historical and upcoming cash dividend pay dates.                                                |
-| **Corporate Earnings**            | `GET /api/v1/calendar/earnings`     | **Finnhub API**   | Resolves corporate earnings announcement calendars.                                                       |
-| **AI Trade Reasoning**            | `POST /v1beta/models/gemini...`     | **Google Gemini** | Analyzes option chains to generate probability calculations and strike suggestions.                       |
+| Data Layer | Integration Endpoint | Provider / Origin | Details |
+| :--- | :--- | :--- | :--- |
+| **Brokerage Balance and Positions** | `GET /trader/v1/accounts` | **Schwab API** | Returns live balances, margins, positions, and average cost basis. |
+| **Account Custom Nicknames** | `GET /trader/v1/userPreference` | **Schwab API** | Queries nickname preferences to replace raw account numbers with labels (e.g., `V-Brokerage`, `V-HSA`). |
+| **Brokerage Account History** | `GET /accounts/{hash}/transactions` | **Schwab API** | Gathers trade execution logs, cash inflows, and fees. |
+| **Equity Price Quotes** | `GET /api/v1/quote` | **Finnhub API** | Fetches active real-time ticker prices. |
+| **Company Payout Calendars** | `GET /api/v1/stock/dividend2` | **Finnhub API** | Retrieves historical and upcoming cash dividend pay dates. |
+| **Corporate Earnings** | `GET /api/v1/calendar/earnings` | **Finnhub API** | Resolves corporate earnings announcement calendars. |
+| **AI Trade Reasoning** | `POST /v1beta/models/...` | **LLM Providers** | Analyzes option chains to generate probability calculations and strike suggestions. |
 
 ---
 
-## 🔄 Capital Flywheel Compounding Engine
+## Capital Flywheel Compounding Engine
 
 The **Flywheel Engine** matches live portfolio holdings against upcoming calendar event projections to generate covered call recommendations:
 
@@ -139,29 +162,51 @@ The **Flywheel Engine** matches live portfolio holdings against upcoming calenda
 3. **Running Cash Projections:** Integrates upcoming option contract expirations and estimated dividend payments to project cash releases.
 4. **Reinvestment Alerts:** Highlights date boundaries when cash collateral is released (e.g., call contract expiration) and prompts you to reinvest that cash immediately into high-yield CSPs.
 
+For full mathematical formulas and edge cases, see [Capital Flywheel Engine Specification](doc/flywheel-engine.md).
+
 ---
 
-## 🤖 Gemini AI Analysis & Option Signals
+## Tax Engine and Portfolio Performance Accounting
 
-The application leverages Google's Gemini models to act as an automated option strategist:
+The application includes an automated accounting subsystem implemented in [TaxEngine.php](src/Service/TaxEngine.php) and [PerformanceHistoryService.php](src/Service/PerformanceHistoryService.php) that computes capital gains, holding periods, and after-tax growth curves:
+
+1. **FIFO Lot Matching:** Chronologically pairs stock and ETF sell executions against purchase lots to calculate cost basis and net capital gain/loss.
+2. **Holding Term Classification:**
+   - **Short-Term (< 365 Days):** Taxed at the standard ordinary income / short-term capital gains rate (20% default).
+   - **Long-Term (≥ 365 Days):** Taxed at the preferential long-term capital gains rate (15% default).
+3. **Account Tax Status Separation:** Distinguishes between **Taxable Accounts** (where estimated tax liabilities are deducted) and **Tax-Advantaged Retirement Accounts** (IRA, Roth, PCRA, 401k, Rollover) where capital gains tax is 0%.
+4. **Option Premium Accounting:** Tracks written option premiums upon Sell-to-Open (STO), realizes gains/losses upon Buy-to-Close (BTC), and recognizes full premium realization upon expiration or assignment.
+5. **Growth Curves and SPY Benchmark Indexing:** Normalizes portfolio performance against starting equity and computes relative S&P 500 (SPY) benchmark growth across 1M, 3M, 6M, YTD, 1Y, and 2Y horizons.
+
+For full accounting rules, IRS option realization details, and data hygiene guardrails, see [Tax Engine Documentation](doc/tax-engine.md).
+
+---
+
+## LLM AI Analysis and Option Signals
+
+The application leverages Large Language Models (Google Gemini, Anthropic Claude, OpenAI) to act as an automated option strategist:
 
 - **Strike Price Optimizations:** Evaluates the delta, implied volatility (IV), and bid-ask spreads of the option chain.
-- **Support & Resistance Probability:** Analyzes raw stock trends, historical support thresholds, and estimated earnings impact.
+- **Support and Resistance Probability:** Analyzes raw stock trends, historical support thresholds, and estimated earnings impact.
 - **Prompt Structure:** The option chain is serialized into a condensed text representation alongside your cost basis. The model processes this data to compute a recommended strike price, expected yield, and safety cushion score.
+
+For prompt formats and provider routing, see [LLM Strategy Router Documentation](doc/llm-analysis.md).
 
 ---
 
-## 🔒 Security & Strict Read-Only Guardrails
+## Security and Strict Read-Only Guardrails
 
 To protect capital and comply with self-directed account safety rules, this project enforces **strict read-only guardrails**:
 
 1. **Write-Action Block:** By default, all code paths capable of placing trades or executing assignments are hard-blocked at the system layer unless trading is explicitly enabled in the environment variables.
-2. **Access Token Encapsulation:** Access tokens and refresh tokens are stored locally inside the sqlite cache. The frontend client never has direct access to the raw OAuth tokens; it communicates strictly via sanitized JSON APIs (`/api/broker/history/aggregated`, `/api/flywheel/calendar`).
+2. **Access Token Encapsulation:** Access tokens and refresh tokens are stored locally inside the SQLite database (`var/data.db`). The frontend client never has direct access to the raw OAuth tokens; it communicates strictly via sanitized JSON APIs (`/api/broker/history/aggregated`, `/api/flywheel/calendar`).
 3. **Non-PII Masking:** Account numbers are masked on-the-fly (`***3261`) before being returned by the controller.
+
+For full security specifications, see [Security Architecture and Guardrails](doc/security-guardrails.md).
 
 ---
 
-## 🧮 Signal Calculation Logic & Covered Call Rules
+## Signal Calculation Logic and Covered Call Rules
 
 The **Capital Flywheel Engine** evaluates signals and calculates covered call targets using quantitative rules defined in [FlywheelService.php](src/Service/FlywheelService.php):
 
@@ -174,17 +219,17 @@ The **Capital Flywheel Engine** evaluates signals and calculates covered call ta
    \text{Target Strike} \ge \text{Average Cost Basis} \times \text{Cost Basis Buffer}
    $$
 3. **Signal Classification:**
-   - **🟢 CALL:** Triggered when the AI conviction score is high ($\ge 70$) and projected target price upside is high ($>15.0\%$). Indicates long-term bullish holding.
-   - **🔴 PUT:** Triggered when stock score drops ($<45$) or upside is negative. Advises buying protective puts for hedging.
-   - **🟡 WHEEL:** Stable middle range. Recommends generating income by writing Cash-Secured Puts (CSP) or Covered Calls.
+   - **CALL:** Triggered when the AI conviction score is high ($\ge 70$) and projected target price upside is high ($>15.0\%$). Indicates long-term bullish holding.
+   - **PUT:** Triggered when stock score drops ($<45$) or upside is negative. Advises buying protective puts for hedging.
+   - **WHEEL:** Stable middle range. Recommends generating income by writing Cash-Secured Puts (CSP) or Covered Calls.
 
 ---
 
-## ⚙️ Configuration Parameters & System Impact
+## Configuration Parameters and System Impact
 
 System configurations are managed in [AppConfigService.php](src/Service/AppConfigService.php) and stored in SQLite. Here is what each setting controls:
 
-### Flywheel & Trade Parameters
+### Flywheel and Trade Parameters
 
 - **Covered Call Out-Of-The-Money Percentage** (default `0.06`): Selects option strikes that are 6% out-of-the-money, balancing yield vs. upside assignment risk.
 - **Covered Call Cost Basis Buffer** (default `1.02`): Demands a 2% buffer above stock purchase price, protecting your principal capital from being called away at a loss.
@@ -192,34 +237,29 @@ System configurations are managed in [AppConfigService.php](src/Service/AppConfi
 - **Covered Call Minimum Shares** (default `100`): Enforces a strict minimum of 100 shares for Covered Call writes (Option Level 1 compliance).
 - **Early Exit BTC Profit Threshold** (default `50.0`): Recommends a **Buy-To-Close (BTC)** order once 50% of the sold premium has decayed, locking in profits and freeing up collateral early.
 
-### Caching Layers & API Gating
+### Caching Layers and API Gating
 
-- **`cache.ttl.broker.portfolio` (default `60`):** Caches live portfolio balances for 1 minute to keep numbers active without hammering Schwab APIs.
+- **`cache.ttl.broker.portfolio` (default `60`):** Caches live portfolio balances for 1 minute to keep numbers active without excessive broker API requests.
 - **`cache.ttl.broker.history` (default `604800`):** Caches transaction aggregates for 7 days.
-- **`cache.ttl.finnhub.dividends` & `cache.ttl.finnhub.earnings` (default `604800`):** Caches corporate payout events and calendar releases for 7 days to avoid Finnhub rate-limiting errors.
-- **Once-a-Day Gated History:** History fetching is restricted to query external endpoints only once a day. Subsequent requests on the same day read directly from the persistent sqlite cache (`var/data.db`). Users can manually bypass this gate using the **Force Pull Latest** button in the UI.
+- **`cache.ttl.finnhub.dividends` and `cache.ttl.finnhub.earnings` (default `604800`):** Caches corporate payout events and calendar releases for 7 days to avoid Finnhub rate-limiting errors.
+- **Once-a-Day Gated History:** History fetching is restricted to query external endpoints only once a day. Subsequent requests on the same day read directly from the persistent SQLite cache (`var/data.db`). Users can manually bypass this gate using the **Force Pull Latest** button in the UI.
+
+For cache schema details, see [Database Schema and Persistent Caching](doc/database-caching.md).
 
 ---
 
-## 🔒 Security, Token Isolation & Credential Encryption
+## Implementation Status (Completed vs. Mocked)
 
-- **Database Configuration Storage:** Sensitive keys and OAuth credentials are stored in the SQLite database (`var/data.db`) rather than plain-text `.env` configuration files. The configuration service transparently detects and clears stale AES-GCM encrypted blobs left by previous versions of the application to facilitate clean re-configuration via the Setup Wizard.
-- **Token Isolation:** The frontend browser has zero access to OAuth tokens. Authentication refreshes are handled exclusively by backend services. The UI interacts with sanitized API payloads (`/api/broker/history/aggregated`) where account numbers are masked (`***3261`).
-- **Read-Only Kill Switch (with trading disabled):** Hardcoded safeguard that prevents any trade placement logic or cash movement from executing, locking the hub into a read-only portfolio analysis platform.
-
----
-
-## 📋 Implementation Status (Completed vs. Mocked)
-
-### ✅ Completed & Live Features
+### Completed and Live Features
 
 - **Schwab OAuth 2.0 Integration:** Full authentication flow, secure token refreshes, and `/accounts` fetching.
 - **Schwab Nicknames Resolution:** Dynamic lookup of nicknames from Schwab's `/userPreference` API.
-- **Persistent Transactions Cache:** Incremental merging of transactions into a local sqlite cache with an indefinite **1-year TTL** to bypass Schwab rate-limits.
+- **Persistent Transactions Cache:** Incremental merging of transactions into a local SQLite cache with an indefinite **1-year TTL** to bypass Schwab rate-limits.
 - **Gated Daily Refreshes:** Gated historical API query to run at most once a day, with a manual override `Force Pull Latest` UI button.
 - **Dynamic Chronological Calendar:** Filters option expirations, projected dividend cash flows, and transaction logs.
+- **Multi-Provider LLM Integration:** Pluggable AI engine supporting Google Gemini, OpenAI, and Anthropic Claude.
 
-### ⚠️ Simulated & Mocked Components
+### Simulated and Mocked Components
 
-- **Non-Schwab Broker APIs:** Alpaca, Robinhood, IBKR, and Tastytrade adapters return placeholder states (they implement [BrokerInterface](src/Broker/BrokerInterface.php) but do not execute live API requests).
-- **Order Execution:** Order routing and trade placement are entirely non-existent. The application is strictly a read-only advisor/screener and does not contain any code pathways or API connections to place trades or route orders.
+- **Non-Schwab Broker APIs:** Alpaca, Robinhood, IBKR, E*TRADE, and Tastytrade adapters provide interface stubs (they implement [BrokerInterface](src/Broker/BrokerInterface.php) and return mock structures when active broker is switched).
+- **Order Execution:** Order routing and trade placement are entirely non-existent. The application is strictly a read-only advisor and screener and does not contain code pathways to place live orders.

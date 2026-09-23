@@ -1,0 +1,18 @@
+/* ==========================================================================
+   SETUP WIZARD STYLESHEET
+   (Inherits inputs, key fields, and pill buttons from screener.css)
+   ========================================================================== */
+
+.broker-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.broker-card.active {
+    border-color: var(--blue);
+    background: rgba(2,132,199,0.08);
+    box-shadow: 0 0 12px rgba(2,132,199,0.25);
+}

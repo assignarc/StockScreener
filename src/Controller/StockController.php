@@ -14,9 +14,25 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
+/**
+ * StockController
+ *
+ * REST API controller for stock screener query filtering, CRUD operations on tracked stocks,
+ * watchlist toggling, automated stock metric suggestions, and live quote retrieval.
+ */
 #[Route('/api', name: 'api_')]
 class StockController extends AbstractController
 {
+    /**
+     * Initializes the stock controller.
+     *
+     * @param StockRepository        $stockRepository     Stock repository.
+     * @param WatchlistRepository    $watchlistRepository Watchlist repository.
+     * @param FinnhubService         $finnhubService      Finnhub market data service.
+     * @param FlywheelService        $flywheelService     Capital flywheel signal service.
+     * @param AppConfigService       $appConfig           Application configuration service.
+     * @param EntityManagerInterface $entityManager       Doctrine entity manager.
+     */
     public function __construct(
         private StockRepository $stockRepository,
         private WatchlistRepository $watchlistRepository,
@@ -25,6 +41,13 @@ class StockController extends AbstractController
         private AppConfigService $appConfig,
         private EntityManagerInterface $entityManager,
     ) {}
+
+    /**
+     * Returns a list of screened stocks based on sector, risk, asset type, and search query filters.
+     *
+     * @param Request $request HTTP request containing query filters.
+     * @return JsonResponse List of filtered stocks with flywheel signals.
+     */
     #[Route('/stocks', name: 'stocks_list', methods: ['GET'])]
     public function listStocks(Request $request): JsonResponse
     {
@@ -50,6 +73,12 @@ class StockController extends AbstractController
         ]);
     }
 
+    /**
+     * Adds or updates a stock in the tracked screener database.
+     *
+     * @param Request $request HTTP request containing stock attributes.
+     * @return JsonResponse Created or updated stock payload.
+     */
     #[Route('/stocks/add', name: 'stocks_add', methods: ['POST'])]
     public function addStock(Request $request): JsonResponse
     {
@@ -89,6 +118,12 @@ class StockController extends AbstractController
         ]);
     }
 
+    /**
+     * Deletes a tracked stock from the screener database by ID.
+     *
+     * @param int $id Primary key ID of the stock.
+     * @return JsonResponse Confirmation response.
+     */
     #[Route('/stocks/{id}', name: 'stocks_delete', methods: ['DELETE'])]
     public function deleteStock(int $id): JsonResponse
     {
@@ -107,6 +142,12 @@ class StockController extends AbstractController
         ]);
     }
 
+    /**
+     * Auto-populates screener fields for a ticker by querying live Finnhub profile and quote APIs.
+     *
+     * @param string $symbol Target ticker symbol.
+     * @return JsonResponse Suggested company profile and metrics payload.
+     */
     #[Route('/stocks/suggest/{symbol}', name: 'stocks_suggest', methods: ['GET'])]
     public function suggestStock(string $symbol): JsonResponse
     {
@@ -151,6 +192,12 @@ class StockController extends AbstractController
         ]);
     }
 
+    /**
+     * Toggles a stock symbol on or off the user's quick-access watchlist.
+     *
+     * @param Request $request HTTP request containing ticker symbol.
+     * @return JsonResponse JSON confirmation of added or removed status.
+     */
     #[Route('/watchlist', name: 'watchlist_toggle', methods: ['POST'])]
     public function toggleWatchlist(Request $request): JsonResponse
     {
@@ -176,6 +223,13 @@ class StockController extends AbstractController
         return $this->json(['status' => 'added', 'symbol' => $symbol]);
     }
 
+    /**
+     * Retrieves a live market quote for a given stock symbol.
+     *
+     * @param string  $symbol  Stock ticker symbol.
+     * @param Request $request HTTP request with optional override token.
+     * @return JsonResponse Live market quote payload.
+     */
     #[Route('/quote/{symbol}', name: 'quote', methods: ['GET'])]
     public function getQuote(string $symbol, Request $request): JsonResponse
     {

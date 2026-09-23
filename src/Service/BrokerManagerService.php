@@ -13,11 +13,27 @@ use App\Broker\TastytradeBroker;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class BrokerManagerService
+ *
+ * Orchestrates multi-broker instances, resolves polymorphic adapters, aggregates
+ * multi-account portfolios, computes unencumbered share blocks for options trading,
+ * and harmonizes transaction history feeds.
+ *
+ * Design Reference: doc/broker-integrations.md
+ */
 class BrokerManagerService
 {
-    /** @var array<string, BrokerInterface> */
+    /** @var array<string, BrokerInterface> Map of initialized broker adapter instances */
     private array $brokers = [];
 
+    /**
+     * @param AppConfigService $appConfig Configuration service.
+     * @param PersistentCacheService $cache Persistent caching service.
+     * @param HttpClientInterface $httpClient External HTTP client.
+     * @param LoggerInterface $logger Application logger.
+     * @param \Doctrine\DBAL\Connection|null $connection Database connection for local portfolio events.
+     */
     public function __construct(
         private AppConfigService $appConfig,
         private PersistentCacheService $cache,
@@ -28,6 +44,9 @@ class BrokerManagerService
         $this->initializeBrokers();
     }
 
+    /**
+     * Initialize broker instances from configuration.
+     */
     private function initializeBrokers(): void
     {
         $instances = $this->appConfig->getBrokerInstances();
@@ -107,6 +126,12 @@ class BrokerManagerService
         }
     }
 
+    /**
+     * Retrieve a broker adapter by instance identifier or type slug.
+     *
+     * @param string $id Broker ID or type slug.
+     * @return BrokerInterface|null Broker adapter instance or null.
+     */
     public function getBroker(string $id): ?BrokerInterface
     {
         if (isset($this->brokers[$id])) {
@@ -121,13 +146,21 @@ class BrokerManagerService
     }
 
     /**
-     * @return array<string, BrokerInterface>
+     * Get all registered broker adapter instances.
+     *
+     * @return array<string, BrokerInterface> Associative map of broker instances.
      */
     public function getBrokers(): array
     {
         return $this->brokers;
     }
 
+    /**
+     * Aggregate portfolio balances, liquidation values, equity positions, and calculate
+     * unencumbered share blocks across all registered and authorized brokers.
+     *
+     * @return array Standardized aggregated portfolio response.
+     */
     public function getAggregatedPortfolio(): array
     {
         $allPositions = [];
@@ -185,8 +218,9 @@ class BrokerManagerService
                     }
 
                     foreach ($accPositions as $posItem) {
-                        $symbol = $posItem['symbol'] ?? 'UNKNOWN';
+                        $rawSym = $posItem['symbol'] ?? 'UNKNOWN';
                         $assetType = $posItem['asset_type'] ?? $posItem['assetType'] ?? 'EQUITY';
+                        $symbol = $assetType === 'OPTION' ? TaxEngine::normalizeOptionSymbol($rawSym) : TaxEngine::normalizeSymbol($rawSym);
                         $qty = (float) ($posItem['quantity'] ?? 0.0);
                         $mktVal = (float) ($posItem['market_value'] ?? $posItem['marketValue'] ?? 0.0);
                         $costBasis = (float) ($posItem['cost_basis'] ?? $posItem['averagePrice'] ?? 0.0);
@@ -329,11 +363,13 @@ class BrokerManagerService
         // --- EXTRACT OPTIONS & PLEDGED SHARES LINKED TO STOCKS ---
         $optionsMap = [];
         $accountOptionPledges = [];
+        $accountOptions = [];
 
         foreach ($equityMap as $symbol => $e) {
             if ($e['assetType'] === 'OPTION') {
-                // Parse underlying ticker symbol from standard OCC string: e.g. "NVDA 260807C00215000" -> "NVDA"
-                if (preg_match('/^([A-Z0-9]+)\s*(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/', $symbol, $match)) {
+                $normSym = TaxEngine::normalizeOptionSymbol($symbol);
+                // Parse underlying ticker symbol from OCC string: e.g. "NVDA 260807C00215000" -> "NVDA"
+                if (preg_match('/^([A-Z0-9]+)\s*(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/', $normSym, $match)) {
                     $root = $match[1];
                     $yy = $match[2];
                     $mm = $match[3];
@@ -344,14 +380,15 @@ class BrokerManagerService
 
                     $contractCount = max(1, (int) abs($e['totalQuantity']));
                     $pledgedShares = $type === 'Call' ? ($contractCount * 100) : 0;
+                    $cashCollateral = $type === 'Put' ? ($contractCount * 100 * $strike) : 0.0;
 
-                    if (!isset($optionsMap[$root])) {
-                        $optionsMap[$root] = [];
-                    }
+                    $readableSym = TaxEngine::formatOptionReadable($normSym);
+                    $strikeStr = number_format($strike, 2);
+                    $cashStr = number_format($cashCollateral, 2);
 
                     $status = $type === 'Call'
-                        ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> COVERED CALL ACTIVE — {$pledgedShares} Shares Pledged ({$contractCount} Contracts, Strike: \${$strike}, Exp: {$dateStr})"
-                        : "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">shield</span> CASH-SECURED PUT ACTIVE — ({$contractCount} Contracts, Strike: \${$strike}, Exp: {$dateStr})";
+                        ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> COVERED CALL ACTIVE — {$pledgedShares} Shares Pledged ({$contractCount} Contracts, Strike: \${$strikeStr}, Exp: {$dateStr})"
+                        : "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">shield</span> CASH-SECURED PUT ACTIVE — \${$cashStr} Cash Collateral ({$contractCount} Contracts, Strike: \${$strikeStr}, Exp: {$dateStr})";
 
                     $optAccounts = [];
                     foreach ($e['accounts'] as $optAcc) {
@@ -362,27 +399,82 @@ class BrokerManagerService
                         ];
                     }
 
-                    $optionsMap[$root][] = [
-                        'symbol' => $symbol,
+                    $optItem = [
+                        'symbol' => $normSym,
+                        'rawSymbol' => $symbol,
+                        'readableSymbol' => $readableSym,
                         'type' => $type,
                         'strike' => $strike,
+                        'strikeStr' => $strikeStr,
                         'expiration' => $dateStr,
                         'contracts' => $contractCount,
                         'marketValue' => round($e['totalMarketValue'], 2),
                         'unrealizedPL' => round($e['totalUnrealizedPL'], 2),
                         'pledgedShares' => $pledgedShares,
+                        'cashCollateral' => $cashCollateral,
+                        'cashCollateralStr' => $cashStr,
                         'status' => $status,
                         'accounts' => $optAccounts,
                     ];
 
-                    if ($type === 'Call') {
-                        foreach ($e['accounts'] as $optAcc) {
-                            $accNum = $optAcc['accountNumber'];
+                    if (!isset($optionsMap[$root])) {
+                        $optionsMap[$root] = [];
+                    }
+                    $optionsMap[$root][] = $optItem;
+
+                    // Map options directly to their owning accounts
+                    foreach ($e['accounts'] as $optAcc) {
+                        $accNum = $optAcc['accountNumber'];
+                        if (!isset($accountOptions[$root][$accNum])) {
+                            $accountOptions[$root][$accNum] = [];
+                        }
+                        $accountOptions[$root][$accNum][] = $optItem;
+
+                        if ($type === 'Call') {
                             if (!isset($accountOptionPledges[$root][$accNum])) {
                                 $accountOptionPledges[$root][$accNum] = 0;
                             }
                             $accountOptionPledges[$root][$accNum] += (abs($optAcc['quantity']) * 100);
                         }
+                    }
+                }
+            }
+        }
+
+        // Ensure every root stock with options exists in $equityMap, and all accounts holding options exist in $equityMap[$root]['accounts']
+        foreach ($optionsMap as $root => $opts) {
+            if (!isset($equityMap[$root])) {
+                $equityMap[$root] = [
+                    'symbol' => $root,
+                    'assetType' => 'EQUITY',
+                    'totalQuantity' => 0.0,
+                    'totalCostBasis' => 0.0,
+                    'totalMarketValue' => 0.0,
+                    'totalUnrealizedPL' => 0.0,
+                    'accountCount' => 0,
+                    'accounts' => [],
+                ];
+            }
+            foreach ($opts as $optItem) {
+                foreach ($optItem['accounts'] as $optAcc) {
+                    $found = false;
+                    foreach ($equityMap[$root]['accounts'] as &$accRef) {
+                        if ($accRef['accountNumber'] === $optAcc['accountNumber']) {
+                            $found = true;
+                            break;
+                        }
+                    }
+                    unset($accRef);
+                    if (!$found) {
+                        $equityMap[$root]['accounts'][] = [
+                            'accountNumber' => $optAcc['accountNumber'],
+                            'nickname' => $optAcc['nickname'] ?? '',
+                            'type' => 'MARGIN',
+                            'quantity' => 0.0,
+                            'marketValue' => 0.0,
+                            'averagePrice' => 0.0,
+                        ];
+                        $equityMap[$root]['accountCount']++;
                     }
                 }
             }
@@ -400,12 +492,22 @@ class BrokerManagerService
 
                 $linkedOpts = $optionsMap[$symbol] ?? [];
                 $pledgedShares = 0;
+                $callCount = 0;
+                $putCount = 0;
+                $tickerCashCollateral = 0.0;
+
                 foreach ($linkedOpts as $opt) {
-                    $pledgedShares += $opt['pledgedShares'];
+                    if ($opt['type'] === 'Call') {
+                        $pledgedShares += $opt['pledgedShares'];
+                        $callCount++;
+                    } else {
+                        $putCount++;
+                        $tickerCashCollateral += $opt['cashCollateral'];
+                    }
                 }
 
                 $availableShares = max(0.0, $qty - $pledgedShares);
-                $isFullyCovered = count($linkedOpts) > 0 && $availableShares <= 0;
+                $isFullyCovered = $callCount > 0 && $availableShares <= 0;
 
                 // Account breakdown
                 $accountBreakdown = [];
@@ -418,7 +520,29 @@ class BrokerManagerService
                     $canUseForCalls = $accAvail >= 100;
                     $eligibleContracts = floor($accAvail / 100);
 
-                    if ($accPledged > 0 && $accAvail == 0) {
+                    $accLinkedOpts = $accountOptions[$symbol][$accNum] ?? [];
+                    $hasAccCalls = false;
+                    $hasAccPuts = false;
+                    $accCashCollateral = 0.0;
+                    foreach ($accLinkedOpts as $alo) {
+                        if ($alo['type'] === 'Call') {
+                            $hasAccCalls = true;
+                        } else {
+                            $hasAccPuts = true;
+                            $accCashCollateral += $alo['cashCollateral'];
+                        }
+                    }
+
+                    if ($accQty == 0 && count($accLinkedOpts) > 0) {
+                        if ($hasAccPuts) {
+                            $cStr = number_format($accCashCollateral, 2);
+                            $badge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--blue);\">shield</span> 0 Shares Held (Cash-Secured Put Active — \${$cStr} Cash Collateral)";
+                            $badgeClass = "b";
+                        } else {
+                            $badge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> 0 Shares Held (Option Active)";
+                            $badgeClass = "m";
+                        }
+                    } elseif ($accPledged > 0 && $accAvail == 0) {
                         $badge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> 0 Available (100% Pledged to Covered Calls)";
                         $badgeClass = "r";
                     } elseif ($accAvail < 100) {
@@ -441,7 +565,28 @@ class BrokerManagerService
                         'eligibleContracts' => $eligibleContracts,
                         'statusBadge' => $badge,
                         'badgeClass' => $badgeClass,
+                        'linkedOptions' => $accLinkedOpts,
                     ];
+                }
+
+                // Top-level status badge
+                if ($callCount > 0 && $isFullyCovered) {
+                    $topStatusBadge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> COVERED CALL ACTIVE (100% Shares Pledged — 0 Available for new Calls)";
+                } elseif ($callCount > 0 && $availableShares < 100) {
+                    $topStatusBadge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);\">warning</span> COVERED CALL ACTIVE ({$pledgedShares} Pledged — {$availableShares} Shares Available, < 100)";
+                } elseif ($callCount > 0) {
+                    $topStatusBadge = "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--green);\">check_circle</span> COVERED CALL ACTIVE ({$pledgedShares} Pledged — {$availableShares} Available for new Calls)";
+                } elseif ($putCount > 0) {
+                    $cStr = number_format($tickerCashCollateral, 2);
+                    if ($availableShares >= 100) {
+                        $topStatusBadge = "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--green);\">check_circle</span> UNENCUMBERED SHARES ({$availableShares} Shares Available for Calls) + CSP ACTIVE (\${$cStr} Cash)";
+                    } else {
+                        $topStatusBadge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--blue);\">shield</span> CASH-SECURED PUT ACTIVE (\${$cStr} Cash Collateral)";
+                    }
+                } elseif ($availableShares < 100) {
+                    $topStatusBadge = "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);\">warning</span> {$availableShares} Shares Available (< 100 shares — CANNOT be used for Call options)";
+                } else {
+                    $topStatusBadge = "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--green);\">check_circle</span> UNENCUMBERED ({$availableShares} Shares Available for Covered Calls)";
                 }
 
                 $aggregatedEquities[] = [
@@ -455,20 +600,15 @@ class BrokerManagerService
                     'allocationPct' => $totalPortfolioVal > 0 ? round(($mkt / $totalPortfolioVal) * 100, 1) : 0.0,
                     'accountCount' => $e['accountCount'],
                     'linkedOptions' => $linkedOpts,
+                    'callCount' => $callCount,
+                    'putCount' => $putCount,
+                    'cashCollateral' => $tickerCashCollateral,
                     'pledgedShares' => $pledgedShares,
                     'availableShares' => round($availableShares, 4),
                     'isFullyCovered' => $isFullyCovered,
                     'accountBreakdown' => $accountBreakdown,
                     'canUseForCalls' => $availableShares >= 100,
-                    'statusBadge' => count($linkedOpts) > 0 
-                        ? ($isFullyCovered 
-                            ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> COVERED CALL ACTIVE (100% Shares Pledged — 0 Available for new Calls)" 
-                            : ($availableShares < 100 
-                                ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);\">warning</span> {$availableShares} Shares Available (< 100 shares — CANNOT be used for Call options)" 
-                                : "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--green);\">check_circle</span> COVERED CALL ACTIVE ({$pledgedShares} Pledged — {$availableShares} Available for new Calls)"))
-                        : ($availableShares < 100 
-                            ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);\">warning</span> {$availableShares} Shares Available (< 100 shares — CANNOT be used for Call options)" 
-                            : "<span class=\"material-symbols-outlined\" style=\"font-size:12px;vertical-align:middle;color:var(--green);\">check_circle</span> UNENCUMBERED ({$availableShares} Shares Available for Covered Calls)"),
+                    'statusBadge' => $topStatusBadge,
                 ];
             }
         }
@@ -515,22 +655,51 @@ class BrokerManagerService
 
     /**
      * Aggregates history across all active brokers and local imported portfolio events.
+     * Real-time API calls always take authoritative precedence over cached/CSV records.
+     *
+     * @param int $days Historical window in calendar days.
+     * @param bool $forceRefresh When true, bypasses daily cache gate.
+     * @return array List of normalized transaction records sorted chronologically descending.
      */
     public function getAggregatedHistory(int $days = 30, bool $forceRefresh = false): array
     {
         $allHistory = [];
-        $existingKeys = [];
+        $apiDedupeIndex = [];
 
+        // Helper to normalize stock and option symbology
+        $normalizeSym = function(string $s): string {
+            return TaxEngine::normalizeSymbol($s);
+        };
+
+        // 1. Fetch live broker history (authoritative source of truth)
         foreach ($this->brokers as $broker) {
             $h = $broker->getAccountHistory($days, $forceRefresh);
             foreach ($h as $item) {
+                $date = $item['date'] ?? '';
+                $sym = strtoupper(trim($item['symbol'] ?? ''));
+                $normSym = $normalizeSym($sym);
+
+                // Format options to readable and equities to standard tickers
+                if (TaxEngine::isOptionSymbol($sym)) {
+                    $item['symbol'] = TaxEngine::formatOptionReadable($normSym);
+                    $item['raw_symbol'] = $normSym;
+                } else {
+                    $item['symbol'] = $normSym;
+                }
+
                 $allHistory[] = $item;
-                $key = ($item['date'] ?? '') . '_' . ($item['symbol'] ?? '') . '_' . round((float)($item['amount'] ?? 0), 2);
-                $existingKeys[$key] = true;
+                $amt = round((float)($item['amount'] ?? 0), 2);
+                $acc = strtoupper(trim($item['account_nickname'] ?? $item['account_number'] ?? ''));
+
+                // Index by raw symbol, normalized symbol, and amount
+                $apiDedupeIndex["{$date}_{$sym}_{$amt}_{$acc}"] = true;
+                $apiDedupeIndex["{$date}_{$sym}_{$amt}"] = true;
+                $apiDedupeIndex["{$date}_{$normSym}_{$amt}_{$acc}"] = true;
+                $apiDedupeIndex["{$date}_{$normSym}_{$amt}"] = true;
             }
         }
 
-        // Merge locally imported CSV portfolio events from DB
+        // 2. Merge locally imported CSV portfolio events from DB (fallback for historical periods not returned by API)
         if ($this->connection) {
             try {
                 $limitDate = (new \DateTimeImmutable("-{$days} days"))->format('Y-m-d');
@@ -539,41 +708,67 @@ class BrokerManagerService
                     ['limitDate' => $limitDate]
                 );
 
+                $dbDedupeIndex = [];
                 foreach ($rows as $r) {
-                    $key = ($r['date'] ?? '') . '_' . ($r['symbol'] ?? '') . '_' . round((float)($r['amount'] ?? 0), 2);
-                    if (!isset($existingKeys[$key])) {
-                        $desc = $r['description'] ?? $r['title'] ?? '';
-                        $action = strtoupper($r['action'] ?? '');
-                        $qty = (float) ($r['quantity'] ?? 0.0);
-                        $price = (float) ($r['price'] ?? 0.0);
-                        $amount = (float) ($r['amount'] ?? 0.0);
-                        
-                        // For Sell actions, qty should be negative for FIFO matching in TaxEngine
-                        $isSell = (str_contains($action, 'SELL') || str_contains(strtoupper($desc), 'SELL'));
-                        if ($isSell && $qty > 0) {
-                            $qty = -$qty;
-                        }
+                    $date = $r['date'] ?? '';
+                    $sym = strtoupper(trim($r['symbol'] ?? ''));
+                    $normSym = $normalizeSym($sym);
+                    $amt = round((float)($r['amount'] ?? 0), 2);
+                    $acc = strtoupper(trim($r['account_number'] ?? ''));
 
-                        $allHistory[] = [
-                            'id' => 'db_' . md5($key . $desc),
-                            'date' => $r['date'],
-                            'type' => $r['type'] === 'EQUITY' ? 'TRADE' : $r['type'],
-                            'symbol' => $r['symbol'],
-                            'amount' => $amount,
-                            'fees' => (float) ($r['fees'] ?? 0.0),
-                            'description' => $desc,
-                            'account_number' => $r['account_number'] ?? 'V-Brokerage',
-                            'transfer_items' => [
-                                [
-                                    'symbol' => $r['symbol'],
-                                    'amount' => $qty, // Share quantity (negative for sell, positive for buy)
-                                    'price' => $price > 0 ? $price : abs($amount),
-                                    'asset_type' => $r['type'] === 'OPTION' ? 'OPTION' : 'EQUITY',
-                                    'cost' => (float) ($r['cost_basis'] ?? 0.0),
-                                ]
-                            ]
-                        ];
+                    // If a live API transaction already exists for this date, symbol, and amount, API overwrites/takes precedence
+                    if (
+                        isset($apiDedupeIndex["{$date}_{$sym}_{$amt}_{$acc}"]) 
+                        || isset($apiDedupeIndex["{$date}_{$sym}_{$amt}"])
+                        || isset($apiDedupeIndex["{$date}_{$normSym}_{$amt}_{$acc}"])
+                        || isset($apiDedupeIndex["{$date}_{$normSym}_{$amt}"])
+                    ) {
+                        continue;
                     }
+
+                    // Also deduplicate duplicate rows within the database itself (e.g. OCC vs Human readable imported rows)
+                    $dbKey = "{$date}_{$normSym}_{$amt}_{$acc}";
+                    if (isset($dbDedupeIndex[$dbKey])) {
+                        continue;
+                    }
+                    $dbDedupeIndex[$dbKey] = true;
+
+                    $desc = $r['description'] ?? $r['title'] ?? '';
+                    $action = strtoupper($r['action'] ?? '');
+                    $qty = (float) ($r['quantity'] ?? 0.0);
+                    $price = (float) ($r['price'] ?? 0.0);
+                    $amount = (float) ($r['amount'] ?? 0.0);
+                    
+                    // For Sell actions, qty should be negative for FIFO matching in TaxEngine
+                    $isSell = (str_contains($action, 'SELL') || str_contains(strtoupper($desc), 'SELL'));
+                    if ($isSell && $qty > 0) {
+                        $qty = -$qty;
+                    }
+
+                    $isJournal = in_array($action, ['JOURNAL', 'TRANSFER', 'SECURITY TRANSFER', 'SYSTEM TRANSFER']);
+                    $txType = $isJournal ? 'JOURNAL' : ($r['type'] === 'EQUITY' ? 'TRADE' : $r['type']);
+
+                    $allHistory[] = [
+                        'id' => 'db_' . md5("{$date}_{$sym}_{$amt}_{$acc}_" . $desc),
+                        'date' => $r['date'],
+                        'type' => $txType,
+                        'action' => $action,
+                        'symbol' => $r['symbol'],
+                        'amount' => $amount,
+                        'fees' => (float) ($r['fees'] ?? 0.0),
+                        'description' => $desc,
+                        'account_number' => $r['account_number'] ?? 'V-Brokerage',
+                        'account_nickname' => $r['account_number'] ?? 'V-Brokerage',
+                        'transfer_items' => [
+                            [
+                                'symbol' => $r['symbol'],
+                                'amount' => $qty,
+                                'price' => $price > 0 ? $price : abs($amount),
+                                'asset_type' => $r['type'] === 'OPTION' ? 'OPTION' : 'EQUITY',
+                                'cost' => (float) ($r['cost_basis'] ?? 0.0),
+                            ]
+                        ]
+                    ];
                 }
             } catch (\Throwable $e) {
                 $this->logger->warning('BrokerManagerService DB events merge error: ' . $e->getMessage());
@@ -585,11 +780,171 @@ class BrokerManagerService
             return strcmp($b['date'] ?? '', $a['date'] ?? '');
         });
 
-        return $allHistory;
+        // 3. Normalize all history records through the single canonical transaction pipeline
+        $normalizedHistory = [];
+        foreach ($allHistory as $item) {
+            $normalizedHistory[] = self::normalizeTransaction($item);
+        }
+
+        return $normalizedHistory;
+    }
+
+    /**
+     * Canonical transaction normalization pipeline.
+     * Enriches transactions with standard category, symbols, formatted descriptions, and account classifications.
+     *
+     * @param array $tx Raw or semi-sanitized transaction array.
+     * @return array Fully normalized canonical transaction.
+     */
+    public static function normalizeTransaction(array $tx): array
+    {
+        $rawType  = strtoupper(trim((string)($tx['type'] ?? '')));
+        $rawSym   = trim((string)($tx['symbol'] ?? ''));
+        $rawDesc  = trim((string)($tx['description'] ?? ''));
+        $action   = strtoupper(trim((string)($tx['action'] ?? '')));
+        $amt      = (float) ($tx['amount'] ?? 0.0);
+        $fees     = (float) ($tx['fees'] ?? 0.0);
+
+        // Analyze transfer items
+        $transferItems = $tx['transfer_items'] ?? [];
+        $hasOptionItem = false;
+        $mainItem      = null;
+
+        if (is_array($transferItems)) {
+            foreach ($transferItems as $it) {
+                $itemAssetType = strtoupper(trim((string)($it['asset_type'] ?? '')));
+                if ($itemAssetType === 'OPTION') {
+                    $hasOptionItem = true;
+                }
+                if ($mainItem === null && in_array($itemAssetType, ['OPTION', 'EQUITY'])) {
+                    $mainItem = $it;
+                }
+            }
+            if ($mainItem === null && !empty($transferItems)) {
+                $mainItem = $transferItems[0];
+            }
+        }
+
+        // Determine if this is an option transaction
+        $itemDesc = $mainItem ? trim((string)($mainItem['description'] ?? '')) : '';
+        $itemSym  = $mainItem ? trim((string)($mainItem['symbol'] ?? '')) : '';
+
+        $isOption = $hasOptionItem
+            || $rawType === 'OPTION'
+            || str_contains($rawType, 'OPTION')
+            || TaxEngine::isOptionSymbol($rawSym, $rawDesc)
+            || ($itemSym && TaxEngine::isOptionSymbol($itemSym, $itemDesc))
+            || ($itemDesc && TaxEngine::isOptionSymbol('', $itemDesc))
+            || preg_match('/\b(CALL|PUT)\b/i', $rawDesc)
+            || preg_match('/\b(CALL|PUT)\b/i', $itemDesc);
+
+        // Guard against bond redemption or CD interest being mistaken for options
+        $isBondOrCd = str_contains($rawDesc, '**CALLED**') 
+            || str_contains($rawDesc, 'BOND INTEREST') 
+            || str_contains($rawDesc, 'CD INTEREST') 
+            || str_contains($rawDesc, '%CD')
+            || str_contains($itemDesc, '**CALLED**')
+            || str_contains($itemDesc, 'BOND INTEREST');
+
+        if ($isBondOrCd) {
+            $isOption = false;
+        }
+
+        $upperSym  = strtoupper($rawSym);
+        $upperDesc = strtoupper($rawDesc);
+
+        // Assign canonical category
+        if ($isOption) {
+            $category = 'OPTION';
+        } elseif ($rawType === 'DIVIDEND' || str_contains($rawType, 'DIV') || str_contains($action, 'DIVIDEND') || str_contains($upperDesc, 'DIVIDEND')) {
+            if ($upperSym === 'INT' || str_contains($upperDesc, 'BANK INT') || str_contains($upperDesc, 'SCHWAB1 INT') || str_contains($upperDesc, 'CREDIT INT') || str_contains($upperDesc, 'INTEREST')) {
+                $category = 'INTEREST';
+            } else {
+                $category = 'DIVIDEND';
+            }
+        } elseif ($rawType === 'INTEREST' || str_contains($rawType, 'INTEREST') || $upperSym === 'INT' || str_contains($upperDesc, 'INTEREST')) {
+            $category = 'INTEREST';
+        } elseif ($rawType === 'FEE' || str_contains($rawType, 'FEE') || $upperSym === 'SEC' || str_contains($upperDesc, 'FEE') || str_contains($action, 'FEE')) {
+            $category = 'FEE';
+        } elseif ($rawType === 'JOURNAL' || str_contains($rawType, 'JOURNAL') || str_contains($rawType, 'TRANSFER') || str_contains($upperDesc, 'TRANSFER') || str_contains($upperDesc, 'JOURNAL') || str_contains($action, 'JOURNAL') || str_contains($action, 'TRANSFER')) {
+            $category = 'JOURNAL';
+        } elseif ($rawType === 'TRADE' || str_contains($rawType, 'TRADE') || str_contains($action, 'BUY') || str_contains($action, 'SELL')) {
+            $category = 'TRADE';
+        } else {
+            $category = 'OTHER';
+        }
+
+        // Canonical and Display Symbols
+        $effectiveSym = ($rawSym && $rawSym !== 'CURRENCY_USD') ? $rawSym : ($itemSym ?: $rawSym);
+        $canonicalSymbol = TaxEngine::normalizeSymbol($effectiveSym);
+
+        if ($isOption) {
+            $displaySymbol = TaxEngine::formatOptionReadable($canonicalSymbol);
+            $underlyingSymbol = '';
+            if (preg_match('/^([A-Z0-9]+)\s+/i', $canonicalSymbol, $m)) {
+                $underlyingSymbol = strtoupper($m[1]);
+            }
+        } else {
+            $displaySymbol = $canonicalSymbol;
+            $underlyingSymbol = $canonicalSymbol;
+        }
+
+        // Display descriptions
+        $mainDesc = $rawDesc;
+        $detailParts = [];
+
+        if ($mainItem) {
+            $cleanItemDesc = trim((string)($mainItem['description'] ?? ''));
+            if ($cleanItemDesc && $cleanItemDesc !== 'USD currency' && $cleanItemDesc !== $mainDesc) {
+                if (!$mainDesc || $mainDesc === 'USD currency') {
+                    $mainDesc = $cleanItemDesc;
+                } else {
+                    $detailParts[] = $cleanItemDesc;
+                }
+            }
+            if (!empty($mainItem['position_effect'])) {
+                $detailParts[] = '[' . strtoupper($mainItem['position_effect']) . ']';
+            }
+            $itemAmt = (float)($mainItem['amount'] ?? 0.0);
+            if ($itemAmt != 0 && strtoupper($mainItem['asset_type'] ?? '') !== 'CURRENCY') {
+                $qty = abs($itemAmt);
+                $act = $itemAmt > 0 ? 'Bought' : 'Sold';
+                $price = !empty($mainItem['price']) ? '@ $' . number_format((float)$mainItem['price'], 2) : '';
+                $detailParts[] = trim("{$act} {$qty} {$price}");
+            }
+        }
+
+        if (!$mainDesc || $mainDesc === 'USD currency') {
+            $mainDesc = $tx['action'] ?? $tx['type'] ?? '—';
+        }
+
+        $detail = implode(' • ', array_filter($detailParts));
+
+        $accName = trim((string)($tx['account_nickname'] ?? $tx['account_number'] ?? 'Brokerage'));
+        $accCategory = TaxEngine::isRetirementAccount($accName, $tx['sub_account'] ?? '') ? 'RETIREMENT' : 'TAXABLE';
+
+        $tx['category']          = $category;
+        $tx['is_option']         = $isOption;
+        $tx['canonical_symbol']  = $canonicalSymbol;
+        $tx['display_symbol']    = $displaySymbol;
+        $tx['symbol']            = $displaySymbol;
+        $tx['raw_symbol']        = $canonicalSymbol;
+        $tx['underlying_symbol'] = $underlyingSymbol;
+        $tx['display_main']      = $mainDesc;
+        $tx['display_detail']    = $detail;
+        $tx['is_credit']         = ($amt > 0);
+        $tx['account_category']  = $accCategory;
+        $tx['account_name']      = $accName;
+
+        return $tx;
     }
 
     /**
      * Aggregates order fill history across all active brokers.
+     *
+     * @param int $days Historical window in calendar days.
+     * @param bool $forceRefresh When true, bypasses cache.
+     * @return array List of normalized order records.
      */
     public function getAggregatedOrderHistory(int $days = 30, bool $forceRefresh = false): array
     {
@@ -611,6 +966,11 @@ class BrokerManagerService
 
     /**
      * Fetches option chain from preferred broker or first authorized broker.
+     *
+     * @param string $symbol Underlying equity ticker symbol.
+     * @param float $currentPrice Current market price.
+     * @param string|null $preferredBrokerId Optional preferred broker identifier.
+     * @return array Normalized option chain array.
      */
     public function getOptionChain(string $symbol, float $currentPrice, ?string $preferredBrokerId = null): array
     {
@@ -636,6 +996,12 @@ class BrokerManagerService
         ];
     }
 
+    /**
+     * Fetch active open orders across all registered brokers.
+     *
+     * @param bool $forceRefresh When true, bypasses cache to query API.
+     * @return array List of open order dictionaries.
+     */
     public function getAggregatedOpenOrders(bool $forceRefresh = false): array
     {
         $allOrders = [];

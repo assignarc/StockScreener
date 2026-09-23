@@ -5,20 +5,29 @@ namespace App\Service;
 use App\Entity\Stock;
 
 /**
- * Capital Flywheel Options Strategy Engine.
+ * Class FlywheelService
  *
- * All configurable thresholds and weights are read from AppConfigService
- * (backed by data.db).  Changing a value in /settings takes effect immediately
- * on the next request — no code deploys required.
+ * Core algorithmic engine for the options Capital Flywheel compounding strategy.
+ * Evaluates equity conviction scores against options signal rules, computes optimal capital allocation,
+ * generates early profit exits (Buy-To-Close), and constructs covered call suggestions based on
+ * unencumbered share blocks and cost basis protection rules.
+ *
+ * Design Reference: doc/flywheel-engine.md
  */
 class FlywheelService
 {
+    /**
+     * @param AppConfigService $config System configuration service.
+     */
     public function __construct(
         private AppConfigService $config,
     ) {}
 
     /**
-     * Evaluates a stock and determines its Capital Flywheel Options Signal.
+     * Evaluate an equity stock entity and assign its Capital Flywheel trade signal.
+     *
+     * @param Stock $stock Tracked stock entity.
+     * @return array Evaluated signal payload with conviction, strategy, and strike suggestions.
      */
     public function evaluateSignal(Stock $stock): array
     {
@@ -31,7 +40,7 @@ class FlywheelService
             ? (($targetPrice - $price) / $price) * 100
             : 0;
 
-        // Read thresholds from config (falls back to defaults if not customised)
+        // Read thresholds from config
         $callScoreThreshold  = (int)   $this->config->get('flywheel.signal.call_score_threshold');
         $callUpsideThreshold = (float) $this->config->get('flywheel.signal.call_upside_threshold');
         $putScoreThreshold   = (int)   $this->config->get('flywheel.signal.put_score_threshold');
@@ -39,7 +48,7 @@ class FlywheelService
         $putHedgeOtmPct      = (float) $this->config->get('flywheel.signal.put_hedge_otm_pct');
         $cspDiscountPct      = (float) $this->config->get('flywheel.signal.csp_discount_pct');
 
-        // ── Level 1 Basic Options Classification Rules ────────────────────────
+        // Options Level 1 Classification Rules
         if ($score >= $callScoreThreshold && $upsidePct > $callUpsideThreshold) {
             $signal = 'CALL';
             $signalBadge = '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> CALL';
@@ -85,8 +94,13 @@ class FlywheelService
     }
 
     /**
-     * Calculates optimal capital allocation for a flywheel portfolio,
-     * enforcing user-configured risk limit and accounting for open trade collateral.
+     * Calculate optimal capital allocation across Call, Put, and Wheel buckets while accounting
+     * for existing option collateral obligations.
+     *
+     * @param array $stocks List of Stock entities.
+     * @param float $totalCapital Total capital pool.
+     * @param array $portfolio Current portfolio dictionary.
+     * @return array Capital allocation breakdown and categorized candidate lists.
      */
     public function calculateAllocation(array $stocks, float $totalCapital = 10000.0, array $portfolio = []): array
     {
@@ -105,7 +119,7 @@ class FlywheelService
             };
         }
 
-        // Calculate collateral already committed by existing open option obligations
+        // Calculate collateral committed by open short puts
         $existingOptionCollateral = 0.0;
         foreach ($portfolio['optionPositions'] ?? [] as $opt) {
             if (str_contains(strtoupper($opt['type'] ?? ''), 'PUT') && ($opt['quantity'] ?? 0) < 0) {
@@ -115,7 +129,6 @@ class FlywheelService
 
         $availableRiskCapital = max(0.0, $totalCapital - $existingOptionCollateral);
 
-        // Read allocation weights from config
         $callWeight  = (float) $this->config->get('flywheel.allocation.call_weight');
         $wheelWeight = (float) $this->config->get('flywheel.allocation.wheel_weight');
         $putWeight   = (float) $this->config->get('flywheel.allocation.put_weight');
@@ -143,8 +156,11 @@ class FlywheelService
     }
 
     /**
-     * Generates actionable Early Exit / Profit Lock (Buy To Close) suggestions
-     * for existing option positions that have decayed past the configured threshold.
+     * Generate Buy-To-Close (BTC) suggestions for active short option positions that have
+     * captured greater than or equal to the configured profit threshold.
+     *
+     * @param array $portfolio Normalized portfolio array.
+     * @return array List of actionable early exit suggestions.
      */
     public function generateEarlyExitSuggestions(array $portfolio): array
     {
@@ -191,8 +207,11 @@ class FlywheelService
     }
 
     /**
-     * Generates actionable Covered Call trade suggestions for unencumbered
-     * portfolio equities (>= configured minimum shares, default 100).
+     * Generate covered call write suggestions for unencumbered equity holdings (>= 100 shares),
+     * enforcing cost basis buffers to prevent realized capital losses.
+     *
+     * @param array $portfolio Normalized portfolio array.
+     * @return array Summary dictionary containing total income and actionable recommendations.
      */
     public function generatePortfolioCoveredCallSuggestions(array $portfolio): array
     {
@@ -200,7 +219,6 @@ class FlywheelService
         $suggestions         = [];
         $totalPotentialIncome = 0.0;
 
-        // Read all covered-call parameters from config in one batch
         $minShares       = (int)   $this->config->get('flywheel.covered_call.min_shares');
         $otmPct          = (float) $this->config->get('flywheel.covered_call.otm_pct');
         $costBasisBuffer = (float) $this->config->get('flywheel.covered_call.cost_basis_buffer');
@@ -219,8 +237,7 @@ class FlywheelService
                 $costBasis        = (float) ($eq['averagePrice'] ?? $currentPrice);
                 $unrealizedPLPct  = (float) ($eq['unrealizedPLPct'] ?? 0.0);
 
-                // Strike must be above current price (OTM) AND above cost basis buffer
-                // to guarantee no realized loss on assignment
+                // Strike must be above market price (OTM) and cost basis buffer
                 $rawStrike       = max($currentPrice * (1 + $otmPct), $costBasis * $costBasisBuffer);
                 $strikeIncrement = $rawStrike > 100 ? 5.0 : 2.5;
                 $strike          = round($rawStrike / $strikeIncrement) * $strikeIncrement;

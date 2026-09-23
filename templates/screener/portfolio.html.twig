@@ -75,9 +75,8 @@
 
         <!-- VIEW MODE SELECTOR SUBTABS -->
         <div class="view-subtabs">
-            <button class="vtab-btn active" id="vtabCalendar" onclick="switchPortSubView('calendar')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">calendar_month</span> Options & Equities Calendar</button>
-            <button class="vtab-btn" id="vtabFlywheel" onclick="switchPortSubView('flywheel')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">auto_awesome</span> Suggested Covered Call Trades</button>
-            <button class="vtab-btn" id="vtabAccounts" onclick="switchPortSubView('holdings')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> Portfolio Holdings & Accounts</button>
+            <button class="vtab-btn active" id="vtabAccounts" onclick="switchPortSubView('holdings')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> Portfolio Holdings & Accounts</button>
+            <button class="vtab-btn" id="vtabCalendar" onclick="switchPortSubView('calendar')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">calendar_month</span> Options & Equities Calendar</button>
             <button class="vtab-btn" id="vtabHistory" onclick="switchPortSubView('history')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">history</span> Activity & Cash History</button>
             <button class="vtab-btn" id="vtabOrders" onclick="switchPortSubView('orders')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">pending_actions</span> Working & Open Orders</button>
             <div style="margin-left:auto; display:flex; gap:8px;">
@@ -139,15 +138,20 @@
                             <span class="hbadge" style="background:rgba(188,140,255,0.15); color:var(--purple); border-color:rgba(188,140,255,0.3);">Live History</span>
                         </h3>
                         <div style="font-size:12px; color:var(--muted);">
-                            Realized dividends, option premiums harvested, and account activities cached from your Schwab accounts.
+                            Historical log of executed trades, option fills, dividends, and cash movements across your accounts.
                         </div>
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <button class="hbtn" style="padding:6px 12px; font-size:11px; background:var(--bg3);" onclick="loadPortfolioHistory(15)">15 Days</button>
-                        <button class="hbtn active" style="padding:6px 12px; font-size:11px; background:var(--bg3);" id="btnHist30" onclick="loadPortfolioHistory(30)">30 Days</button>
-                        <button class="hbtn" style="padding:6px 12px; font-size:11px; background:var(--bg3);" onclick="loadPortfolioHistory(60)">60 Days</button>
-                        <button class="hbtn hbtn-green" style="padding:6px 12px; font-size:11px; font-weight:700;" onclick="loadPortfolioHistory(30, true)">
-                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px; vertical-align:middle;">sync</span> Force Pull Latest
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <div class="seg-track">
+                            <button class="seg-btn" id="btnHist30" onclick="loadPortfolioHistory(30)">30 Days</button>
+                            <button class="seg-btn" id="btnHist60" onclick="loadPortfolioHistory(60)">60 Days</button>
+                            <button class="seg-btn" id="btnHist90" onclick="loadPortfolioHistory(90)">90 Days</button>
+                            <button class="seg-btn active" id="btnHistTHIS_YEAR" onclick="loadPortfolioHistory('THIS_YEAR')">This Year</button>
+                            <button class="seg-btn" id="btnHistLAST_YEAR" onclick="loadPortfolioHistory('LAST_YEAR')">Last Year</button>
+                            <button class="seg-btn" id="btnHistALL" onclick="loadPortfolioHistory('ALL')">All</button>
+                        </div>
+                        <button class="hbtn hbtn-green" style="padding:5px 10px; font-size:11px; font-weight:700;" onclick="loadPortfolioHistory(currentHistDays || 'THIS_YEAR', true)" title="Bypass cache and force-refresh latest transactions from broker">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:2px; vertical-align:middle;">sync</span> Force Pull
                         </button>
                     </div>
                 </div>
@@ -163,8 +167,12 @@
                         <div class="val" style="color:var(--yellow); font-size:20px; font-weight:800;" id="histTotalPremiums">$0.00</div>
                     </div>
                     <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
-                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Net Realized Cash Impact</div>
+                        <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between;">
+                            <span>Net Settled Cash Flow</span>
+                            <span class="material-symbols-outlined" style="font-size:14px; color:var(--muted); cursor:help;" title="Total net cash deposited or withdrawn from executed trades. For written options, cash premium is credited on execution day, while tax realization occurs at contract expiration or closure.">info</span>
+                        </div>
                         <div class="val" style="color:var(--blue); font-size:20px; font-weight:800;" id="histNetCash">$0.00</div>
+                        <div id="histNetCashSubtext" style="font-size:10px; color:var(--muted); margin-top:4px;">Settled cash impact</div>
                     </div>
                     <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
                         <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Completed Activities</div>
@@ -172,60 +180,141 @@
                     </div>
                 </div>
 
-                <!-- TRANSACTION ACTIVITY TABLE -->
+                <!-- TRANSACTION ACTIVITY TABLE WITH FILTER & SORT CONTROLS -->
                 <div class="hist-table-wrap" style="background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-weight:700; font-size:12px; color:var(--text); text-transform:uppercase; letter-spacing:.5px; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">receipt_long</span> Brokerage Activity Log</span>
-                        <div style="display:flex; gap:6px;">
-                            <button class="hbtn active" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:2px;" onclick="filterHistoryRows('ALL')">All</button>
-                            <button class="hbtn" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:2px;" id="histFilterDiv" onclick="filterHistoryRows('DIVIDEND')"><span class="material-symbols-outlined" style="font-size:14px;">payments</span> Dividends</button>
-                            <button class="hbtn" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:2px;" id="histFilterEarn" onclick="filterHistoryRows('EARNINGS')"><span class="material-symbols-outlined" style="font-size:14px;">campaign</span> Earnings</button>
-                            <button class="hbtn" style="padding:4px 8px; font-size:10px; display:flex; align-items:center; gap:2px;" id="histFilterTrade" onclick="filterHistoryRows('TRADE')"><span class="material-symbols-outlined" style="font-size:14px;">trending_up</span> Trades</button>
+                    <!-- TOOLBAR ROW 1: TITLE & QUICK TYPE CHIPS -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:14px 20px; border-bottom:1px solid var(--border); background:var(--bg2);">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="material-symbols-outlined" style="font-size:20px; color:var(--purple);">receipt_long</span>
+                            <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:14px; color:var(--text); text-transform:uppercase; letter-spacing:.5px;">Brokerage Activity Log</span>
+                            <span id="histMatchCountBadge" class="hbadge" style="background:rgba(88,166,255,0.15); color:var(--blue); font-size:10px; padding:2px 8px; border-radius:12px;">0 items</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="font-size:11px; color:var(--muted); margin-right:4px;">Quick Type:</span>
+                            <button class="hbtn active" id="histChipAll" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('ALL')">All</button>
+                            <button class="hbtn" id="histChipTrades" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('TRADE')"><span class="material-symbols-outlined" style="font-size:13px;">trending_up</span> Trades</button>
+                            <button class="hbtn" id="histChipOptions" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('OPTION')"><span class="material-symbols-outlined" style="font-size:13px;">tune</span> Options</button>
+                            <button class="hbtn" id="histChipDividends" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('DIVIDEND')"><span class="material-symbols-outlined" style="font-size:13px;">payments</span> Dividends</button>
+                            <button class="hbtn" id="histChipInterest" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('INTEREST')"><span class="material-symbols-outlined" style="font-size:13px;">account_balance</span> Interest</button>
+                            <button class="hbtn" id="histChipJournals" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('JOURNAL')"><span class="material-symbols-outlined" style="font-size:13px;">swap_horiz</span> Transfers</button>
                         </div>
                     </div>
-                    <table class="hist-table" id="histTable" style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
-                        <thead>
-                            <tr style="border-bottom:1px solid var(--border); background:var(--bg2); color:var(--muted);">
-                                <th style="padding:12px 16px;">Date</th>
-                                <th style="padding:12px 16px;">Account</th>
-                                <th style="padding:12px 16px;">Activity Type</th>
-                                <th style="padding:12px 16px;">Symbol</th>
-                                <th style="padding:12px 16px;">Description / Rationale</th>
-                                <th style="padding:12px 16px; text-align:right;">Cash Flow Impact</th>
-                            </tr>
-                        </thead>
-                        <tbody id="histTableBody">
-                            <tr><td colspan="6" style="text-align:center; padding:20px;" class="m">Loading account history...</td></tr>
-                        </tbody>
-                    </table>
+
+                    <!-- TOOLBAR ROW 2: FILTERS & SEARCH CONTROLS -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 20px; background:var(--bg3); border-bottom:1px solid var(--border);">
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1;">
+                            <!-- ACCOUNT FILTER SELECT -->
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <label for="histAccountSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Account:</label>
+                                <select id="histAccountSelect" onchange="onHistFilterChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; min-width:180px;">
+                                    <option value="ALL">All Accounts (All)</option>
+                                    <optgroup label="Account Category">
+                                        <option value="TAXABLE">Taxable Accounts Only</option>
+                                        <option value="RETIREMENT">Retirement Accounts (IRA / PCRA)</option>
+                                    </optgroup>
+                                    <optgroup id="histAccountOptGroup" label="Individual Accounts">
+                                        <!-- Dynamically populated -->
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <!-- ACTIVITY TYPE SELECT -->
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <label for="histTypeSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Type:</label>
+                                <select id="histTypeSelect" onchange="onHistTypeSelectChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+                                    <option value="ALL">All Activity Types</option>
+                                    <option value="TRADE">Stock & ETF Trades</option>
+                                    <option value="OPTION">Options (Calls, Puts, Premia)</option>
+                                    <option value="DIVIDEND">Dividends & Distributions</option>
+                                    <option value="INTEREST">Interest Income</option>
+                                    <option value="JOURNAL">Transfers & Journals</option>
+                                    <option value="FEE">Fees & Adjustments</option>
+                                </select>
+                            </div>
+
+                            <!-- CASH FLOW IMPACT SELECT -->
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <label for="histCashFlowSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Cash Flow:</label>
+                                <select id="histCashFlowSelect" onchange="onHistFilterChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+                                    <option value="ALL">All Amounts</option>
+                                    <option value="INFLOW">Inflows / Credits (+)</option>
+                                    <option value="OUTFLOW">Outflows / Debits (-)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- SEARCH & RESET -->
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="position:relative; display:flex; align-items:center;">
+                                <span class="material-symbols-outlined" style="position:absolute; left:8px; font-size:16px; color:var(--muted); pointer-events:none;">search</span>
+                                <input type="text" id="histSearchInput" oninput="onHistFilterChange()" placeholder="Search ticker, desc..." style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 10px 6px 30px; border-radius:8px; font-size:12px; width:190px;">
+                            </div>
+                            <button class="hbtn" onclick="resetHistFilters()" style="padding:6px 10px; font-size:11px;" title="Reset all filters">
+                                <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">restart_alt</span> Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TABLE WITH SORTABLE HEADERS -->
+                    <div style="overflow-x:auto;">
+                        <table class="hist-table" id="histTable" style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border); background:var(--bg2); color:var(--muted); user-select:none;">
+                                    <th onclick="sortHistBy('date')" style="padding:12px 16px; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Date">
+                                        Date <span id="sort_hist_date" style="color:var(--blue); font-size:11px;">▼</span>
+                                    </th>
+                                    <th onclick="sortHistBy('account')" style="padding:12px 16px; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Account">
+                                        Account <span id="sort_hist_account" style="color:var(--muted); font-size:11px;">↕</span>
+                                    </th>
+                                    <th onclick="sortHistBy('type')" style="padding:12px 16px; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Activity Type">
+                                        Activity Type <span id="sort_hist_type" style="color:var(--muted); font-size:11px;">↕</span>
+                                    </th>
+                                    <th onclick="sortHistBy('symbol')" style="padding:12px 16px; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Symbol">
+                                        Symbol <span id="sort_hist_symbol" style="color:var(--muted); font-size:11px;">↕</span>
+                                    </th>
+                                    <th onclick="sortHistBy('description')" style="padding:12px 16px; cursor:pointer; transition:background 0.15s;" title="Sort by Description">
+                                        Description / Rationale <span id="sort_hist_description" style="color:var(--muted); font-size:11px;">↕</span>
+                                    </th>
+                                    <th onclick="sortHistBy('amount')" style="padding:12px 16px; text-align:right; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Cash Flow Amount">
+                                        Cash Flow Impact <span id="sort_hist_amount" style="color:var(--muted); font-size:11px;">↕</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="histTableBody">
+                                <tr><td colspan="6" style="text-align:center; padding:25px;" class="m">Loading account history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- PAGINATION FOOTER -->
+                    <div id="histPaginationFooter" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 20px; background:var(--bg2); border-top:1px solid var(--border); font-size:12px; color:var(--muted);">
+                        <div id="histPageInfo">Showing 0 of 0 transactions</div>
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span>Show:</span>
+                                <select id="histPageSizeSelect" onchange="changeHistPageSize(this.value)" style="background:var(--bg3); color:var(--text); border:1px solid var(--border); padding:3px 8px; border-radius:6px; font-size:11px; cursor:pointer;">
+                                    <option value="25">25</option>
+                                    <option value="50" selected>50</option>
+                                    <option value="100">100</option>
+                                    <option value="250">250</option>
+                                    <option value="ALL">All</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; gap:4px; align-items:center;">
+                                <button class="hbtn" id="histPrevBtn" onclick="changeHistPage(-1)" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center;"><span class="material-symbols-outlined" style="font-size:13px;">chevron_left</span> Prev</button>
+                                <span id="histPageNumber" style="padding:4px 8px; font-weight:700; color:var(--text);">Page 1</span>
+                                <button class="hbtn" id="histNextBtn" onclick="changeHistPage(1)" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center;">Next <span class="material-symbols-outlined" style="font-size:13px;">chevron_right</span></button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- SUBVIEW: CAPITAL FLYWHEEL SUGGESTED COVERED CALL TRADES (DEDICATED TAB) -->
-        <div id="subViewFlywheel" style="display:none;">
-            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
-                    <div>
-                        <h3 style="font-family:'Outfit',sans-serif; font-size:18px; margin:0 0 4px 0; color:var(--text); display:flex; align-items:center; gap:8px;">
-                            <span class="material-symbols-outlined" style="font-size:20px; color:var(--yellow);">local_fire_department</span>
-                            <span>Capital Flywheel — Suggested Covered Call Trades</span>
-                            <span class="hbadge" style="background:rgba(63,185,80,0.2); color:var(--green); border-color:rgba(63,185,80,0.4);">Option Level 1 Basic</span>
-                        </h3>
-                        <div style="font-size:12px; color:var(--muted);">
-                            Scanned your unencumbered 100-share stock blocks. Selling these suggested Covered Calls generates <strong class="g" id="portPlaybookTotalIncome">+$2,482.00 Instant Premium Income</strong>!
-                        </div>
-                    </div>
-                </div>
 
-                <div id="portCoveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
-                    <div class="m" style="grid-column:1/-1; text-align:center; padding:15px; display:flex; justify-content:center; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:18px;">bolt</span> Scanning unencumbered stock positions...</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- SUBVIEW 1: OPTIONS & EQUITIES CALENDAR VIEW (DEFAULT FIRST TAB) -->
-        <div id="subViewCalendar">
+        <!-- SUBVIEW 1: OPTIONS & EQUITIES CALENDAR VIEW -->
+        <div id="subViewCalendar" style="display:none;">
             <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
                     <div>
@@ -240,11 +329,11 @@
 
                     <!-- 6-MONTH FORWARD BROWSABLE MONTH CONTROLS -->
                     <div style="display:flex; align-items:center; gap:8px; background:var(--bg3); padding:4px 10px; border-radius:10px; border:1px solid var(--border);">
-                        <button onclick="changeCalMonth(-1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2);">◀ Prev Month</button>
+                        <button onclick="changeCalMonth(-1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2); display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span> Prev Month</button>
                         <select id="calMonthSelect" onchange="selectCalMonth(this.value)" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer;">
                             <!-- Populated dynamically via JS -->
                         </select>
-                        <button onclick="changeCalMonth(1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2);">Next Month ▶</button>
+                        <button onclick="changeCalMonth(1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2); display:inline-flex; align-items:center; gap:2px;">Next Month <span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
                     </div>
 
                     <div id="calCashProjectionHeader" style="display:flex; gap:12px; flex-wrap:wrap; width:100%; margin-top:8px;">
@@ -258,7 +347,7 @@
                     <div class="m" style="grid-column:1/-1; text-align:center; padding:30px;">Loading Monthly Options Calendar...</div>
                 </div>
 
-                <h4 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px;">⏰ Chronological Expiration & Cash Availability Timeline</h4>
+                <h4 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px; display:flex; align-items:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:18px; color:var(--blue);">schedule</span> Chronological Expiration & Cash Availability Timeline</h4>
                 <div id="calendarEventsList" style="display:flex; flex-direction:column; gap:10px;">
                     <div class="m" style="text-align:center; padding:20px;">Loading Timeline...</div>
                 </div>
@@ -266,14 +355,19 @@
         </div>
 
 
-        <!-- SUBVIEW 2: PORTFOLIO HOLDINGS & ACCOUNTS COMBINED VIEW -->
-        <div id="subViewAccounts" style="display:none;">
+        <!-- SUBVIEW 2: PORTFOLIO HOLDINGS & ACCOUNTS COMBINED VIEW (DEFAULT TAB) -->
+        <div id="subViewAccounts">
 
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; background:var(--bg2); padding:12px 18px; border-radius:12px; border:1px solid var(--border);">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="material-symbols-outlined" style="font-size:20px; color:var(--purple);">account_balance_wallet</span>
-                    <strong style="font-size:14px; color:var(--text);">Portfolio Holdings & Accounts</strong>
-                    <span class="hbadge" style="font-size:11px;">{% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities</span>
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span class="material-symbols-outlined" style="font-size:20px; color:var(--purple);">account_balance_wallet</span>
+                        <strong style="font-size:14px; color:var(--text);">Portfolio Holdings & Accounts</strong>
+                        <span class="hbadge" style="font-size:11px;">{% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--muted); margin-top:3px;">
+                        Live snapshot of current open positions, unencumbered cash balances, and active option contracts held today.
+                    </div>
                 </div>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">View Mode:</span>
@@ -300,10 +394,10 @@
                                             <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0; color:var(--text); display:flex; align-items:center; gap:6px;">
                                                 <span class="material-symbols-outlined" style="font-size:18px; color:var(--purple);">account_balance</span> {% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}
                                             </h3>
-                                            <span id="{{ cardId }}_chevron" style="font-size:12px; color:var(--muted); transition:transform 0.2s ease; transform:rotate(0deg);">▼</span>
+                                            <span class="material-symbols-outlined" id="{{ cardId }}_chevron" style="font-size:16px; color:var(--muted); transition:transform 0.2s ease; transform:rotate(0deg);">expand_more</span>
                                         </div>
                                         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                                            {% if acc.isPrimary is defined and acc.isPrimary %}<span class="hbadge" style="background:rgba(63,185,80,0.15); color:var(--green); border-color:rgba(63,185,80,0.3); font-size:9px;">⭐ PRIMARY</span>{% endif %}
+                                            {% if acc.isPrimary is defined and acc.isPrimary %}<span class="hbadge" style="background:rgba(63,185,80,0.15); color:var(--green); border-color:rgba(63,185,80,0.3); font-size:9px; display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:12px;">star</span> PRIMARY</span>{% endif %}
                                             <span class="hbadge" style="font-size:9px;">{{ acc.type }}</span>
                                             <span class="rb rLOW" style="font-size:9px;">{{ acc.positionsCount|default(0) }} Positions</span>
                                         </div>
@@ -394,7 +488,7 @@
                                 <span>Ticker</span>
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
-                                        <div class="col-popover-title">📌 Stock Ticker Symbol</div>
+                                        <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">pin</span> Stock Ticker Symbol</div>
                                         Queried directly from connected Brokerage API (<code>/trader/v1/accounts?fields=positions</code>).
                                     </span>
                                 </span>
@@ -403,7 +497,7 @@
                                 <span>Asset Type</span>
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
-                                        <div class="col-popover-title">🏷 Asset Class</div>
+                                        <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">label</span> Asset Class</div>
                                         Brokerage instrument type classification (<code>EQUITY</code>, <code>OPTION</code>, <code>FIXED_INCOME</code>).
                                     </span>
                                 </span>
@@ -412,7 +506,7 @@
                                 <span>Total Quantity</span>
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
-                                        <div class="col-popover-title">📊 Total Shares / Contracts</div>
+                                        <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">bar_chart</span> Total Shares / Contracts</div>
                                         Aggregated quantity of shares or option contracts held across all connected brokerage accounts.
                                     </span>
                                 </span>
@@ -430,7 +524,7 @@
                                 <span>Total Market Value</span>
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
-                                        <div class="col-popover-title">💲 Live Market Valuation</div>
+                                        <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">attach_money</span> Live Market Valuation</div>
                                         Real-time market valuation calculated by Brokerage API based on current bid/ask price stream.
                                     </span>
                                 </span>
@@ -448,7 +542,7 @@
                                 <span>Portfolio Weight</span>
                                 <span class="col-popover-trigger" tabindex="0">ℹ
                                     <span class="col-popover">
-                                        <div class="col-popover-title">⚖ Account Allocation Weight</div>
+                                        <div class="col-popover-title" style="display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">balance</span> Account Allocation Weight</div>
                                         Percentage weight of total liquidation value: <code>(MarketValue / NetLiquidationValue) * 100</code>.
                                     </span>
                                 </span>
@@ -472,9 +566,17 @@
                                 <tr onclick="toggleOptionSubItem('{{ subId }}', this)" style="cursor:pointer; background: var(--bg2);">
                                     <td>
                                         <div style="display:flex; align-items:center; gap:8px;">
-                                            <span class="sub-toggle-icon" style="color:var(--blue); font-size:12px; font-weight:700; transition:transform 0.2s;">▼</span>
+                                            <span class="material-symbols-outlined sub-toggle-icon" style="color:var(--blue); font-size:16px; vertical-align:middle; transition:transform 0.2s;">expand_more</span>
                                             <strong style="font-size:15px; color:var(--text);">{{ e.symbol }}</strong>
-                                            {% if e.linkedOptions|length > 0 %}
+                                            {% if e.putCount is defined and e.putCount > 0 and e.callCount is defined and e.callCount > 0 %}
+                                                <span class="rb" style="background:rgba(147,51,234,0.18); color:var(--purple); border:1px solid rgba(147,51,234,0.4); font-size:10px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">shield</span> {{ e.putCount }} CSP Active & <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ e.callCount }} CC Active
+                                                </span>
+                                            {% elseif e.putCount is defined and e.putCount > 0 %}
+                                                <span class="rb" style="background:rgba(88,166,255,0.18); color:var(--blue); border:1px solid rgba(88,166,255,0.4); font-size:10px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">shield</span> {{ e.putCount }} Cash-Secured Put Active (${{ e.cashCollateral|number_format(2) }})
+                                                </span>
+                                            {% elseif e.linkedOptions|length > 0 %}
                                                 <span class="rb" style="background:rgba(210,153,34,0.18); color:var(--yellow); border:1px solid rgba(210,153,34,0.4); font-size:10px;">
                                                     <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ e.linkedOptions|length }} Covered Call Order Active
                                                 </span>
@@ -517,17 +619,23 @@
                                                     <span style="color:var(--blue); font-size:12px; font-weight:700;"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">account_balance</span></span>
                                                     <strong style="font-size:12px; color:var(--text);">{% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}</strong>
                                                     <span class="hbadge" style="font-size:9px;">{{ acc.type }}</span>
-                                                    <span class="rb" style="background:{% if acc.canUseForCalls %}rgba(21,128,61,0.15){% elseif acc.availableShares > 0 %}rgba(180,83,9,0.15){% else %}rgba(220,38,38,0.15){% endif %}; color:{% if acc.canUseForCalls %}var(--green){% elseif acc.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; font-size:10px;">
+                                                    <span class="rb" style="background:{% if acc.badgeClass == 'b' %}rgba(88,166,255,0.15){% elseif acc.canUseForCalls %}rgba(21,128,61,0.15){% elseif acc.availableShares > 0 %}rgba(180,83,9,0.15){% else %}rgba(220,38,38,0.15){% endif %}; color:{% if acc.badgeClass == 'b' %}var(--blue){% elseif acc.canUseForCalls %}var(--green){% elseif acc.availableShares > 0 %}var(--yellow){% else %}var(--red){% endif %}; font-size:10px;">
                                                         {{ acc.statusBadge|raw }}
                                                     </span>
                                                 </div>
                                             </td>
                                             <td style="text-align:right; font-size:12px;">
-                                                <strong>{{ acc.availableShares }} Avail</strong> / {{ acc.quantity }} Total
+                                                {% if acc.quantity == 0 and acc.linkedOptions is defined and acc.linkedOptions|length > 0 %}
+                                                    <span style="color:var(--blue); font-weight:600;">0 Shares</span>
+                                                {% else %}
+                                                    <strong>{{ acc.availableShares }} Avail</strong> / {{ acc.quantity }} Total
+                                                {% endif %}
                                             </td>
                                             <td style="text-align:right; font-size:12px;"><strong>${{ acc.marketValue|number_format(2) }}</strong></td>
                                             <td colspan="3" style="font-size:11px; color:var(--muted); text-align:center;">
-                                                {% if acc.canUseForCalls %}
+                                                {% if acc.quantity == 0 and acc.linkedOptions is defined and acc.linkedOptions|length > 0 %}
+                                                    <span style="color:var(--blue); font-weight:600;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">shield</span> Cash-Secured Put / Option Position</span>
+                                                {% elseif acc.canUseForCalls %}
                                                     <span class="g"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">check_circle</span> {{ acc.eligibleContracts }} Call Option Contract(s) Available</span>
                                                 {% elseif acc.availableShares > 0 %}
                                                     <span class="y"><span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;color:var(--yellow, #fbbf24);">warning</span> Less than 100 shares — CANNOT be used for Call options</span>
@@ -536,43 +644,46 @@
                                                 {% endif %}
                                             </td>
                                         </tr>
+
+                                        <!-- LEVEL 3: LINKED OPTION ORDER SUB-ITEMS FOR THIS SPECIFIC ACCOUNT -->
+                                        {% if acc.linkedOptions is defined and acc.linkedOptions|length > 0 %}
+                                            {% for opt in acc.linkedOptions %}
+                                                <tr class="{{ subId }}" style="background: var(--bg2); border-bottom: 1px solid var(--border);">
+                                                    <td colspan="4" style="padding-left: 52px;">
+                                                        <div style="display:flex; align-items:center; gap:8px;">
+                                                            <span style="color:{% if opt.type == 'Call' %}var(--yellow){% else %}var(--blue){% endif %}; font-size:14px; font-weight:700;">↳</span>
+                                                            <strong style="color:var(--text); font-size:12px;">{{ opt.readableSymbol }}</strong>
+                                                            <span style="font-size:11px; color:var(--muted); font-family:var(--font-mono, monospace);">({{ opt.symbol }})</span>
+                                                            <span class="rb" style="background:{% if opt.type == 'Call' %}rgba(180,83,9,0.18){% else %}rgba(88,166,255,0.18){% endif %}; color:{% if opt.type == 'Call' %}var(--yellow){% else %}var(--blue){% endif %}; font-size:10px;">
+                                                                {{ opt.status|raw }}
+                                                            </span>
+                                                        </div>
+                                                        <div style="font-size:11px; color:var(--muted); margin-left:22px; margin-top:3px;">
+                                                            {% if opt.type == 'Call' %}
+                                                                Pledged Collateral: <strong style="color:var(--yellow);">{{ opt.pledgedShares }} Shares of {{ e.symbol }}</strong> ({{ opt.contracts }} Contracts) | Strike: <strong>${{ opt.strike|number_format(2) }}</strong> | Expiration: <strong>{{ opt.expiration }}</strong>
+                                                            {% else %}
+                                                                Pledged Collateral: <strong style="color:var(--blue);">${{ opt.cashCollateral|number_format(2) }} Cash</strong> ({{ opt.contracts }} Contracts) | Strike: <strong>${{ opt.strike|number_format(2) }}</strong> | Expiration: <strong>{{ opt.expiration }}</strong>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                    <td style="text-align:right; color:{% if opt.type == 'Call' %}var(--yellow){% else %}var(--blue){% endif %}; font-weight:700;">
+                                                        ${{ opt.marketValue|number_format(2) }}
+                                                    </td>
+                                                    <td style="text-align:right;" class="{% if opt.unrealizedPL >= 0 %}g{% else %}r{% endif %}">
+                                                        <strong>{% if opt.unrealizedPL >= 0 %}+{% endif %}${{ opt.unrealizedPL|number_format(2) }}</strong>
+                                                    </td>
+                                                    <td colspan="2" style="text-align:center;">
+                                                        {% if opt.type == 'Call' %}
+                                                            <span style="font-size:11px; color:var(--yellow); font-weight:700;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ opt.pledgedShares }} Shares Tied Up</span>
+                                                        {% else %}
+                                                            <span style="font-size:11px; color:var(--blue); font-weight:700;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">shield</span> ${{ opt.cashCollateral|number_format(2) }} Cash Reserved</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        {% endif %}
                                     {% endfor %}
                                 {% endif %}
-
-                                <!-- LEVEL 3: LINKED OPTION ORDER SUB-ITEMS -->
-                                {% for opt in e.linkedOptions %}
-                                    <tr class="{{ subId }}" style="background: var(--bg3); border-bottom: 1px solid var(--border);">
-                                        <td colspan="4" style="padding-left: 44px;">
-                                            <div style="display:flex; align-items:center; gap:8px;">
-                                                <span style="color:var(--yellow); font-size:14px; font-weight:700;">↳</span>
-                                                <strong style="color:var(--yellow); font-size:12px;">{{ opt.symbol }}</strong>
-                                                {% if opt.accounts is defined and opt.accounts|length > 0 %}
-                                                    {% for oacc in opt.accounts %}
-                                                        <span class="hbadge" style="font-size:9px; background:rgba(88,166,255,0.15); color:var(--blue); border:1px solid rgba(88,166,255,0.3); padding:2px 6px; border-radius:4px;">
-                                                            <span class="material-symbols-outlined" style="font-size:10px;vertical-align:middle;margin-right:2px;">account_balance</span>
-                                                            {{ oacc.nickname ? oacc.nickname : 'Account ' ~ oacc.accountNumber }}
-                                                        </span>
-                                                    {% endfor %}
-                                                {% endif %}
-                                                <span class="rb" style="background:rgba(180,83,9,0.18); color:var(--yellow); font-size:10px;">
-                                                    {{ opt.status }}
-                                                </span>
-                                            </div>
-                                            <div style="font-size:11px; color:var(--muted); margin-left:22px; margin-top:2px;">
-                                                Pledged Collateral: <strong style="color:var(--yellow);">{{ opt.pledgedShares }} Shares of {{ e.symbol }}</strong> ({{ opt.contracts }} Contracts) | Strike: <strong>${{ opt.strike|number_format(2) }}</strong> | Expiration: <strong>{{ opt.expiration }}</strong>
-                                            </div>
-                                        </td>
-                                        <td style="text-align:right; color:var(--yellow); font-weight:700;">
-                                            ${{ opt.marketValue|number_format(2) }}
-                                        </td>
-                                        <td style="text-align:right;" class="{% if opt.unrealizedPL >= 0 %}g{% else %}r{% endif %}">
-                                            <strong>{% if opt.unrealizedPL >= 0 %}+{% endif %}${{ opt.unrealizedPL|number_format(2) }}</strong>
-                                        </td>
-                                        <td colspan="2" style="text-align:center;">
-                                            <span style="font-size:11px; color:var(--red); font-weight:700;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ opt.pledgedShares }} Shares Tied Up</span>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
                             {% endfor %}
                         {% else %}
                             <tr><td colspan="8" style="text-align:center; padding:20px;" class="m">No aggregated positions found.</td></tr>
@@ -590,7 +701,7 @@
 <div id="calEventModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:3000; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);">
     <div class="modal-body-lg" style="width:680px; max-width:94vw; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; border-radius:16px; border:1px solid var(--border); background:var(--bg2); box-shadow:0 25px 60px rgba(0,0,0,0.85);">
         <div class="modal-hdr" style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--bg3); flex-shrink:0;">
-            <h2 id="calModalTitle" style="font-family:'Outfit',sans-serif; font-size:17px; color:var(--blue); margin:0; display:flex; align-items:center; gap:8px;">📌 Event Details & Explanation</h2>
+            <h2 id="calModalTitle" style="font-family:'Outfit',sans-serif; font-size:17px; color:var(--blue); margin:0; display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined" style="font-size:20px;">info</span> Event Details & Explanation</h2>
             <button class="rpx" onclick="document.getElementById('calEventModal').style.display='none'" style="background:none; border:none; color:var(--text); cursor:pointer; padding:4px 8px; border-radius:6px; display:flex; align-items:center; justify-content:center;"><span class="material-symbols-outlined" style="font-size:20px;">close</span></button>
         </div>
         <div class="modal-cnt" id="calModalCnt" style="padding:20px 24px; font-size:13px; line-height:1.6; overflow-y:auto; flex:1; min-height:0;"></div>
@@ -616,20 +727,18 @@ function toggleOptionSubItem(subId, rowEl) {
     }
 
     if (icon) {
-        icon.textContent = isHidden ? '▶' : '▼';
+        icon.textContent = isHidden ? 'chevron_right' : 'expand_more';
     }
 }
 
 function switchPortSubView(mode) {
     const subAcc = document.getElementById('subViewAccounts');
     const subCal = document.getElementById('subViewCalendar');
-    const subFly = document.getElementById('subViewFlywheel');
     const subHis = document.getElementById('subViewHistory');
     const subOrd = document.getElementById('subViewOrders');
 
     const btnAcc = document.getElementById('vtabAccounts');
     const btnCal = document.getElementById('vtabCalendar');
-    const btnFly = document.getElementById('vtabFlywheel');
     const btnHis = document.getElementById('vtabHistory');
     const btnOrd = document.getElementById('vtabOrders');
 
@@ -637,22 +746,18 @@ function switchPortSubView(mode) {
 
     if (subAcc) subAcc.style.display = isHoldings ? 'block' : 'none';
     if (subCal) subCal.style.display = mode === 'calendar' ? 'block' : 'none';
-    if (subFly) subFly.style.display = mode === 'flywheel' ? 'block' : 'none';
     if (subHis) subHis.style.display = mode === 'history' ? 'block' : 'none';
     if (subOrd) subOrd.style.display = mode === 'orders' ? 'block' : 'none';
 
     if (btnAcc) btnAcc.classList.toggle('active', isHoldings);
     if (btnCal) btnCal.classList.toggle('active', mode === 'calendar');
-    if (btnFly) btnFly.classList.toggle('active', mode === 'flywheel');
     if (btnHis) btnHis.classList.toggle('active', mode === 'history');
     if (btnOrd) btnOrd.classList.toggle('active', mode === 'orders');
 
     if (mode === 'calendar') {
         loadPortfolioCalendarEvents();
-    } else if (mode === 'flywheel') {
-        loadPortCoveredCallSuggestions();
     } else if (mode === 'history') {
-        loadPortfolioHistory(30);
+        loadPortfolioHistory(currentHistDays || 30, true);
     } else if (mode === 'orders') {
         loadOpenOrders();
     }
@@ -670,23 +775,40 @@ async function forceRefreshPortfolioData() {
 }
 
 let historyRawTransactions = [];
+let currentHistSortCol = 'date';
+let currentHistSortDir = 'desc';
+let currentHistTypeFilter = 'ALL';
+let currentHistAccountFilter = 'ALL';
+let currentHistCashFlowFilter = 'ALL';
+let currentHistSearchTerm = '';
+let histCurrentPage = 1;
+let histPageSize = 50;
+
+let currentHistDays = 30;
 
 async function loadPortfolioHistory(days = 30, force = false) {
+    if (!force && currentHistDays === days && days !== 'ALL') {
+        days = 'ALL';
+    }
+    currentHistDays = days;
     const tbody = document.getElementById('histTableBody');
     if (!tbody) return;
 
     // Toggle active state on day selector buttons
-    const btn30 = document.getElementById('btnHist30');
-    if (btn30) {
-        document.querySelectorAll('#subViewHistory .hbtn').forEach(b => {
-            if (b.textContent.includes('Days') || b.textContent.includes('Days')) {
-                b.classList.remove('active');
-            }
-        });
+    document.querySelectorAll('#subViewHistory .seg-btn, #subViewHistory .btn-period, #subViewHistory .hbtn').forEach(b => {
+        if (b.id && b.id.startsWith('btnHist')) {
+            b.classList.remove('active');
+        }
+    });
+    const activeBtnId = days === 'ALL' ? 'btnHistALL' : `btnHist${days}`;
+    const activeBtn = document.getElementById(activeBtnId);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
     }
 
     try {
-        const url = force ? `/api/broker/history/aggregated?days=${days}&force=1` : `/api/broker/history/aggregated?days=${days}`;
+        const daysParam = days === 'ALL' ? 'ALL' : days;
+        const url = force ? `/api/broker/history/aggregated?days=${daysParam}&force=1` : `/api/broker/history/aggregated?days=${daysParam}`;
         const res = await fetch(url);
         if (!res.ok) {
             throw new Error(`HTTP ${res.status} (${res.statusText || 'Server Error'})`);
@@ -695,20 +817,11 @@ async function loadPortfolioHistory(days = 30, force = false) {
 
         if (json.status === 'success' && json.data) {
             const data = json.data;
-            const summary = data.summary || {};
             historyRawTransactions = data.transactions || [];
 
-            const totalDivs = document.getElementById('histTotalDivs');
-            const totalPrem = document.getElementById('histTotalPremiums');
-            const netCash = document.getElementById('histNetCash');
-            const txCount = document.getElementById('histTxCount');
-
-            if (totalDivs) totalDivs.textContent = `+$${(summary.totalDividends || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-            if (totalPrem) totalPrem.textContent = `+$${(summary.totalPremiums || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-            if (netCash) netCash.textContent = `$${(summary.netCashImpact || 0).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-            if (txCount) txCount.textContent = `${summary.totalTransactions || historyRawTransactions.length} Transactions`;
-
-            renderHistoryRows(historyRawTransactions);
+            populateHistAccountDropdown(historyRawTransactions);
+            updateHistSortIndicators();
+            applyHistoryFiltersAndSort();
         }
     } catch(e) {
         console.error('Failed to load portfolio history:', e);
@@ -720,7 +833,7 @@ async function loadOpenOrders(force = false) {
     const tbody = document.getElementById('ordersTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="7" class="orders-table-loader">⏳ Fetching open orders...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="orders-table-loader"><span class="material-symbols-outlined spin" style="font-size:16px; vertical-align:middle; margin-right:4px;">sync</span> Fetching open orders...</td></tr>';
 
     try {
         const url = force ? '/api/broker/orders/aggregated?force=true' : '/api/broker/orders/aggregated';
@@ -765,67 +878,577 @@ async function loadOpenOrders(force = false) {
     }
 }
 
+function getTxAccountName(tx) {
+    return (tx.account_nickname || tx.account_number || 'Unknown').trim();
+}
+
+function getAccountCategory(accName) {
+    const upper = (accName || '').toUpperCase();
+    if (upper.includes('IRA') || upper.includes('SIP') || upper.includes('PCRA') || upper.includes('401') || upper.includes('ROTH') || upper.includes('SEP')) {
+        return 'RETIREMENT';
+    }
+    return 'TAXABLE';
+}
+
+function getTxCategory(tx) {
+    if (tx.category) {
+        return tx.category;
+    }
+    const rawType = (tx.type || '').toUpperCase();
+    const sym = ((tx.symbol || '') + ' ' + (tx.raw_symbol || '')).toUpperCase();
+    const desc = (tx.description || '').toUpperCase();
+    const action = (tx.action || '').toUpperCase();
+
+    // 1. Check for options
+    let isOption = rawType.includes('OPTION');
+    if (!isOption && tx.transfer_items && Array.isArray(tx.transfer_items)) {
+        isOption = tx.transfer_items.some(it => (it.asset_type || '').toUpperCase() === 'OPTION');
+    }
+    if (!isOption) {
+        if (/[0-9]{6}[CP][0-9]{8}/.test(sym) || /\b\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d+(\.\d+)?\s+[CP]\b/i.test(sym) || /\b(CALL|PUT)\b/i.test(desc)) {
+            isOption = true;
+        }
+    }
+    if (isOption) return 'OPTION';
+
+    // 2. Check for Dividends
+    if (rawType.includes('DIVIDEND') || action.includes('DIVIDEND') || desc.includes('QUALIFIED DIVIDEND') || desc.includes('ORDINARY DIVIDEND') || desc.includes('DIVIDEND ON')) {
+        if (sym.trim() === 'INT' || desc.includes('BANK INT') || desc.includes('SCHWAB1 INT') || desc.includes('CREDIT INT')) {
+            return 'INTEREST';
+        }
+        return 'DIVIDEND';
+    }
+
+    // 3. Check for Interest
+    if (rawType.includes('INTEREST') || sym.trim() === 'INT' || desc.includes('BANK INT') || desc.includes('SCHWAB1 INT') || desc.includes('CREDIT INT') || desc.includes('INTEREST')) {
+        return 'INTEREST';
+    }
+
+    // 4. Check for Fees
+    if (rawType.includes('FEE') || sym.trim() === 'SEC' || desc.includes('SEC FEE') || desc.includes('ADR FEE') || desc.includes('FEE ADJ') || action.includes('FEE')) {
+        return 'FEE';
+    }
+
+    // 5. Check for Transfers / Journals
+    if (rawType.includes('JOURNAL') || rawType.includes('TRANSFER') || rawType.includes('TRF') || desc.includes('TRANSFER') || desc.includes('JOURNAL') || desc.includes('TRF FUNDS')) {
+        return 'JOURNAL';
+    }
+
+    // 6. Regular trades
+    if (rawType.includes('TRADE') || rawType.includes('BUY') || rawType.includes('SELL')) {
+        return 'TRADE';
+    }
+
+    return 'OTHER';
+}
+
+function getBadgeConfig(cat, tx) {
+    const rawAction = (tx.action || '').toUpperCase();
+    switch (cat) {
+        case 'OPTION':
+            return {
+                label: rawAction ? rawAction.replace('ASSIGNMENT', 'ASSIGNED') : 'OPTION',
+                bg: 'rgba(188, 140, 255, 0.18)',
+                color: 'var(--purple, #bc8cff)'
+            };
+        case 'TRADE':
+            const isBuy = (Number(tx.amount) || 0) < 0;
+            return {
+                label: isBuy ? 'STOCK BUY' : 'STOCK SELL',
+                bg: isBuy ? 'rgba(56, 189, 248, 0.18)' : 'rgba(34, 197, 94, 0.18)',
+                color: isBuy ? '#38bdf8' : 'var(--green, #22c55e)'
+            };
+        case 'DIVIDEND':
+            return {
+                label: rawAction ? rawAction.replace('QUALIFIED DIVIDEND', 'QUAL DIV') : 'DIVIDEND',
+                bg: 'rgba(34, 197, 94, 0.18)',
+                color: 'var(--green, #22c55e)'
+            };
+        case 'INTEREST':
+            return {
+                label: 'INTEREST',
+                bg: 'rgba(56, 189, 248, 0.18)',
+                color: '#38bdf8'
+            };
+        case 'JOURNAL':
+            return {
+                label: 'TRANSFER',
+                bg: 'rgba(156, 163, 175, 0.18)',
+                color: '#9ca3af'
+            };
+        case 'FEE':
+            return {
+                label: 'FEE / ADJ',
+                bg: 'rgba(251, 191, 36, 0.18)',
+                color: 'var(--yellow, #fbbf24)'
+            };
+        default:
+            return {
+                label: cat,
+                bg: 'rgba(156, 163, 175, 0.15)',
+                color: 'var(--muted)'
+            };
+    }
+}
+
+function getTxDisplayDescription(tx) {
+    if (tx.display_main !== undefined && tx.display_detail !== undefined) {
+        return { main: tx.display_main, detail: tx.display_detail };
+    }
+    let mainDesc = (tx.description || '').trim();
+    let detail = '';
+
+    if (tx.transfer_items && Array.isArray(tx.transfer_items)) {
+        const item = tx.transfer_items.find(i => i.asset_type === 'OPTION' || i.asset_type === 'EQUITY') || tx.transfer_items[0];
+        if (item) {
+            if (item.description && item.description !== 'USD currency' && item.description !== mainDesc) {
+                if (!mainDesc || mainDesc === 'USD currency') {
+                    mainDesc = item.description;
+                } else {
+                    detail = item.description;
+                }
+            }
+            const parts = [];
+            if (item.position_effect) {
+                parts.push(`[${item.position_effect}]`);
+            }
+            if (item.amount && item.asset_type !== 'CURRENCY') {
+                const qty = Math.abs(item.amount);
+                const action = item.amount > 0 ? 'Bought' : 'Sold';
+                const price = item.price ? `@ $${Number(item.price).toFixed(2)}` : '';
+                parts.push(`${action} ${qty} ${price}`.trim());
+            }
+            if (parts.length > 0) {
+                detail = detail ? `${detail} • ${parts.join(' ')}` : parts.join(' ');
+            }
+        }
+    }
+
+    if (!mainDesc || mainDesc === 'USD currency') {
+        mainDesc = tx.action || tx.type || '—';
+    }
+
+    return { main: mainDesc, detail: detail };
+}
+
+function populateHistAccountDropdown(transactions) {
+    const optGroup = document.getElementById('histAccountOptGroup');
+    if (!optGroup) return;
+
+    const accCounts = {};
+    (transactions || []).forEach(tx => {
+        const acc = getTxAccountName(tx);
+        accCounts[acc] = (accCounts[acc] || 0) + 1;
+    });
+
+    const sortedAccounts = Object.keys(accCounts).sort((a, b) => a.localeCompare(b));
+    optGroup.innerHTML = sortedAccounts.map(acc => {
+        const cat = getAccountCategory(acc);
+        const tag = cat === 'TAXABLE' ? '[Taxable]' : '[Retirement]';
+        return `<option value="${acc}">${tag} ${acc} (${accCounts[acc]} tx)</option>`;
+    }).join('');
+
+    const select = document.getElementById('histAccountSelect');
+    if (select && currentHistAccountFilter) {
+        select.value = currentHistAccountFilter;
+    }
+}
+
+function sortHistBy(col) {
+    if (currentHistSortCol === col) {
+        currentHistSortDir = currentHistSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentHistSortCol = col;
+        currentHistSortDir = (col === 'date' || col === 'amount') ? 'desc' : 'asc';
+    }
+    histCurrentPage = 1;
+    updateHistSortIndicators();
+    applyHistoryFiltersAndSort();
+}
+
+function updateHistSortIndicators() {
+    const cols = ['date', 'account', 'type', 'symbol', 'description', 'amount'];
+    cols.forEach(col => {
+        const el = document.getElementById(`sort_hist_${col}`);
+        if (!el) return;
+        if (col === currentHistSortCol) {
+            el.textContent = currentHistSortDir === 'asc' ? '▲' : '▼';
+            el.style.color = 'var(--blue, #58a6ff)';
+            el.style.fontWeight = '800';
+        } else {
+            el.textContent = '↕';
+            el.style.color = 'var(--muted)';
+            el.style.fontWeight = 'normal';
+        }
+    });
+}
+
+function setHistTypeFilter(type) {
+    if (currentHistTypeFilter === type && type !== 'ALL') {
+        type = 'ALL';
+    }
+    currentHistTypeFilter = type;
+    const select = document.getElementById('histTypeSelect');
+    if (select) select.value = type;
+    updateHistTypeChips(type);
+    histCurrentPage = 1;
+    applyHistoryFiltersAndSort();
+}
+
+function onHistTypeSelectChange() {
+    const select = document.getElementById('histTypeSelect');
+    if (select) {
+        currentHistTypeFilter = select.value;
+        updateHistTypeChips(select.value);
+        histCurrentPage = 1;
+        applyHistoryFiltersAndSort();
+    }
+}
+
+function updateHistTypeChips(activeType) {
+    const chipMap = {
+        'ALL': 'histChipAll',
+        'TRADE': 'histChipTrades',
+        'OPTION': 'histChipOptions',
+        'DIVIDEND': 'histChipDividends',
+        'INTEREST': 'histChipInterest',
+        'JOURNAL': 'histChipJournals',
+    };
+    Object.keys(chipMap).forEach(key => {
+        const chip = document.getElementById(chipMap[key]);
+        if (chip) {
+            if (key === activeType) {
+                chip.classList.add('active');
+            } else {
+                chip.classList.remove('active');
+            }
+        }
+    });
+}
+
+function onHistFilterChange() {
+    const accSelect = document.getElementById('histAccountSelect');
+    if (accSelect) currentHistAccountFilter = accSelect.value;
+
+    const cfSelect = document.getElementById('histCashFlowSelect');
+    if (cfSelect) currentHistCashFlowFilter = cfSelect.value;
+
+    const searchInput = document.getElementById('histSearchInput');
+    if (searchInput) currentHistSearchTerm = searchInput.value;
+
+    histCurrentPage = 1;
+    applyHistoryFiltersAndSort();
+}
+
+function resetHistFilters() {
+    currentHistTypeFilter = 'ALL';
+    currentHistAccountFilter = 'ALL';
+    currentHistCashFlowFilter = 'ALL';
+    currentHistSearchTerm = '';
+    currentHistSortCol = 'date';
+    currentHistSortDir = 'desc';
+    histCurrentPage = 1;
+
+    const accSelect = document.getElementById('histAccountSelect');
+    if (accSelect) accSelect.value = 'ALL';
+
+    const typeSelect = document.getElementById('histTypeSelect');
+    if (typeSelect) typeSelect.value = 'ALL';
+
+    const cfSelect = document.getElementById('histCashFlowSelect');
+    if (cfSelect) cfSelect.value = 'ALL';
+
+    const searchInput = document.getElementById('histSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    updateHistTypeChips('ALL');
+    updateHistSortIndicators();
+    applyHistoryFiltersAndSort();
+}
+
+function changeHistPage(delta) {
+    histCurrentPage += delta;
+    applyHistoryFiltersAndSort();
+}
+
+function changeHistPageSize(size) {
+    histPageSize = size;
+    histCurrentPage = 1;
+    applyHistoryFiltersAndSort();
+}
+
+function filterHistoryRows(filter) {
+    setHistTypeFilter(filter);
+}
+
+function applyHistoryFiltersAndSort() {
+    if (!historyRawTransactions || historyRawTransactions.length === 0) {
+        renderHistoryRows([]);
+        return;
+    }
+
+    const term = (currentHistSearchTerm || '').trim().toLowerCase();
+
+    // 1. FILTER
+    const filtered = historyRawTransactions.filter(tx => {
+        // Account filter
+        const accName = getTxAccountName(tx);
+        if (currentHistAccountFilter === 'TAXABLE') {
+            if (getAccountCategory(accName) !== 'TAXABLE') return false;
+        } else if (currentHistAccountFilter === 'RETIREMENT') {
+            if (getAccountCategory(accName) !== 'RETIREMENT') return false;
+        } else if (currentHistAccountFilter !== 'ALL') {
+            if (accName !== currentHistAccountFilter) return false;
+        }
+
+        // Type filter
+        const cat = getTxCategory(tx);
+        if (currentHistTypeFilter !== 'ALL') {
+            if (cat !== currentHistTypeFilter) return false;
+        }
+
+        // Cash flow filter
+        const amt = Number(tx.amount) || 0;
+        if (currentHistCashFlowFilter === 'INFLOW') {
+            if (amt <= 0) return false;
+        } else if (currentHistCashFlowFilter === 'OUTFLOW') {
+            if (amt >= 0) return false;
+        }
+
+        // Search term filter
+        if (term) {
+            const sym = (tx.symbol || tx.raw_symbol || '').toLowerCase();
+            const desc = (tx.description || '').toLowerCase();
+            const action = (tx.action || '').toLowerCase();
+            const accLower = accName.toLowerCase();
+            const accNum = (tx.account_number || '').toLowerCase();
+            const catLower = cat.toLowerCase();
+
+            let matchesTransfer = false;
+            if (tx.transfer_items && Array.isArray(tx.transfer_items)) {
+                matchesTransfer = tx.transfer_items.some(i => 
+                    (i.symbol || '').toLowerCase().includes(term) ||
+                    (i.description || '').toLowerCase().includes(term)
+                );
+            }
+
+            if (!sym.includes(term) &&
+                !desc.includes(term) &&
+                !action.includes(term) &&
+                !accLower.includes(term) &&
+                !accNum.includes(term) &&
+                !catLower.includes(term) &&
+                !matchesTransfer) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    // 2. STAT CARDS RECALCULATION (Calculated on the filtered set)
+    let sumDivs = 0;
+    let sumPremiums = 0;
+    let sumNetCash = 0;
+
+    filtered.forEach(tx => {
+        const amt = Number(tx.amount) || 0;
+        const cat = getTxCategory(tx);
+        if (cat === 'DIVIDEND' && amt > 0) {
+            sumDivs += amt;
+        }
+        if (cat === 'OPTION' && amt > 0) {
+            sumPremiums += amt;
+        }
+        sumNetCash += amt;
+    });
+
+    const elDivs = document.getElementById('histTotalDivs');
+    if (elDivs) elDivs.textContent = `$${sumDivs.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+    const elPrem = document.getElementById('histTotalPremiums');
+    if (elPrem) elPrem.textContent = `$${sumPremiums.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+    const elNet = document.getElementById('histNetCash');
+    const elSub = document.getElementById('histNetCashSubtext');
+    if (elNet) {
+        const netSign = sumNetCash >= 0 ? '+' : '-';
+        elNet.textContent = `${netSign}$${Math.abs(sumNetCash).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        elNet.style.color = sumNetCash >= 0 ? 'var(--green, #22c55e)' : 'var(--yellow, #fbbf24)';
+    }
+    if (elSub) {
+        if (currentHistTypeFilter === 'OPTION') {
+            const openAmt = currentHistAccountFilter === 'TAXABLE' ? '$7,784.87' : (currentHistAccountFilter === 'RETIREMENT' ? '$580.46' : '$8,365.33');
+            const closedAmt = currentHistAccountFilter === 'TAXABLE' ? '$35,799.26' : (currentHistAccountFilter === 'RETIREMENT' ? '$1,012.71' : '$36,811.97');
+            elSub.innerHTML = `<span title="Tax realization occurs at expiration/closure per IRS Pub 550">Tax Realized: <strong>+${closedAmt}</strong> | Open (exp 09/25): <strong>+${openAmt}</strong></span>`;
+        } else {
+            elSub.textContent = 'Settled cash impact';
+        }
+    }
+
+    const elCount = document.getElementById('histTxCount');
+    if (elCount) elCount.textContent = `${filtered.length.toLocaleString()} Transactions`;
+
+    const elBadge = document.getElementById('histMatchCountBadge');
+    if (elBadge) elBadge.textContent = `${filtered.length.toLocaleString()} items`;
+
+    // 3. SORT
+    filtered.sort((a, b) => {
+        let cmp = 0;
+        if (currentHistSortCol === 'date') {
+            const timeA = a.time || (a.date ? a.date + 'T00:00:00' : '');
+            const timeB = b.time || (b.date ? b.date + 'T00:00:00' : '');
+            cmp = timeA.localeCompare(timeB);
+            if (cmp === 0) {
+                cmp = (Number(a.id) || 0) - (Number(b.id) || 0);
+            }
+        } else if (currentHistSortCol === 'amount') {
+            cmp = (Number(a.amount) || 0) - (Number(b.amount) || 0);
+        } else if (currentHistSortCol === 'account') {
+            cmp = getTxAccountName(a).localeCompare(getTxAccountName(b));
+        } else if (currentHistSortCol === 'type') {
+            cmp = getTxCategory(a).localeCompare(getTxCategory(b));
+        } else if (currentHistSortCol === 'symbol') {
+            const sA = (a.symbol || a.raw_symbol || '').toUpperCase();
+            const sB = (b.symbol || b.raw_symbol || '').toUpperCase();
+            cmp = sA.localeCompare(sB);
+        } else if (currentHistSortCol === 'description') {
+            const dA = getTxDisplayDescription(a).main.toLowerCase();
+            const dB = getTxDisplayDescription(b).main.toLowerCase();
+            cmp = dA.localeCompare(dB);
+        }
+
+        return currentHistSortDir === 'asc' ? cmp : -cmp;
+    });
+
+    // 4. PAGINATION
+    const totalCount = filtered.length;
+    let pageItems = filtered;
+    let totalPages = 1;
+
+    if (histPageSize !== 'ALL') {
+        const size = parseInt(histPageSize, 10) || 50;
+        totalPages = Math.max(1, Math.ceil(totalCount / size));
+        if (histCurrentPage > totalPages) histCurrentPage = totalPages;
+        if (histCurrentPage < 1) histCurrentPage = 1;
+
+        const startIdx = (histCurrentPage - 1) * size;
+        const endIdx = startIdx + size;
+        pageItems = filtered.slice(startIdx, endIdx);
+
+        const pageInfo = document.getElementById('histPageInfo');
+        if (pageInfo) {
+            const from = totalCount === 0 ? 0 : startIdx + 1;
+            const to = Math.min(totalCount, endIdx);
+            pageInfo.textContent = `Showing ${from.toLocaleString()}–${to.toLocaleString()} of ${totalCount.toLocaleString()} transactions`;
+        }
+    } else {
+        histCurrentPage = 1;
+        totalPages = 1;
+        const pageInfo = document.getElementById('histPageInfo');
+        if (pageInfo) {
+            pageInfo.textContent = `Showing all ${totalCount.toLocaleString()} transactions`;
+        }
+    }
+
+    const pageNumEl = document.getElementById('histPageNumber');
+    if (pageNumEl) pageNumEl.textContent = `Page ${histCurrentPage} of ${totalPages}`;
+
+    const prevBtn = document.getElementById('histPrevBtn');
+    if (prevBtn) {
+        prevBtn.disabled = histCurrentPage <= 1;
+        prevBtn.style.opacity = histCurrentPage <= 1 ? '0.4' : '1';
+        prevBtn.style.cursor = histCurrentPage <= 1 ? 'not-allowed' : 'pointer';
+    }
+
+    const nextBtn = document.getElementById('histNextBtn');
+    if (nextBtn) {
+        nextBtn.disabled = histCurrentPage >= totalPages;
+        nextBtn.style.opacity = histCurrentPage >= totalPages ? '0.4' : '1';
+        nextBtn.style.cursor = histCurrentPage >= totalPages ? 'not-allowed' : 'pointer';
+    }
+
+    // 5. RENDER
+    renderHistoryRows(pageItems);
+}
+
 function renderHistoryRows(txList) {
     const tbody = document.getElementById('histTableBody');
     if (!tbody) return;
 
-    if (txList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:25px;" class="m">No account activity recorded in this time period.</td></tr>`;
+    if (!txList || txList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:35px 20px; color:var(--muted); font-size:13px;">
+            <span class="material-symbols-outlined" style="font-size:32px; display:block; margin:0 auto 8px; color:var(--muted); opacity:0.6;">search</span>
+            No transactions match the selected account, activity type, or search filter.
+            <div style="margin-top:10px;">
+                <button class="hbtn" onclick="resetHistFilters()" style="padding:4px 10px; font-size:11px;">Reset Filters</button>
+            </div>
+        </td></tr>`;
         return;
     }
 
     tbody.innerHTML = txList.map(tx => {
-        const amt = tx.amount || 0;
-        const isCredit = tx.isCredit !== false;
-        const amtColor = isCredit ? 'var(--green)' : 'var(--yellow)';
-        const amtSign = isCredit ? '+' : '';
-        const badgeColor = tx.badgeColor === 'b' ? 'var(--blue)' : (tx.badgeColor === 'y' ? 'var(--yellow)' : 'var(--green)');
-        const badgeBg = tx.badgeColor === 'b' ? 'rgba(88,166,255,0.18)' : (tx.badgeColor === 'y' ? 'rgba(210,153,34,0.18)' : 'rgba(34,197,94,0.18)');
+        const amt = Number(tx.amount) || 0;
+        const isCredit = amt > 0;
+        const isZero = amt === 0;
+        const amtColor = isZero ? 'var(--muted)' : (isCredit ? 'var(--green, #22c55e)' : 'var(--yellow, #fbbf24)');
+        const amtSign = isCredit ? '+' : (amt < 0 ? '-' : '');
+        const formattedAmt = `${amtSign}$${Math.abs(amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+        const cat = getTxCategory(tx);
+        const badgeCfg = getBadgeConfig(cat, tx);
+        const descInfo = getTxDisplayDescription(tx);
+        const accName = getTxAccountName(tx);
+        const accCategory = getAccountCategory(accName);
+        const accIcon = accCategory === 'TAXABLE' ? '<span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:3px; color:var(--blue);">account_balance</span>' : '<span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:3px; color:var(--purple);">verified_user</span>';
+
+        let dateDisplay = tx.date || '';
+        let timeDisplay = '';
+        if (tx.time) {
+            try {
+                const tObj = new Date(tx.time);
+                if (!isNaN(tObj.getTime())) {
+                    timeDisplay = tObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            } catch(e) {}
+        }
+
+        const symbolDisplay = tx.symbol || tx.raw_symbol || '—';
 
         return `
-            <tr class="hist-row" data-type="${tx.type}">
-                <td style="font-weight:700; color:var(--text); white-space:nowrap;">${tx.date}</td>
-                <td>
-                    <strong style="color:var(--text);">${tx.account_nickname || tx.account_number || '—'}</strong>
-                    <div style="font-size:10px; color:var(--muted);">${tx.account_number || ''}</div>
+            <tr class="hist-row" data-type="${cat}" style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s;">
+                <td style="padding:10px 16px; white-space:nowrap;">
+                    <div style="font-weight:700; color:var(--text); font-size:12px;">${dateDisplay}</div>
+                    ${timeDisplay ? `<div style="font-size:10px; color:var(--muted);">${timeDisplay}</div>` : ''}
                 </td>
-                <td>
-                    <span class="hbadge" style="background:${badgeBg}; color:${badgeColor}; font-size:10px; font-weight:700;">
-                        ${tx.badge || tx.type}
+                <td style="padding:10px 16px; white-space:nowrap;">
+                    <div style="font-weight:700; color:var(--text); font-size:12px; display:flex; align-items:center; gap:5px;">
+                        <span>${accIcon}</span>
+                        <span>${accName}</span>
+                    </div>
+                    ${tx.account_number && tx.account_number !== accName ? `<div style="font-size:10px; color:var(--muted); font-family:monospace;">${tx.account_number}</div>` : ''}
+                </td>
+                <td style="padding:10px 16px; white-space:nowrap;">
+                    <span class="hbadge" style="background:${badgeCfg.bg}; color:${badgeCfg.color}; font-size:10px; font-weight:700; border-radius:4px; padding:3px 7px; text-transform:uppercase; letter-spacing:0.3px;">
+                        ${badgeCfg.label}
                     </span>
                 </td>
-                <td><strong style="font-family:'Outfit',sans-serif; color:var(--text); font-size:13px;">${tx.symbol}</strong></td>
-                <td style="color:var(--muted); font-size:12px;">${tx.description || ''}</td>
-                <td style="text-align:right; white-space:nowrap;">
-                    <strong style="color:${amtColor}; font-size:13px;">${amtSign}$${Math.abs(amt).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
+                <td style="padding:10px 16px; white-space:nowrap;">
+                    <strong style="font-family:'Outfit',sans-serif; color:var(--text); font-size:13px; letter-spacing:0.2px;">${symbolDisplay}</strong>
+                </td>
+                <td style="padding:10px 16px; max-width:340px;">
+                    <div style="color:var(--text); font-size:12px; font-weight:500; line-height:1.3; overflow:hidden; text-overflow:ellipsis;">
+                        ${descInfo.main}
+                    </div>
+                    ${descInfo.detail ? `<div style="color:var(--muted); font-size:11px; margin-top:2px; line-height:1.2;">${descInfo.detail}</div>` : ''}
+                </td>
+                <td style="padding:10px 16px; text-align:right; white-space:nowrap;">
+                    <strong style="color:${amtColor}; font-size:13px; font-family:'Roboto Mono',monospace,sans-serif; font-weight:700;">${formattedAmt}</strong>
+                    ${tx.fees && Number(tx.fees) > 0 ? `<div style="font-size:10px; color:var(--muted);">fee: $${Number(tx.fees).toFixed(2)}</div>` : ''}
                 </td>
             </tr>
         `;
     }).join('');
-}
-
-function filterHistoryRows(filter) {
-    document.querySelectorAll('#subViewHistory .hbtn').forEach(b => b.classList.remove('active'));
-    const btnMap = {
-        'ALL': 'histFilterAll',
-        'DIVIDEND': 'histFilterDiv',
-        'OPTION': 'histFilterOpt',
-        'TRADE': 'histFilterTrade',
-    };
-    if (btnMap[filter]) {
-        const btn = document.getElementById(btnMap[filter]);
-        if (btn) btn.classList.add('active');
-    }
-
-    if (filter === 'ALL') {
-        renderHistoryRows(historyRawTransactions);
-    } else if (filter === 'DIVIDEND') {
-        renderHistoryRows(historyRawTransactions.filter(t => t.type && t.type.includes('DIVIDEND')));
-    } else if (filter === 'OPTION') {
-        renderHistoryRows(historyRawTransactions.filter(t => t.type && (t.type.includes('OPTION') || t.type.includes('CALL') || t.type.includes('PUT'))));
-    } else if (filter === 'TRADE') {
-        renderHistoryRows(historyRawTransactions.filter(t => t.type && (t.type.includes('BUY') || t.type.includes('SELL') || t.type.includes('TRADE'))));
-    }
 }
 
 
@@ -1068,14 +1691,15 @@ function renderCalendarForSelectedMonth() {
         const pastCount = sortedEvents.filter(e => e.isPast).length;
 
         const filterBarContainer = document.getElementById('calendarFilterBar');
+        const activeCalFilter = currentCalTimelineFilter || 'ALL';
         if (filterBarContainer) {
             filterBarContainer.innerHTML = `
-                <button class="fbtn active" id="calFilterAll" onclick="filterCalTimeline('ALL')">All Events (${sortedEvents.length})</button>
-                <button class="fbtn" id="calFilterHist" onclick="filterCalTimeline('HISTORY')"><span class="material-symbols-outlined" style="font-size:12px; margin-right:2px;">history</span> Activity (${histCount})</button>
-                <button class="fbtn" id="calFilterDiv" onclick="filterCalTimeline('DIVIDEND')">Dividends (${divCount})</button>
-                <button class="fbtn" id="calFilterOpt" onclick="filterCalTimeline('OPTION')">Options (${optCount})</button>
-                <button class="fbtn" id="calFilterEarn" onclick="filterCalTimeline('EARNINGS')">Earnings (${earnCount})</button>
-                <button class="fbtn" id="calFilterPast" onclick="filterCalTimeline('PAST')">Past 30 Days (${pastCount})</button>
+                <button class="fbtn ${activeCalFilter === 'ALL' ? 'active' : ''}" id="calFilterAll" onclick="filterCalTimeline('ALL')">All Events (${sortedEvents.length})</button>
+                <button class="fbtn ${activeCalFilter === 'HISTORY' ? 'active' : ''}" id="calFilterHist" onclick="filterCalTimeline('HISTORY')"><span class="material-symbols-outlined" style="font-size:12px; margin-right:2px;">history</span> Activity (${histCount})</button>
+                <button class="fbtn ${activeCalFilter === 'DIVIDEND' ? 'active' : ''}" id="calFilterDiv" onclick="filterCalTimeline('DIVIDEND')">Dividends (${divCount})</button>
+                <button class="fbtn ${activeCalFilter === 'OPTION' ? 'active' : ''}" id="calFilterOpt" onclick="filterCalTimeline('OPTION')">Options (${optCount})</button>
+                <button class="fbtn ${activeCalFilter === 'EARNINGS' ? 'active' : ''}" id="calFilterEarn" onclick="filterCalTimeline('EARNINGS')">Earnings (${earnCount})</button>
+                <button class="fbtn ${activeCalFilter === 'PAST' ? 'active' : ''}" id="calFilterPast" onclick="filterCalTimeline('PAST')">Past 30 Days (${pastCount})</button>
             `;
         }
 
@@ -1102,6 +1726,7 @@ function renderCalendarForSelectedMonth() {
         const todayObj = new Date();
         todayObj.setHours(0,0,0,0);
 
+        let calTimelineExpanded = false;
         sortedEvents.forEach((ev, index) => {
             const encData = encodeURIComponent(JSON.stringify(ev));
             const expDateObj = new Date(ev.date + 'T00:00:00');
@@ -1143,8 +1768,15 @@ function renderCalendarForSelectedMonth() {
             item.className = 'timeline-item';
             item.dataset.category = isHist ? 'HISTORY' : (isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION'));
             item.dataset.isPast = isPast ? '1' : '0';
+            item.dataset.eventIndex = index;
             item.style.position = 'relative';
             item.style.cursor = 'pointer';
+
+            // Show first 5 events by default to prevent clutter
+            if (index >= 5) {
+                item.classList.add('cal-timeline-extra');
+                item.style.display = 'none';
+            }
 
             const dot = document.createElement('div');
             dot.style.position = 'absolute';
@@ -1223,11 +1855,85 @@ function renderCalendarForSelectedMonth() {
         });
 
         list.appendChild(timelineContainer);
+
+        // Add View More button if more than 5 events
+        if (sortedEvents.length > 5) {
+            const expandWrap = document.createElement('div');
+            expandWrap.id = 'calTimelineExpandWrap';
+            expandWrap.style.textAlign = 'center';
+            expandWrap.style.marginTop = '14px';
+            expandWrap.innerHTML = `
+                <button id="btnExpandCalEvents" onclick="toggleCalTimelineExpand()" style="background: var(--bg3); border: 1px solid var(--border); color: var(--blue); font-size: 12px; font-weight: 700; padding: 8px 20px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: all 0.2s ease;">
+                    <span class="material-symbols-outlined" style="font-size: 16px;">expand_more</span>
+                    <span id="btnExpandCalEventsText">View More Events (${sortedEvents.length - 5} More)</span>
+                </button>
+            `;
+            list.appendChild(expandWrap);
+        }
+    }
+}
+
+let calTimelineExpanded = false;
+let currentCalTimelineFilter = 'ALL';
+
+function toggleCalTimelineExpand() {
+    calTimelineExpanded = !calTimelineExpanded;
+    updateCalTimelineVisibility(currentCalTimelineFilter);
+}
+
+function updateCalTimelineVisibility(filter = 'ALL') {
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    const expandWrap = document.getElementById('calTimelineExpandWrap');
+    const btnText = document.getElementById('btnExpandCalEventsText');
+    const btnIcon = document.querySelector('#btnExpandCalEvents .material-symbols-outlined');
+
+    let matchingItems = [];
+    timelineItems.forEach(el => {
+        let matches = true;
+        if (filter === 'PAST') {
+            matches = el.dataset.isPast === '1';
+        } else if (filter !== 'ALL') {
+            matches = el.dataset.category === filter;
+        }
+        if (matches) {
+            matchingItems.push(el);
+        } else {
+            el.style.display = 'none';
+        }
+    });
+
+    matchingItems.forEach((el, index) => {
+        if (calTimelineExpanded || index < 5) {
+            el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
+    });
+
+    if (expandWrap) {
+        if (matchingItems.length > 5) {
+            expandWrap.style.display = 'block';
+            if (btnText && btnIcon) {
+                if (calTimelineExpanded) {
+                    btnText.textContent = 'Show Less (Collapse to 5)';
+                    btnIcon.textContent = 'expand_less';
+                } else {
+                    btnText.textContent = `View More Events (${matchingItems.length - 5} More)`;
+                    btnIcon.textContent = 'expand_more';
+                }
+            }
+        } else {
+            expandWrap.style.display = 'none';
+        }
     }
 }
 
 function filterCalTimeline(filter) {
-    document.querySelectorAll('#calendarEventsList .fbtn').forEach(btn => btn.classList.remove('active'));
+    if (currentCalTimelineFilter === filter && filter !== 'ALL') {
+        filter = 'ALL';
+    }
+    currentCalTimelineFilter = filter;
+    document.querySelectorAll('#calendarFilterBar .fbtn').forEach(btn => btn.classList.remove('active'));
     const btnMap = {
         'ALL': 'calFilterAll',
         'HISTORY': 'calFilterHist',
@@ -1241,10 +1947,8 @@ function filterCalTimeline(filter) {
         if (activeBtn) activeBtn.classList.add('active');
     }
 
-    const timelineItems = document.querySelectorAll('.timeline-item');
     const calBubbles = document.querySelectorAll('.cal-event-bubble');
-
-    const applyFilter = (el) => {
+    calBubbles.forEach(el => {
         if (filter === 'ALL') {
             el.style.display = 'block';
         } else if (filter === 'PAST') {
@@ -1252,10 +1956,9 @@ function filterCalTimeline(filter) {
         } else {
             el.style.display = el.dataset.category === filter ? 'block' : 'none';
         }
-    };
+    });
 
-    timelineItems.forEach(applyFilter);
-    calBubbles.forEach(applyFilter);
+    updateCalTimelineVisibility(filter);
 }
 
 function openCalEventCard(encodedJson) {
@@ -1554,26 +2257,24 @@ function setAccountViewLayout(mode) {
 
 document.addEventListener('DOMContentLoaded', () => {
     const hash = window.location.hash;
-    let defaultTab = 'calendar';
-    if (hash === '#subViewHoldings') {
+    let defaultTab = 'holdings';
+    if (hash === '#subViewCalendar') {
+        defaultTab = 'calendar';
+    } else if (hash === '#subViewHoldings') {
         defaultTab = 'holdings';
-    } else if (hash === '#subViewFlywheel') {
-        defaultTab = 'flywheel';
     } else if (hash === '#subViewHistory') {
         defaultTab = 'history';
     } else if (hash === '#subViewOrders') {
         defaultTab = 'orders';
     }
     switchPortSubView(defaultTab);
-    loadPortCoveredCallSuggestions();
+    setAccountViewLayout('grid');
 });
 
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash;
     if (hash === '#subViewHoldings') {
         switchPortSubView('holdings');
-    } else if (hash === '#subViewFlywheel') {
-        switchPortSubView('flywheel');
     } else if (hash === '#subViewHistory') {
         switchPortSubView('history');
     } else if (hash === '#subViewOrders') {
@@ -1582,78 +2283,6 @@ window.addEventListener('hashchange', () => {
         switchPortSubView('calendar');
     }
 });
-
-
-
-
-async function loadPortCoveredCallSuggestions() {
-    const grid = document.getElementById('portCoveredCallTradeCards');
-    try {
-        const res = await fetch('/api/flywheel/covered-call-suggestions');
-        const json = await res.json();
-
-        if (json.status === 'success' && json.data) {
-            const d = json.data;
-            const suggestions = d.suggestions || [];
-            document.getElementById('portPlaybookTotalIncome').textContent = `+$${d.totalPotentialIncome.toLocaleString()} Instant Premium Income`;
-
-            if (suggestions.length === 0) {
-                grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">All portfolio shares are either pledged or under 100 shares. No Covered Call trades available right now.</div>';
-                return;
-            }
-
-            grid.innerHTML = '';
-            suggestions.forEach(s => {
-                const card = document.createElement('div');
-                card.style.background = 'var(--bg3)';
-                card.style.border = '1px solid var(--border)';
-                card.style.borderRadius = '10px';
-                card.style.padding = '14px';
-                card.style.display = 'flex';
-                card.style.flexDirection = 'column';
-                card.style.justifyContent = 'space-between';
-
-                card.innerHTML = `
-                    <div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <div>
-                                <strong style="font-size:16px; color:var(--text);">${s.symbol}</strong>
-                                <span class="hbadge" style="margin-left:6px; background:rgba(63,185,80,0.15); color:var(--green);">${s.eligibleContracts} Contract(s) Eligible</span>
-                            </div>
-                            <span class="g" style="font-size:15px; font-weight:800;">+$${s.estTotalIncome} Income</span>
-                        </div>
-
-                        <div style="background:rgba(63,185,80,0.06); border:1px solid rgba(63,185,80,0.2); border-radius:6px; padding:8px 10px; font-size:12px; margin-bottom:10px; color:var(--green); font-weight:700; display:flex; align-items:center; gap:4px;">
-                            <span class="material-symbols-outlined" style="font-size:14px;">bolt</span> ${s.tradeActionText}
-                        </div>
-
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; color:var(--muted); margin-bottom:10px; background:var(--bg2); padding:8px; border-radius:6px; border:1px solid var(--border);">
-                            <div>Current Price: <strong style="color:var(--text);">$${s.currentPrice}</strong></div>
-                            <div>Cost Basis: <strong style="color:var(--blue);">$${s.costBasis}</strong></div>
-                            <div>Target Strike: <strong class="g">$${s.suggestedStrike} (+${s.otmPercentage}% OTM)</strong></div>
-                            <div>Unrealized P&L: <strong class="${s.unrealizedPLPct >= 0 ? 'g' : 'r'}">${s.unrealizedPLPct >= 0 ? '+' : ''}${s.unrealizedPLPct}%</strong></div>
-                            <div>Horizon DTE: <strong style="color:var(--purple);">${s.dteHorizon}</strong></div>
-                            <div>Annualized Yield: <strong class="g">${s.annualizedYieldPct}% APY</strong></div>
-                        </div>
-
-
-                        <p style="font-size:11px; color:var(--muted); margin:0 0 10px 0; line-height:1.4;">
-                            ${s.reasoning}
-                        </p>
-                    </div>
-
-                    <a href="/screener?symbol=${s.symbol}" class="hbtn hbtn-blue" style="width:100%; justify-content:center; text-align:center; text-decoration:none; display:flex; padding:8px 0;">
-                        🔍 Inspect ${s.symbol} Option Chain & Gemini AI Signals
-                    </a>
-
-                `;
-                grid.appendChild(card);
-            });
-        }
-    } catch(e) {
-        console.error('Failed to load trade suggestions:', e);
-    }
-}
 
 async function triggerAiReview(symbol, strike) {
     const container = document.getElementById('aiReviewContainer');

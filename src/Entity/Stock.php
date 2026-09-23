@@ -6,6 +6,12 @@ use App\Repository\StockRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * Stock Entity
+ *
+ * Represents a tracked equity or ETF in the stock screener with fundamental metrics,
+ * conviction score, price targets, risk ratings, and investment thesis.
+ */
 #[ORM\Entity(repositoryClass: StockRepository::class)]
 class Stock
 {
@@ -257,6 +263,11 @@ class Stock
         return $this;
     }
 
+    /**
+     * Serializes the Stock entity to an associative array for API responses.
+     *
+     * @return array Associative array of stock attributes.
+     */
     public function toArray(): array
     {
         return [

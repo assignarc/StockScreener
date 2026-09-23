@@ -1,0 +1,212 @@
+/* ==========================================================================
+   SETTINGS & CONFIGURATION STYLESHEET
+   ========================================================================== */
+
+/* ── Settings Page Layout ─────────────────────────────────────────────── */
+.settings-wrap {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Page Hero ──────────────────────────────────────────────────────── */
+.settings-hero {
+    padding: 28px 32px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+}
+.settings-hero h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0 0 6px 0;
+    color: var(--text);
+}
+.settings-hero p { color: var(--muted); font-size: 13px; margin: 0; }
+
+/* ── Content Grid ────────────────────────────────────────────────────── */
+.settings-content {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 32px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+/* ── Config Section Card ─────────────────────────────────────────────── */
+.cfg-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.cfg-section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+}
+.cfg-section-header .sec-icon { font-size: 22px; }
+.cfg-section-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--text);
+}
+.cfg-section-header p {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 2px 0 0 0;
+}
+.cfg-rows { padding: 0; }
+
+/* ── Config Row ─────────────────────────────────────────────────────── */
+.cfg-row {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+}
+.cfg-row:last-child { border-bottom: none; }
+.cfg-row:hover { background: var(--bg3); }
+.cfg-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 3px;
+}
+.cfg-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+.cfg-key {
+    font-size: 10px;
+    color: var(--blue);
+    font-family: 'Courier New', monospace;
+    margin-top: 4px;
+    opacity: 0.8;
+}
+
+/* ── Config Input ────────────────────────────────────────────────────── */
+.cfg-input {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: right;
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    box-sizing: border-box;
+}
+.cfg-input:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(88,166,255,0.15);
+}
+.cfg-input.modified { border-color: var(--yellow); }
+.cfg-input.saved    { border-color: var(--green);  }
+
+/* ── Wide Key Input row — spans full width ─────────────────────────── */
+.cfg-row-wide {
+    display: block;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+}
+.cfg-row-wide:last-child { border-bottom: none; }
+.cfg-row-wide:hover { background: var(--bg3); }
+.cfg-row-wide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* Form inputs, key fields & pill action chips inherited from screener.css */
+
+/* ── hbtn-purple variant ─────────────────────────────────────────────── */
+.hbtn-purple {
+    background: linear-gradient(135deg, #7c3aed, #9d4edd);
+    color: #fff;
+    border: none;
+}
+.hbtn-purple:hover { opacity: 0.88; }
+
+/* ── Broker instance card ───────────────────────────────────────────── */
+.broker-instance-card {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    transition: border-color 0.2s;
+}
+.broker-instance-card:hover { border-color: rgba(56,189,248,0.35); }
+
+/* ── Save Bar ────────────────────────────────────────────────────────── */
+.save-bar {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 50;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+}
+.save-bar .save-status {
+    font-size: 13px;
+    color: var(--muted);
+    flex: 1;
+}
+.save-bar .save-status.success { color: var(--green); }
+.save-bar .save-status.error   { color: var(--red); }
+
+.btn-save {
+    background: linear-gradient(135deg, var(--blue), var(--green));
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 28px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    font-family: 'Outfit', sans-serif;
+}
+.btn-save:hover   { opacity: 0.9; transform: translateY(-1px); }
+.btn-save:active  { transform: translateY(0); }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-reset {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-reset:hover { color: var(--text); border-color: var(--text); }
+
+/* ── Pct display ─────────────────────────────────────────────────────── */
+.pct-suffix { font-size: 11px; color: var(--muted); margin-top: 3px; text-align: right; }

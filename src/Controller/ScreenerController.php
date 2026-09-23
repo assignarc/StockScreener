@@ -16,8 +16,23 @@ use App\Service\PerformanceHistoryService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
+/**
+ * ScreenerController
+ *
+ * Main UI view controller rendering dashboard, screener, portfolio, tax center,
+ * historical performance charts, discover recommendations, planner, and engine monitor.
+ */
 class ScreenerController extends AbstractController
 {
+    /**
+     * Initializes the screener view controller.
+     *
+     * @param StockRepository           $stockRepository    Stock repository.
+     * @param BrokerManagerService      $brokerManager      Multi-broker management service.
+     * @param PersistentCacheService    $cache              Persistent cache service.
+     * @param TaxEngine                 $taxEngine          Tax calculation engine.
+     * @param PerformanceHistoryService $performanceHistory Portfolio snapshot and growth curve service.
+     */
     public function __construct(
         private StockRepository $stockRepository,
         private BrokerManagerService $brokerManager,
@@ -26,10 +41,15 @@ class ScreenerController extends AbstractController
         private PerformanceHistoryService $performanceHistory,
     ) {}
 
+    /**
+     * Renders the portfolio growth history page with interactive charts.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/portfolio/history', name: 'app_portfolio_history')]
     public function portfolioHistory(): Response
     {
-        $historyData = $this->performanceHistory->getGrowthHistory('6M');
+        $historyData = $this->performanceHistory->getGrowthHistory('THIS_YEAR');
 
         return $this->render('screener/history.html.twig', [
             'growth' => $historyData,
@@ -37,15 +57,28 @@ class ScreenerController extends AbstractController
         ]);
     }
 
+    /**
+     * API endpoint returning portfolio growth curves and benchmark series for a given period.
+     *
+     * @param Request $request HTTP request containing period parameter.
+     * @return JsonResponse JSON growth data.
+     */
     #[Route('/portfolio/history-api', name: 'app_portfolio_history_api', methods: ['GET'])]
     public function portfolioHistoryApi(Request $request): JsonResponse
     {
-        $period = $request->query->get('period', '6M');
+        $period = $request->query->get('period', 'THIS_YEAR');
         $historyData = $this->performanceHistory->getGrowthHistory($period);
 
         return $this->json($historyData);
     }
 
+    /**
+     * Handles file upload and processing of Schwab transaction CSV files.
+     *
+     * @param Request                                $request     HTTP request containing uploaded file.
+     * @param \App\Service\SchwabCsvImporterService $csvImporter CSV importer service.
+     * @return JsonResponse Import result summary.
+     */
     #[Route('/portfolio/import-csv', name: 'app_portfolio_import_csv', methods: ['POST'])]
     public function importCsv(Request $request, \App\Service\SchwabCsvImporterService $csvImporter): JsonResponse
     {
@@ -60,23 +93,41 @@ class ScreenerController extends AbstractController
         return $this->json($result);
     }
 
+    /**
+     * Renders the Tax Center view showing capital gains/losses, holding terms, and estimated liability.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/portfolio/tax', name: 'app_portfolio_tax')]
     public function taxCenter(): Response
     {
         $portfolioData = $this->brokerManager->getAggregatedPortfolio();
         
-        // Fetch 2 years of history for tax calculation
-        $history = $this->brokerManager->getAggregatedHistory(730);
+        // Fetch up to 10 years of history for tax calculation to ensure complete lot matching
+        $history = $this->brokerManager->getAggregatedHistory(3650);
         $realizations = $this->taxEngine->calculateTaxRealizations($history, $portfolioData);
+        $incomeRecords = $this->taxEngine->calculateIncomeRealizations($history, $portfolioData);
+
+        $currentYear = (int) date('Y');
+        $carryforwards = $this->taxEngine->calculateHistoricalLossCarryforwards($realizations, $currentYear);
+        $taxLiability = $this->taxEngine->calculateTaxLiability($realizations, $incomeRecords, $carryforwards, null, (string)$currentYear);
 
         return $this->render('screener/tax_center.html.twig', [
             'portfolio' => $portfolioData,
             'realizations' => $realizations,
+            'incomeRecords' => $incomeRecords,
+            'taxLiability' => $taxLiability,
+            'carryforwards' => $carryforwards,
             'history' => $history,
             'activePage' => 'tax_center',
         ]);
     }
 
+    /**
+     * Renders the main dashboard page.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/', name: 'app_dashboard')]
     public function dashboard(): Response
     {
@@ -90,6 +141,11 @@ class ScreenerController extends AbstractController
         ]);
     }
 
+    /**
+     * Renders the stock screener page with customizable filter controls.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/screener', name: 'app_screener')]
     public function screener(): Response
     {
@@ -105,6 +161,11 @@ class ScreenerController extends AbstractController
         ]);
     }
 
+    /**
+     * Renders the portfolio management page.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/portfolio', name: 'app_portfolio')]
     public function portfolio(): Response
     {
@@ -116,6 +177,11 @@ class ScreenerController extends AbstractController
         ]);
     }
 
+    /**
+     * Renders the discover ideas page with AI-generated recommendations.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/discover', name: 'app_discover')]
     public function discover(): Response
     {
@@ -127,6 +193,11 @@ class ScreenerController extends AbstractController
         ]);
     }
 
+    /**
+     * Renders the Capital Flywheel trade planner page.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/planner', name: 'app_planner')]
     public function planner(): Response
     {
@@ -138,6 +209,11 @@ class ScreenerController extends AbstractController
         ]);
     }
 
+    /**
+     * Renders the application help and documentation page.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/help', name: 'app_help')]
     public function help(): Response
     {
@@ -145,6 +221,12 @@ class ScreenerController extends AbstractController
             'activePage' => 'help',
         ]);
     }
+
+    /**
+     * Renders the background Flywheel engine health and telemetry monitor.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/engine-monitor', name: 'app_engine_monitor')]
     public function engineMonitor(): Response
     {

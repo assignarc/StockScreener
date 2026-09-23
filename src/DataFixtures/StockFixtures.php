@@ -6,8 +6,20 @@ use App\Entity\Stock;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
+/**
+ * StockFixtures
+ *
+ * Seeds initial benchmark conviction stocks and ETFs across major thematic sectors
+ * (AI Chips, Quantum, Space, Biotech, Cybersecurity, Fintech).
+ */
 class StockFixtures extends Fixture
 {
+    /**
+     * Loads initial stock fixtures into SQLite.
+     *
+     * @param ObjectManager $manager Doctrine object manager.
+     * @return void
+     */
     public function load(ObjectManager $manager): void
     {
         $stocksData = [

@@ -7,11 +7,31 @@ use App\Service\PersistentCacheService;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Class SchwabBroker
+ *
+ * Implements BrokerInterface for Charles Schwab Trader and Market Data APIs.
+ * Handles OAuth 2.0 authentication token exchange and automated refresh,
+ * live account balance and position queries, transaction history aggregation,
+ * open order monitoring, and option chain ingestion.
+ *
+ * Design Reference: doc/broker-integrations.md
+ */
 class SchwabBroker implements BrokerInterface
 {
     private const BASE_URL = 'https://api.schwabapi.com/marketdata/v1';
     private const TRADING_BASE_URL = 'https://api.schwabapi.com/trader/v1';
 
+    /**
+     * @param string $id Unique broker instance identifier.
+     * @param string $nickname User-friendly display nickname.
+     * @param string|null $appKey Charles Schwab Developer App Key (Client ID).
+     * @param string|null $appSecret Charles Schwab Developer App Secret (Client Secret).
+     * @param HttpClientInterface $httpClient HTTP client for external API requests.
+     * @param LoggerInterface $logger Application logger instance.
+     * @param PersistentCacheService $cache SQLite persistent caching service.
+     * @param AppConfigService $appConfig Key-value application configuration service.
+     */
     public function __construct(
         private string $id,
         private string $nickname,
@@ -23,42 +43,82 @@ class SchwabBroker implements BrokerInterface
         private AppConfigService $appConfig
     ) {}
 
+    /**
+     * Get unique identifier for this broker instance.
+     *
+     * @return string Unique broker configuration ID.
+     */
     public function getId(): string
     {
         return $this->id;
     }
 
+    /**
+     * Get broker type slug.
+     *
+     * @return string Always 'schwab'.
+     */
     public function getType(): string
     {
         return 'schwab';
     }
 
+    /**
+     * Get human-readable nickname for this broker account.
+     *
+     * @return string Account nickname or formatted fallback name.
+     */
     public function getNickname(): string
     {
         return $this->nickname ?: 'Schwab Account (' . $this->id . ')';
     }
 
+    /**
+     * Retrieve the effective Developer App Key.
+     *
+     * @return string|null Developer App Key or null if unset.
+     */
     public function getEffectiveAppKey(): ?string
     {
         return !empty($this->appKey) ? $this->appKey : null;
     }
 
+    /**
+     * Retrieve the effective Developer App Secret.
+     *
+     * @return string|null Developer App Secret or null if unset.
+     */
     public function getEffectiveAppSecret(): ?string
     {
         return !empty($this->appSecret) ? $this->appSecret : null;
     }
 
+    /**
+     * Determine whether required Schwab API credentials are configured.
+     *
+     * @return bool True if both app key and secret are non-empty.
+     */
     public function isConfigured(): bool
     {
         return !empty($this->getEffectiveAppKey()) && !empty($this->getEffectiveAppSecret());
     }
 
+    /**
+     * Check if live trade operations are enabled in the environment.
+     *
+     * @return bool True if TRADING_ENABLED=true in .env.
+     */
     public function isTradingEnabled(): bool
     {
         $flag = $_ENV['TRADING_ENABLED'] ?? false;
         return filter_var($flag, FILTER_VALIDATE_BOOLEAN);
     }
 
+    /**
+     * Enforce read-only safety guardrail before modifying operations.
+     *
+     * @throws \RuntimeException If trading is disabled.
+     */
     public function ensureTradingAllowed(): void
     {
         if (!$this->isTradingEnabled()) {
@@ -69,11 +129,23 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
+    /**
+     * Check if an active access token is available.
+     *
+     * @return bool True if authorized.
+     */
     public function isAuthorized(): bool
     {
         return $this->getAccessToken() !== null;
     }
 
+    /**
+     * Build the Schwab OAuth 2.0 authorization URL.
+     *
+     * @param string $redirectUri Registered OAuth callback URI.
+     * @param string|null $state Optional CSRF protection state parameter.
+     * @return string|null Schwab authorization URL.
+     */
     public function getAuthUrl(string $redirectUri, ?string $state = null): ?string
     {
         $params = [
@@ -87,6 +159,13 @@ class SchwabBroker implements BrokerInterface
         return 'https://api.schwabapi.com/v1/oauth/authorize?' . http_build_query($params);
     }
 
+    /**
+     * Exchange an OAuth authorization code for Schwab access and refresh tokens.
+     *
+     * @param string $code OAuth authorization code.
+     * @param string $redirectUri Registered OAuth callback URI.
+     * @return array Status associative array with token data or error description.
+     */
     public function exchangeAuthCode(string $code, string $redirectUri): array
     {
         if (!$this->isConfigured()) {
@@ -123,6 +202,11 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
+    /**
+     * Refresh an expired Schwab access token using the stored refresh token.
+     *
+     * @return string|null New access token string or null on failure.
+     */
     public function refreshAccessToken(): ?string
     {
         $tokenData = $this->readTokenData();
@@ -130,6 +214,7 @@ class SchwabBroker implements BrokerInterface
             return null;
         }
 
+        // Return current token if it has more than 60 seconds of validity remaining
         $expiresAt = $tokenData['expires_at'] ?? 0;
         if (time() < $expiresAt - 60 && !empty($tokenData['access_token'])) {
             return $tokenData['access_token'];
@@ -169,6 +254,11 @@ class SchwabBroker implements BrokerInterface
         return null;
     }
 
+    /**
+     * Retrieve the active access token, performing an automatic refresh if needed.
+     *
+     * @return string|null Valid access token or null if unauthenticated.
+     */
     public function getAccessToken(): ?string
     {
         $tokenData = $this->readTokenData();
@@ -184,6 +274,11 @@ class SchwabBroker implements BrokerInterface
         return $tokenData['access_token'] ?? null;
     }
 
+    /**
+     * Purge stored OAuth tokens and clear persistent caches for this broker instance.
+     *
+     * @return bool True upon successful eviction.
+     */
     public function purgeTokens(): bool
     {
         $this->appConfig->set('broker.' . $this->id . '.oauth_token', null);
@@ -191,6 +286,11 @@ class SchwabBroker implements BrokerInterface
         return true;
     }
 
+    /**
+     * Read token array from application configuration store.
+     *
+     * @return array|null Token payload array or null if unset.
+     */
     private function readTokenData(): ?array
     {
         $tokenData = $this->appConfig->get('broker.' . $this->id . '.oauth_token');
@@ -201,11 +301,22 @@ class SchwabBroker implements BrokerInterface
         return null;
     }
 
+    /**
+     * Write token array into application configuration store.
+     *
+     * @param array $tokenData Token payload containing access_token, refresh_token, expires_at.
+     */
     private function writeTokenData(array $tokenData): void
     {
         $this->appConfig->set('broker.' . $this->id . '.oauth_token', $tokenData);
     }
 
+    /**
+     * Fetch live account balances, purchasing power, and positions across all Schwab accounts.
+     * Resolves user preferences to display custom nicknames.
+     *
+     * @return array Sanitized portfolio array.
+     */
     public function getAccountPortfolio(): array
     {
         $cacheKey = 'b' . $this->id . '.' . str_replace(' ', '_', strtolower($this->getNickname())) . '.portfolio';
@@ -249,6 +360,7 @@ class SchwabBroker implements BrokerInterface
                 $this->logger->warning('Schwab /userPreference API error: ' . $e->getMessage());
             }
 
+            // 2. Query Schwab Accounts API for live balances and open positions
             $response = $this->httpClient->request('GET', self::TRADING_BASE_URL . '/accounts', [
                 'headers' => ['Authorization' => 'Bearer ' . $token],
                 'query'   => ['fields' => 'positions'],
@@ -269,6 +381,13 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
+    /**
+     * Fetch normalized transaction history with daily gating and 1-year persistent caching.
+     *
+     * @param int $days Historical window in calendar days.
+     * @param bool $forceRefresh When true, bypasses daily gate to execute external API query.
+     * @return array List of normalized transaction records sorted descending by date.
+     */
     public function getAccountHistory(int $days = 30, bool $forceRefresh = false): array
     {
         $cacheTtl = (int) $this->appConfig->get('cache.ttl.broker.history', 604800);
@@ -459,6 +578,13 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
+    /**
+     * Fetch order history across accounts for the specified timeframe.
+     *
+     * @param int $days Historical window in calendar days.
+     * @param bool $forceRefresh When true, bypasses cache to query API.
+     * @return array List of normalized order records.
+     */
     public function getOrderHistory(int $days = 30, bool $forceRefresh = false): array
     {
         $cacheTtl = (int) $this->appConfig->get('cache.ttl.broker.history', 86400);
@@ -546,6 +672,12 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
+    /**
+     * Fetch active working and pending orders.
+     *
+     * @param bool $forceRefresh When true, bypasses cache to query API.
+     * @return array List of open order records.
+     */
     public function getOpenOrders(bool $forceRefresh = false): array
     {
         $cacheKey = 'b' . $this->id . '.' . str_replace(' ', '_', strtolower($this->getNickname())) . '.open_orders';
@@ -588,6 +720,12 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
+    /**
+     * Sanitize raw orders response into normalized structure with masked account numbers.
+     *
+     * @param array $orders Raw API order response array.
+     * @return array Sanitized open orders.
+     */
     private function sanitizeOrdersData(array $orders): array
     {
         $sanitized = [];
@@ -628,6 +766,13 @@ class SchwabBroker implements BrokerInterface
         return $sanitized;
     }
 
+    /**
+     * Query Schwab Market Data API for option chain strikes, expirations, and Greeks.
+     *
+     * @param string $symbol Underlying equity ticker symbol.
+     * @param float $currentPrice Current market price of the underlying equity.
+     * @return array Normalized option chain containing call and put contracts.
+     */
     public function getOptionChain(string $symbol, float $currentPrice): array
     {
         $symbol = strtoupper(trim($symbol));
@@ -669,6 +814,13 @@ class SchwabBroker implements BrokerInterface
         }
     }
 
+    /**
+     * Sanitize raw accounts payload and extract balances, equity positions, and option contracts.
+     *
+     * @param array $accounts Raw accounts array from Schwab API.
+     * @param array $nicknameMap Account number to nickname lookup map.
+     * @return array Sanitized portfolio summary array.
+     */
     private function sanitizePortfolioData(array $accounts, array $nicknameMap = []): array
     {
         if (empty($accounts)) {
@@ -805,6 +957,14 @@ class SchwabBroker implements BrokerInterface
         ];
     }
 
+    /**
+     * Sanitize raw transactions list into normalized records with fees and extracted symbols.
+     *
+     * @param array $transactions Raw transactions array.
+     * @param string $accountNumber Account identifier string.
+     * @param string|null $accountNickname Resolved account nickname.
+     * @return array Sanitized transaction records.
+     */
     private function sanitizeHistoryData(array $transactions, string $accountNumber = '', ?string $accountNickname = null): array
     {
         $sanitized = [];
@@ -885,6 +1045,14 @@ class SchwabBroker implements BrokerInterface
         return $sanitized;
     }
 
+    /**
+     * Parse raw option chain payload from Schwab API into structured call and put lists.
+     *
+     * @param array $data Raw option chain payload.
+     * @param string $symbol Underlying equity ticker symbol.
+     * @param float $currentPrice Current market price.
+     * @return array Structured option chain with call and put contracts.
+     */
     private function parseOptionChainResponse(array $data, string $symbol, float $currentPrice): array
     {
         $calls = [];
@@ -917,6 +1085,12 @@ class SchwabBroker implements BrokerInterface
         ];
     }
 
+    /**
+     * Extract stock ticker symbol from free-text transaction descriptions (e.g. dividends).
+     *
+     * @param string $desc Transaction description text.
+     * @return string|null Resolved ticker symbol or null.
+     */
     private function extractSymbolFromDescription(string $desc): ?string
     {
         $descUpper = strtoupper(trim($desc));
@@ -971,6 +1145,13 @@ class SchwabBroker implements BrokerInterface
         return null;
     }
 
+    /**
+     * Format raw contract payload into standard option contract structure.
+     *
+     * @param array $c Raw option contract associative array.
+     * @param string $type Option contract type ('CALL' or 'PUT').
+     * @return array Normalized option contract array.
+     */
     private function formatOptionContract(array $c, string $type): array
     {
         return [

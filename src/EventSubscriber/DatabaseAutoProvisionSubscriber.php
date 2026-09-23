@@ -8,12 +8,29 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 
+/**
+ * DatabaseAutoProvisionSubscriber
+ *
+ * Kernel request event subscriber that guarantees Just-In-Time (JIT) SQLite schema
+ * provisioning and redirects unconfigured new installations to the /setup wizard.
+ */
 class DatabaseAutoProvisionSubscriber implements EventSubscriberInterface
 {
+    /**
+     * Initializes the subscriber with the database bootstrap service.
+     *
+     * @param DatabaseBootstrapService $bootstrap Database bootstrap and schema provisioning service.
+     */
     public function __construct(
         private DatabaseBootstrapService $bootstrap,
     ) {}
 
+    /**
+     * Handles kernel request events to ensure tables exist and redirect to setup if needed.
+     *
+     * @param RequestEvent $event Kernel request event.
+     * @return void
+     */
     public function onKernelRequest(RequestEvent $event): void
     {
         if (!$event->isMainRequest()) {
@@ -46,6 +63,11 @@ class DatabaseAutoProvisionSubscriber implements EventSubscriberInterface
         }
     }
 
+    /**
+     * Registers subscribed kernel events and priority rankings.
+     *
+     * @return array Map of event names to handler methods.
+     */
     public static function getSubscribedEvents(): array
     {
         return [

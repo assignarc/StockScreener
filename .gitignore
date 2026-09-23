@@ -42,3 +42,5 @@ test.txt
 *.log
 *.tmp
 
+AGENTS.md
+.agents/*

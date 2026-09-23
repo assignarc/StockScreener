@@ -5,8 +5,24 @@ namespace App\Service;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class FinnhubService
+ *
+ * Ingests financial market data, live equity quotes, corporate dividend calendars, earnings release dates,
+ * general macroeconomic news, CUSIP ticker resolutions, and stock split histories from Finnhub API.
+ * Uses persistent caching to protect API rate-limit quotas.
+ *
+ * Design Reference: doc/broker-integrations.md
+ */
 class FinnhubService
 {
+    /**
+     * @param HttpClientInterface $httpClient External HTTP transport client.
+     * @param LoggerInterface $logger Application logger.
+     * @param PersistentCacheService $cache Persistent caching service.
+     * @param AppConfigService $appConfig Application configuration service.
+     * @param string|null $finnhubApiKey Optional environment fallback API key.
+     */
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
@@ -15,11 +31,25 @@ class FinnhubService
         private ?string $finnhubApiKey = null,
     ) {}
 
+    /**
+     * Resolve effective Finnhub API key from parameter, SQLite config, or environment.
+     *
+     * @param string|null $apiKey Optional explicit API key override.
+     * @return string|null Resolved API key or null.
+     */
     public function getEffectiveApiKey(?string $apiKey = null): ?string
     {
         return $apiKey ?: ($this->appConfig->getFinnhubApiKey() ?: $this->finnhubApiKey);
     }
 
+    /**
+     * Fetch real-time price quote for a ticker symbol.
+     *
+     * @param string $symbol Equity ticker symbol.
+     * @param string|null $apiKey Optional API key.
+     * @param bool $forceRefresh When true, bypasses cache to execute live request.
+     * @return array|null Normalized quote dictionary or null.
+     */
     public function getQuote(string $symbol, ?string $apiKey = null, bool $forceRefresh = false): ?array
     {
         $symbol = strtoupper($symbol);
@@ -63,11 +93,16 @@ class FinnhubService
             }
 
             return null;
-        }, (int) $this->appConfig->get('cache.ttl.finnhub.quote', 300)); // configurable TTL
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.quote', 300));
     }
 
     /**
-     * Parallel Asynchronous Batch Quote Retrieval via Symfony HttpClient streaming
+     * Parallel non-blocking batch quote retrieval via HTTP client streaming.
+     *
+     * @param array $symbols List of ticker symbols.
+     * @param string|null $apiKey Optional API key.
+     * @param bool $forceRefresh When true, bypasses cache.
+     * @return array Map of symbol to quote data arrays.
      */
     public function getBatchQuotes(array $symbols, ?string $apiKey = null, bool $forceRefresh = false): array
     {
@@ -86,7 +121,7 @@ class FinnhubService
                 $this->cache->delete($cacheKey);
             }
 
-            // Check cache first (0ms latency hit)
+            // Check cache first
             $cached = $this->cache->get($cacheKey);
             if ($cached !== null) {
                 $results[$symbol] = $cached;
@@ -133,6 +168,14 @@ class FinnhubService
         return $results;
     }
 
+    /**
+     * Fetch corporate profile data.
+     *
+     * @param string $symbol Equity ticker symbol.
+     * @param string|null $apiKey Optional API key.
+     * @param bool $forceRefresh When true, bypasses cache.
+     * @return array|null Profile array or null.
+     */
     public function getCompanyProfile(string $symbol, ?string $apiKey = null, bool $forceRefresh = false): ?array
     {
         $symbol = strtoupper($symbol);
@@ -165,11 +208,17 @@ class FinnhubService
             }
 
             return null;
-        }, 604800); // 7 days TTL
+        }, 604800);
     }
 
     /**
-     * Fetches Earnings Calendar from Finnhub API for specific symbol or date range
+     * Fetch earnings release calendar for date range or specific symbol.
+     *
+     * @param string $fromDate Start date in YYYY-MM-DD format.
+     * @param string $toDate End date in YYYY-MM-DD format.
+     * @param string|null $symbol Optional ticker symbol filter.
+     * @param bool $forceRefresh When true, bypasses cache.
+     * @return array List of scheduled corporate earnings entries.
      */
     public function getEarningsCalendar(string $fromDate, string $toDate, ?string $symbol = null, bool $forceRefresh = false): array
     {
@@ -210,11 +259,15 @@ class FinnhubService
             }
 
             return [];
-        }, (int) $this->appConfig->get('cache.ttl.finnhub.earnings', 86400)) ?? []; // configurable TTL
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.earnings', 86400)) ?? [];
     }
 
     /**
-     * Fetches Dividend history and upcoming dividend payouts from Finnhub API
+     * Fetch dividend payout calendar and historical cash distributions.
+     *
+     * @param string $symbol Equity ticker symbol.
+     * @param bool $forceRefresh When true, bypasses cache.
+     * @return array List of dividend event dictionaries.
      */
     public function getDividends(string $symbol, bool $forceRefresh = false): array
     {
@@ -252,11 +305,15 @@ class FinnhubService
             }
 
             return [];
-        }, (int) $this->appConfig->get('cache.ttl.finnhub.dividends', 86400)) ?? []; // configurable TTL
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.dividends', 86400)) ?? [];
     }
 
     /**
-     * Fetches general market news.
+     * Fetch general market news articles.
+     *
+     * @param string $category News category slug.
+     * @param bool $forceRefresh When true, bypasses cache.
+     * @return array List of news items.
      */
     public function getMarketNews(string $category = 'general', bool $forceRefresh = false): array
     {
@@ -286,5 +343,154 @@ class FinnhubService
                 return [];
             }
         });
+    }
+
+    /**
+     * Resolve security metadata by CUSIP or numeric identifier.
+     *
+     * @param string $cusip CUSIP string.
+     * @param string|null $apiKey Optional API key.
+     * @return array|null Resolved security profile or null.
+     */
+    public function lookupCusip(string $cusip, ?string $apiKey = null): ?array
+    {
+        $cusip = strtoupper(trim($cusip));
+        $key = $this->getEffectiveApiKey($apiKey);
+        if (!$key || empty($cusip)) {
+            return null;
+        }
+
+        $cacheKey = "finnhub.cusip.{$cusip}";
+        return $this->cache->get($cacheKey, function() use ($cusip, $key) {
+            try {
+                $response = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/stock/profile2', [
+                    'query' => [
+                        'cusip' => $cusip,
+                        'token' => $key,
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $data = $response->toArray();
+                    if (!empty($data['ticker']) || !empty($data['name'])) {
+                        return [
+                            'ticker' => $data['ticker'] ?? null,
+                            'name' => $data['name'] ?? null,
+                            'currency' => $data['currency'] ?? 'USD',
+                            'exchange' => $data['exchange'] ?? null,
+                            'finnhubIndustry' => $data['finnhubIndustry'] ?? null,
+                            'type' => 'EQUITY',
+                        ];
+                    }
+                }
+
+                $searchResp = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/search', [
+                    'query' => [
+                        'q' => $cusip,
+                        'token' => $key,
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                ]);
+
+                if ($searchResp->getStatusCode() === 200) {
+                    $searchData = $searchResp->toArray();
+                    $results = $searchData['result'] ?? [];
+                    if (!empty($results)) {
+                        $top = $results[0];
+                        return [
+                            'ticker' => $top['symbol'] ?? null,
+                            'name' => $top['description'] ?? null,
+                            'type' => $top['type'] ?? 'SECURITY',
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning("Finnhub CUSIP lookup failed for {$cusip}: " . $e->getMessage());
+            }
+
+            return null;
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.profile', 604800));
+    }
+
+    /**
+     * Search Finnhub symbol directory for tickers matching query string.
+     *
+     * @param string $query Query string.
+     * @param string|null $apiKey Optional API key.
+     * @return array List of search match dictionaries.
+     */
+    public function searchSymbol(string $query, ?string $apiKey = null): array
+    {
+        $query = strtoupper(trim($query));
+        $key = $this->getEffectiveApiKey($apiKey);
+        if (!$key || empty($query)) {
+            return [];
+        }
+
+        $cacheKey = "finnhub.search." . md5($query);
+        return $this->cache->get($cacheKey, function() use ($query, $key) {
+            try {
+                $response = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/search', [
+                    'query' => [
+                        'q' => $query,
+                        'token' => $key,
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $data = $response->toArray();
+                    return $data['result'] ?? [];
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning("Finnhub search error for {$query}: " . $e->getMessage());
+            }
+            return [];
+        }, 86400) ?? [];
+    }
+
+    /**
+     * Fetch historical stock split adjustments for a symbol.
+     *
+     * @param string $symbol Equity ticker symbol.
+     * @param string|null $from Start date YYYY-MM-DD.
+     * @param string|null $to End date YYYY-MM-DD.
+     * @param string|null $apiKey Optional API key.
+     * @return array List of stock split entries.
+     */
+    public function getStockSplits(string $symbol, ?string $from = null, ?string $to = null, ?string $apiKey = null): array
+    {
+        $symbol = strtoupper(trim($symbol));
+        $key = $this->getEffectiveApiKey($apiKey);
+        if (!$key || empty($symbol)) {
+            return [];
+        }
+
+        $fromDate = $from ?: '2020-01-01';
+        $toDate = $to ?: date('Y-m-d');
+        $cacheKey = "finnhub.splits.{$symbol}.{$fromDate}.{$toDate}";
+
+        return $this->cache->get($cacheKey, function() use ($symbol, $fromDate, $toDate, $key) {
+            try {
+                $response = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/stock/split', [
+                    'query' => [
+                        'symbol' => $symbol,
+                        'from'   => $fromDate,
+                        'to'     => $toDate,
+                        'token'  => $key,
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $data = $response->toArray();
+                    return is_array($data) ? $data : [];
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning("Finnhub Stock Splits API error for {$symbol}: " . $e->getMessage());
+            }
+            return [];
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.profile', 604800)) ?? [];
     }
 }

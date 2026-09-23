@@ -7,16 +7,25 @@ use Psr\Log\LoggerInterface;
 use App\Service\AppConfigService;
 
 /**
- * Centralized Just-In-Time (JIT) Database Provisioning & Auto-Seeding Service.
+ * DatabaseBootstrapService
  *
- * All DDL statements and initial default seed values are centralized here.
- * If var/data.db or any tables are missing on boot or request, they are
- * automatically created and seeded without manual migrations or scripts.
+ * Centralized Just-In-Time (JIT) Database Provisioning and Auto-Seeding Service.
+ *
+ * All DDL statements, table definitions, index configurations, and initial seed
+ * values are managed here. If var/data.db or any tables are missing on boot or
+ * during a request, they are automatically provisioned without manual migrations.
  */
 class DatabaseBootstrapService
 {
     private static bool $bootstrapped = false;
 
+    /**
+     * Initializes the database bootstrap service.
+     *
+     * @param Connection      $connection Doctrine DBAL database connection.
+     * @param LoggerInterface $logger     PSR-3 logger instance.
+     * @param string          $projectDir Root directory of the Symfony project.
+     */
     public function __construct(
         private Connection $connection,
         private LoggerInterface $logger,
@@ -25,6 +34,8 @@ class DatabaseBootstrapService
 
     /**
      * Just-In-Time schema guarantee. Checks tables and provisions immediately if missing.
+     *
+     * @return void
      */
     public function ensureSchemaAndSeed(): void
     {
@@ -42,6 +53,11 @@ class DatabaseBootstrapService
         }
     }
 
+    /**
+     * Ensures the local SQLite database directory and file exist on disk.
+     *
+     * @return void
+     */
     private function ensureDatabaseFileExists(): void
     {
         $varDir = $this->projectDir . '/var';
@@ -54,6 +70,11 @@ class DatabaseBootstrapService
         }
     }
 
+    /**
+     * Executes DDL statements to provision tables, indexes, and configure WAL mode pragmas.
+     *
+     * @return void
+     */
     private function provisionTables(): void
     {
         // Enable SQLite high-concurrency PRAGMAs (WAL mode, busy timeout, synchronous)
@@ -199,9 +220,14 @@ class DatabaseBootstrapService
         ');
     }
 
+    /**
+     * Seeds initial default configurations, migrates legacy token files, and provisions core tickers.
+     *
+     * @return void
+     */
     private function seedInitialData(): void
     {
-        // ── Seed App Configurations ──────────────────────────────────────────
+        // Seed App Configurations
         // NOTE: Secrets (api keys) are intentionally seeded as null.
         // The Setup Wizard (/setup) is the only supported path to enter credentials.
         // No critical information lives in .env or git.
@@ -222,7 +248,7 @@ class DatabaseBootstrapService
             }
         }
 
-        // ── Migrate legacy var/schwab_token.json to encrypted DB storage ──
+        // Migrate legacy var/schwab_token.json to encrypted DB storage
         $legacyTokenFile = $this->projectDir . '/var/schwab_token.json';
         if (file_exists($legacyTokenFile)) {
             $raw = @file_get_contents($legacyTokenFile);
@@ -243,7 +269,7 @@ class DatabaseBootstrapService
             @unlink($legacyTokenFile);
         }
 
-        // ── Seed Core Watchlist Tickers ───────────────────────────────────────
+        // Seed Core Watchlist Tickers
         $defaultStocks = [
             ['NVDA',  'NVIDIA Corporation',       'Technology',             128.50, 155.00, '$3.16T', '+122.0%', '75.0%', '48 Months', '1.2%', 'LOW', 92, 'STRONG BUY', 'Market leader in AI datacenter GPUs.'],
             ['AAPL',  'Apple Inc.',               'Technology',             224.23, 260.00, '$3.44T', '+6.1%',   '46.3%', '36 Months', '0.8%', 'LOW', 88, 'BUY',        'Robust ecosystem with Apple Intelligence rollout.'],
@@ -272,7 +298,9 @@ class DatabaseBootstrapService
     }
 
     /**
-     * Checks if initial setup has been completed by the user
+     * Checks if initial setup has been completed by the user.
+     *
+     * @return bool True if initial setup wizard was completed, false otherwise.
      */
     public function isSetupCompleted(): bool
     {
@@ -285,7 +313,9 @@ class DatabaseBootstrapService
     }
 
     /**
-     * Returns schema health and table counts
+     * Returns schema health, file size, and table row counts.
+     *
+     * @return array Schema status metrics and table counts.
      */
     public function getSchemaStatus(): array
     {

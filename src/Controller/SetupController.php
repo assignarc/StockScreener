@@ -12,8 +12,22 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * SetupController
+ *
+ * Web and API controller managing the first-run onboarding wizard,
+ * credential validation (Finnhub API connectivity testing), and SQLite configuration seeding.
+ */
 class SetupController extends AbstractController
 {
+    /**
+     * Initializes the setup controller.
+     *
+     * @param AppConfigService         $appConfig      Application configuration service.
+     * @param DatabaseBootstrapService $bootstrap      Database bootstrap and schema provisioning service.
+     * @param FinnhubService           $finnhubService Finnhub market data service.
+     * @param HttpClientInterface      $httpClient     HTTP client for external connectivity validation.
+     */
     public function __construct(
         private AppConfigService $appConfig,
         private DatabaseBootstrapService $bootstrap,
@@ -21,6 +35,11 @@ class SetupController extends AbstractController
         private HttpClientInterface $httpClient,
     ) {}
 
+    /**
+     * Renders the interactive setup wizard onboarding view.
+     *
+     * @return Response Rendered view template.
+     */
     #[Route('/setup', name: 'app_setup', methods: ['GET'])]
     public function setupView(): Response
     {
@@ -37,6 +56,12 @@ class SetupController extends AbstractController
         ]);
     }
 
+    /**
+     * Validates Finnhub API key connectivity by requesting a live market quote for AAPL.
+     *
+     * @param Request $request HTTP request containing candidate API key.
+     * @return JsonResponse JSON validation result with sample live quote.
+     */
     #[Route('/api/setup/test-finnhub', name: 'api_setup_test_finnhub', methods: ['POST'])]
     public function testFinnhubKey(Request $request): JsonResponse
     {
@@ -78,6 +103,12 @@ class SetupController extends AbstractController
         }
     }
 
+    /**
+     * Saves wizard configuration payload (API keys, models, broker instances) to SQLite app_config.
+     *
+     * @param Request $request HTTP request containing configuration settings.
+     * @return JsonResponse JSON response confirming save and schema status.
+     */
     #[Route('/api/setup/save', name: 'api_setup_save', methods: ['POST'])]
     public function saveSetup(Request $request): JsonResponse
     {
@@ -136,6 +167,11 @@ class SetupController extends AbstractController
         ]);
     }
 
+    /**
+     * Returns the overall setup and configuration completion status.
+     *
+     * @return JsonResponse Setup status summary.
+     */
     #[Route('/api/setup/status', name: 'api_setup_status', methods: ['GET'])]
     public function getStatus(): JsonResponse
     {

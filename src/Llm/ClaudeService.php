@@ -6,8 +6,22 @@ use App\Service\AppConfigService;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Psr\Log\LoggerInterface;
 
+/**
+ * Class ClaudeService
+ *
+ * Implements LlmServiceInterface for Anthropic Claude models via Anthropic Messages API.
+ * Provides option chain evaluations, pre-trade verification, and macroeconomic market news synthesis.
+ *
+ * Design Reference: doc/llm-analysis.md
+ */
 class ClaudeService implements LlmServiceInterface
 {
+    /**
+     * @param HttpClientInterface $httpClient HTTP client for API transport.
+     * @param LoggerInterface $logger Application logger.
+     * @param AppConfigService $appConfig Application configuration service.
+     * @param string $claudeApiUrl Anthropic Messages API base URL.
+     */
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
@@ -15,22 +29,41 @@ class ClaudeService implements LlmServiceInterface
         private string $claudeApiUrl = 'https://api.anthropic.com/v1'
     ) {}
 
+    /**
+     * {@inheritdoc}
+     */
     public function getProviderName(): string
     {
         return 'Anthropic Claude (' . $this->getEffectiveModel() . ')';
     }
 
+    /**
+     * Retrieve active Claude API key.
+     *
+     * @return string|null API key string or null.
+     */
     private function getEffectiveApiKey(): ?string
     {
         $key = $this->appConfig->get('claude.api_key');
         return !empty($key) ? (string) $key : null;
     }
 
+    /**
+     * Retrieve configured Claude model identifier.
+     *
+     * @return string Model identifier string.
+     */
     private function getEffectiveModel(): string
     {
         return (string) $this->appConfig->get('claude.model', 'claude-3-5-sonnet-latest');
     }
 
+    /**
+     * Dispatch message request to Anthropic Claude API.
+     *
+     * @param string $prompt Prompt string.
+     * @return string|null Response text or null on failure.
+     */
     private function callClaudeApi(string $prompt): ?string
     {
         $apiKey = $this->getEffectiveApiKey();
@@ -75,6 +108,9 @@ class ClaudeService implements LlmServiceInterface
         return null;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function generateFlywheelIdeas(array $portfolio, array $trackedStocks = [], array $marketIntelligence = []): array
     {
         $cashAvailable = $portfolio['cashBalance'] ?? 0.0;
@@ -147,6 +183,14 @@ Output strictly JSON formatting. The JSON must be an array of strategy objects u
         ];
     }
 
+    /**
+     * Parse decoded JSON strategy ideas from Claude API response.
+     *
+     * @param string $aiText Response JSON string.
+     * @param float $cash Available cash collateral.
+     * @param array $equities Portfolio equities.
+     * @return array Decoded ideas list.
+     */
     private function parseClaudeIdeas(string $aiText, float $cash, array $equities): array
     {
         try {
@@ -162,6 +206,13 @@ Output strictly JSON formatting. The JSON must be an array of strategy objects u
         return $this->generateDefaultAiIdeas($cash, $equities);
     }
 
+    /**
+     * Provide baseline options strategy ideas in unconfigured or fallback environments.
+     *
+     * @param float $cash Available cash collateral.
+     * @param array $equities Portfolio equities.
+     * @return array List of default strategy suggestions.
+     */
     private function generateDefaultAiIdeas(float $cash, array $equities): array
     {
         return [
@@ -219,6 +270,9 @@ Output strictly JSON formatting. The JSON must be an array of strategy objects u
         ];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function analyzeOptionChain(string $symbol, float $currentPrice, array $chain): array
     {
         $symbol = strtoupper($symbol);
@@ -264,6 +318,9 @@ Explain in 2 sentences why these two strikes represent optimal risk/reward for O
         ];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function verifyTradePreExecution(array $trade): array
     {
         $symbol = $trade['symbol'] ?? 'NVDA';
@@ -299,6 +356,9 @@ Perform a 3-point sanity check:
         ];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function reviewOptionPosition(string $symbol, array $contractData, array $liveChain): array
     {
         $type = strtoupper($contractData['type'] ?? 'CALL');
@@ -355,6 +415,9 @@ Provide a STRICT JSON response with exactly these fields:
         return [];
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function analyzeMarketNews(array $newsItems): array
     {
         if (empty($newsItems)) {

@@ -1,0 +1,10 @@
+/* ==========================================================================
+   TAX CENTER & REALIZATIONS STYLESHEET
+   (Inherits common segmented tracks, filter pills, and tab indicators from screener.css)
+   ========================================================================== */
+
+/* Page-Specific Tax Center Overrides */
+.tax-center-wrap {
+    width: 100%;
+    box-sizing: border-box;
+}

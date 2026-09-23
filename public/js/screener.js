@@ -102,7 +102,7 @@ function useCashInFlywheel(amount) {
     document.getElementById('totalCap').value = Math.round(cashToUse);
     updateFlywheelAllocation();
     switchMainTab('screener');
-    document.getElementById('statusBar').innerText = `⚡ Loaded $${Math.round(cashToUse).toLocaleString()} cash into Capital Flywheel Options Allocator!`;
+    document.getElementById('statusBar').innerHTML = `<span class="material-symbols-outlined" style="font-size:15px; vertical-align:middle; margin-right:4px;">bolt</span> Loaded $${Math.round(cashToUse).toLocaleString()} cash into Capital Flywheel Options Allocator!`;
 }
 
 async function fetchStocks() {
@@ -128,20 +128,30 @@ async function fetchStocks() {
 }
 
 function filterSignal(signal, btn) {
+    if (activeSignal === signal && signal !== 'ALL') {
+        signal = 'ALL';
+        btn = document.querySelector('.controls .sig-btn') || btn;
+    }
     activeSignal = signal;
     document.querySelectorAll('.controls .sig-btn').forEach(b => {
         b.className = 'sig-btn';
     });
     
-    if (signal === 'ALL') btn.classList.add('active-all');
-    if (signal === 'CALL') btn.classList.add('active-call');
-    if (signal === 'PUT') btn.classList.add('active-put');
-    if (signal === 'WHEEL') btn.classList.add('active-wheel');
+    if (btn) {
+        if (signal === 'ALL') btn.classList.add('active-all');
+        if (signal === 'CALL') btn.classList.add('active-call');
+        if (signal === 'PUT') btn.classList.add('active-put');
+        if (signal === 'WHEEL') btn.classList.add('active-wheel');
+    }
 
     render();
 }
 
 function filterSector(sector, btn) {
+    if (activeSector === sector && sector !== 'ALL') {
+        sector = 'ALL';
+        btn = document.querySelector('.controls .fbtn') || btn;
+    }
     activeSector = sector;
     document.querySelectorAll('.controls .fbtn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
@@ -251,14 +261,14 @@ function render() {
         const upsideClass = stock.upsideVal > 0 ? 'g' : 'r';
 
         const fwSignal = stock.flywheel ? stock.flywheel.signal : 'WHEEL';
-        const fwBadge = stock.flywheel ? stock.flywheel.signalBadge : '🟡 WHEEL';
+        const fwBadge = stock.flywheel ? stock.flywheel.signalBadge : '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--yellow);">warning</span> WHEEL';
 
         const owned = ownedMap[stock.symbol];
-        const ownedBadge = owned ? `<span class="rb" style="background:rgba(188,140,255,0.15); color:var(--purple); border:1px solid rgba(188,140,255,0.3); margin-left:6px;">💼 ${owned.quantity} SH</span>` : '';
+        const ownedBadge = owned ? `<span class="rb" style="background:rgba(188,140,255,0.15); color:var(--purple); border:1px solid rgba(188,140,255,0.3); margin-left:6px; display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:12px;">business_center</span> ${owned.quantity} SH</span>` : '';
 
         tr.innerHTML = `
             <td>
-                <span class="wstar ${stock.isWatchlisted ? 'active' : ''}" onclick="event.stopPropagation(); toggleWatchlist('${stock.symbol}', this)">★</span>
+                <span class="material-symbols-outlined wstar ${stock.isWatchlisted ? 'active' : ''}" onclick="event.stopPropagation(); toggleWatchlist('${stock.symbol}', this)" style="font-size:16px; margin-right:4px; vertical-align:middle;">star</span>
                 <strong>${stock.symbol}</strong>
                 ${ownedBadge}
             </td>
@@ -330,7 +340,7 @@ async function fetchPortfolio() {
                 }
             }
 
-            render(); // Refresh stock table to display 💼 OWNED badges
+            render(); // Refresh stock table to display OWNED badges
 
             const totalPositions = (data.aggregatedEquities || []).length;
             const accCount = (data.accounts || []).length;
@@ -359,7 +369,7 @@ async function fetchPortfolio() {
                 box.innerHTML = `
                     <div>
                         <h4>
-                            <span>🏦 Account ${acc.accountNumber}</span>
+                            <span style="display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px; color:var(--blue);">account_balance</span> Account ${acc.accountNumber}</span>
                             <span class="hbadge">${acc.type}</span>
                         </h4>
                         <div style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">
@@ -372,7 +382,7 @@ async function fetchPortfolio() {
                         </div>
                     </div>
                     <button class="btn btn-pri" style="width: 100%; text-align: center;" onclick="useCashInFlywheel(${acc.cashAvailable})">
-                        ⚡ Load $${Math.round(acc.cashAvailable).toLocaleString()} Cash into Options Allocator
+                        <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">bolt</span>Load $${Math.round(acc.cashAvailable).toLocaleString()} Cash into Options Allocator
                     </button>
                 `;
                 accGrid.appendChild(box);
@@ -399,7 +409,7 @@ async function fetchPortfolio() {
                     <td style="text-align:right;"><strong style="color:var(--purple);">${e.allocationPct}%</strong></td>
                     <td style="text-align:center;"><span class="rb rLOW">${e.accountCount} Acc</span></td>
                     <td style="text-align:center;">
-                        <button class="fbtn" onclick="searchEquityInScreener('${e.symbol}')">🔍 Analyze Options</button>
+                        <button class="fbtn" onclick="searchEquityInScreener('${e.symbol}')" style="display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">search</span> Analyze Options</button>
                     </td>
                 `;
                 aggBody.appendChild(tr);
@@ -436,7 +446,7 @@ async function toggleWatchlist(symbol, element) {
 }
 
 async function loadLivePrices() {
-    document.getElementById('statusBar').innerHTML = '<span class="spin">⚡</span> Fetching live stock quotes from Finnhub API...';
+    document.getElementById('statusBar').innerHTML = '<span class="material-symbols-outlined spin" style="font-size:15px; vertical-align:middle; margin-right:4px;">sync</span> Fetching live stock quotes from Finnhub API...';
 
     let updated = 0;
     for (let stock of allStocks) {
@@ -509,7 +519,7 @@ async function fetchSchwabOptionChain(symbol) {
     const aiGrid = document.getElementById('geminiOptionTargetsGrid');
     const aiVerdict = document.getElementById('geminiOptionVerdict');
 
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;" class="m">⚡ Connecting to Schwab API & Gemini AI Engine...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;" class="m"><span class="material-symbols-outlined spin" style="font-size:16px; vertical-align:middle; margin-right:4px;">sync</span> Connecting to Schwab API & Gemini AI Engine...</td></tr>';
     if (aiBox) aiBox.style.display = 'none';
 
     try {
@@ -531,17 +541,17 @@ async function fetchSchwabOptionChain(symbol) {
 
                 aiGrid.innerHTML = `
                     <div style="background:var(--bg3); padding:8px 10px; border-radius:6px; border:1px solid rgba(63,185,80,0.3);">
-                        <div style="font-size:10px; color:var(--green); font-weight:700;">🟢 GEMINI RECOMMENDED COVERED CALL</div>
+                        <div style="font-size:10px; color:var(--green); font-weight:700; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:13px;">check_circle</span> GEMINI RECOMMENDED COVERED CALL</div>
                         <div style="font-size:14px; font-weight:800; margin:2px 0;">Strike: $${recCall.strike} <span style="font-size:11px; color:var(--muted);">(+${recCall.otmPct}% OTM)</span></div>
                         <div style="color:var(--muted); font-size:10px;">Est. Credit: <strong class="g">+$${recCall.incomePerContract}</strong> per contract | Yield: <strong class="g">${recCall.annualizedYield}% APY</strong> | Δ ${recCall.delta}</div>
                     </div>
                     <div style="background:var(--bg3); padding:8px 10px; border-radius:6px; border:1px solid rgba(210,153,34,0.3);">
-                        <div style="font-size:10px; color:var(--yellow); font-weight:700;">🟡 GEMINI RECOMMENDED CASH-SECURED PUT</div>
+                        <div style="font-size:10px; color:var(--yellow); font-weight:700; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:13px;">warning</span> GEMINI RECOMMENDED CASH-SECURED PUT</div>
                         <div style="font-size:14px; font-weight:800; margin:2px 0;">Strike: $${recPut.strike} <span style="font-size:11px; color:var(--muted);">(-${recPut.discountPct}% Discount)</span></div>
                         <div style="color:var(--muted); font-size:10px;">Est. Credit: <strong class="y">+$${recPut.incomePerContract}</strong> per contract | Yield: <strong class="y">${recPut.annualizedYield}% APY</strong> | Δ ${recPut.delta}</div>
                     </div>
                 `;
-                aiVerdict.innerHTML = `<strong>💡 Gemini AI Option Verdict:</strong> ${aiData.aiVerdict}`;
+                aiVerdict.innerHTML = `<strong style="display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:15px; color:var(--purple);">psychology</span> Gemini AI Option Verdict:</strong> ${aiData.aiVerdict}`;
                 aiBox.style.display = 'block';
             }
         }
@@ -566,7 +576,7 @@ async function fetchSchwabOptionChain(symbol) {
                         <td>${c.iv || '—'}</td>
                         <td class="g">${c.delta}</td>
                         <td class="m">${c.theta}</td>
-                        <td>${isTarget ? '<span class="rb rLOW">🎯 GEMINI CALL TARGET</span>' : '—'}</td>
+                        <td>${isTarget ? '<span class="rb rLOW" style="display:inline-flex; align-items:center; gap:3px;"><span class="material-symbols-outlined" style="font-size:12px;">gps_fixed</span> GEMINI CALL TARGET</span>' : '—'}</td>
                     </tr>
                 `);
             });
@@ -581,7 +591,7 @@ async function fetchSchwabOptionChain(symbol) {
                         <td>${p.iv || '—'}</td>
                         <td class="r">${p.delta}</td>
                         <td class="m">${p.theta}</td>
-                        <td>${isTarget ? '<span class="rb rMED">🎯 GEMINI PUT TARGET</span>' : '—'}</td>
+                        <td>${isTarget ? '<span class="rb rMED" style="display:inline-flex; align-items:center; gap:3px;"><span class="material-symbols-outlined" style="font-size:12px;">gps_fixed</span> GEMINI PUT TARGET</span>' : '—'}</td>
                     </tr>
                 `);
             });
@@ -662,7 +672,7 @@ function renderTrackedStocksTable() {
             <td style="padding:10px 12px; text-align:right;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '—'}</td>
             <td style="padding:10px 12px; text-align:center;"><strong class="g">${s.score}</strong></td>
             <td style="padding:10px 12px; text-align:center;">
-                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4);" onclick="deleteTrackedStock(${s.id})">🗑 Delete</button>
+                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4); display:inline-flex; align-items:center; gap:4px;" onclick="deleteTrackedStock(${s.id})"><span class="material-symbols-outlined" style="font-size:14px;">delete</span> Delete</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -679,7 +689,7 @@ async function scanStockFromFinnhub() {
     }
 
     resBox.style.display = 'block';
-    resBox.innerHTML = '<span class="m">⚡ Scanning Finnhub & Schwab market data for ' + symbol + '...</span>';
+    resBox.innerHTML = '<span class="m" style="display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined spin" style="font-size:14px;">sync</span> Scanning Finnhub & Schwab market data for ' + symbol + '...</span>';
 
     try {
         const res = await fetch(`/api/stocks/suggest/${symbol}`);
@@ -696,7 +706,7 @@ async function scanStockFromFinnhub() {
                         <strong style="font-size:15px; color:var(--blue);">${d.symbol}</strong> — ${d.name}
                         <span class="hbadge" style="margin-left:8px;">${d.sector}</span>
                     </div>
-                    <span class="badge-sig badge-${fw.signal}">${fw.signalBadge || '🟢 CALL'}</span>
+                    <span class="badge-sig badge-${fw.signal}">${fw.signalBadge || '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> CALL'}</span>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; font-size:12px; margin-bottom:12px;">
                     <div>Price: <strong>$${d.price.toFixed(2)}</strong></div>
@@ -708,7 +718,7 @@ async function scanStockFromFinnhub() {
                     <strong>Option Strategy Recommendation:</strong> ${fw.recommendedStrategy || 'Level 1 Defined Risk'}
                 </div>
                 <button class="btn btn-pri" style="width:100%; text-align:center;" onclick="importScannedStock()">
-                    ➕ Add ${d.symbol} to Screener & Tracked List
+                    <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:4px;">add</span> Add ${d.symbol} to Screener & Tracked List
                 </button>
             `;
         }
@@ -730,7 +740,7 @@ async function importScannedStock() {
         const result = await res.json();
 
         if (result.status === 'success') {
-            alert(`✅ ${scannedStockData.symbol} added successfully to your screener!`);
+            alert(`${scannedStockData.symbol} added successfully to your screener!`);
             document.getElementById('addScanResult').style.display = 'none';
             document.getElementById('addSymbolInput').value = '';
             scannedStockData = null;
@@ -763,7 +773,7 @@ async function deleteTrackedStock(id) {
 
 async function fetchDiscoverSuggestions() {
     const grid = document.getElementById('suggestionsGrid');
-    grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:20px;">⚡ Gathering live internet market intelligence & suggestions...</div>';
+    grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:20px;"><span class="material-symbols-outlined spin" style="font-size:16px; vertical-align:middle; margin-right:4px;">sync</span> Gathering live internet market intelligence & suggestions...</div>';
 
     try {
         const res = await fetch('/api/stocks/discover-suggestions');
@@ -799,24 +809,24 @@ async function fetchDiscoverSuggestions() {
                         </div>
 
                         <div class="tb" style="background:var(--bg3); border:1px solid var(--border); margin-bottom:10px; padding:10px; border-radius:8px;">
-                            <h4 style="color:var(--purple); font-size:11px; font-weight:700; margin:0 0 4px 0; text-transform:uppercase;">💡 Investment Reasoning:</h4>
+                            <h4 style="color:var(--purple); font-size:11px; font-weight:700; margin:0 0 4px 0; text-transform:uppercase; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">lightbulb</span> Investment Reasoning:</h4>
                             <p style="font-size:12px; color:var(--text); margin:0; line-height:1.4;">${s.reasoning}</p>
                         </div>
 
 
                         <div style="font-size:11px; color:var(--muted); margin-bottom:12px;">
-                            <div><strong>⚡ Sector Catalysts:</strong> ${s.catalysts}</div>
-                            <div><strong>🔒 Recommended Strategy:</strong> <span style="color:var(--purple); font-weight:600;">${s.suggestedStrategy}</span></div>
+                            <div><strong style="display:inline-flex; align-items:center; gap:3px;"><span class="material-symbols-outlined" style="font-size:13px; color:var(--yellow);">bolt</span> Sector Catalysts:</strong> ${s.catalysts}</div>
+                            <div><strong style="display:inline-flex; align-items:center; gap:3px;"><span class="material-symbols-outlined" style="font-size:13px; color:var(--purple);">lock</span> Recommended Strategy:</strong> <span style="color:var(--purple); font-weight:600;">${s.suggestedStrategy}</span></div>
                         </div>
                     </div>
 
                     ${isTracked ? `
                         <button class="fbtn" style="width:100%; border-color:var(--green); color:var(--green); cursor:default;" disabled>
-                            ✓ Already in Tracked Screener
+                            <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:4px;">check</span> Already in Tracked Screener
                         </button>
                     ` : `
                         <button class="btn btn-pri" style="width:100%; text-align:center;" onclick="addSuggestionToTracked(${JSON.stringify(s).replace(/"/g, '&quot;')})">
-                            ➕ Add ${s.symbol} to Tracked Screener
+                            <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:4px;">add</span> Add ${s.symbol} to Tracked Screener
                         </button>
                     `}
                 `;
@@ -838,7 +848,7 @@ async function addSuggestionToTracked(obj) {
         const result = await res.json();
 
         if (result.status === 'success') {
-            alert(`✅ ${obj.symbol} added to your tracked screener!`);
+            alert(`${obj.symbol} added to your tracked screener!`);
             await fetchStocks();
             fetchDiscoverSuggestions();
             renderTab3TrackedTable();
@@ -865,7 +875,7 @@ function renderTab3TrackedTable() {
             <td style="padding:10px 12px; text-align:right;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '—'}</td>
             <td style="padding:10px 12px; text-align:center;"><strong class="g">${s.score}</strong></td>
             <td style="padding:10px 12px; text-align:center;">
-                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4);" onclick="deleteTrackedStock(${s.id})">🗑 Delete</button>
+                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4); display:inline-flex; align-items:center; gap:4px;" onclick="deleteTrackedStock(${s.id})"><span class="material-symbols-outlined" style="font-size:14px;">delete</span> Delete</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -882,7 +892,7 @@ async function scanStockTab3() {
     }
 
     resBox.style.display = 'block';
-    resBox.innerHTML = '<span class="m">⚡ Scanning Finnhub & Schwab market data for ' + symbol + '...</span>';
+    resBox.innerHTML = '<span class="m" style="display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined spin" style="font-size:14px;">sync</span> Scanning Finnhub & Schwab market data for ' + symbol + '...</span>';
 
     try {
         const res = await fetch(`/api/stocks/suggest/${symbol}`);
@@ -898,7 +908,7 @@ async function scanStockTab3() {
                         <strong style="font-size:15px; color:var(--purple);">${d.symbol}</strong> — ${d.name}
                         <span class="hbadge" style="margin-left:8px;">${d.sector}</span>
                     </div>
-                    <span class="badge-sig badge-${fw.signal}">${fw.signalBadge || '🟢 CALL'}</span>
+                    <span class="badge-sig badge-${fw.signal}">${fw.signalBadge || '<span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;color:var(--green);">check_circle</span> CALL'}</span>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; font-size:12px; margin-bottom:12px;">
                     <div>Price: <strong>$${d.price.toFixed(2)}</strong></div>
@@ -907,11 +917,11 @@ async function scanStockTab3() {
                     <div>Risk: <strong>${d.risk}</strong></div>
                 </div>
                 <div class="tb" style="background:rgba(188,140,255,0.05); border-color:rgba(188,140,255,0.3); margin-bottom:10px; padding:10px;">
-                    <h4 style="color:var(--purple); font-size:10px; margin-bottom:4px;">💡 WHY TRACK THIS STOCK:</h4>
+                    <h4 style="color:var(--purple); font-size:10px; margin-bottom:4px; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:13px;">lightbulb</span> WHY TRACK THIS STOCK:</h4>
                     <p style="font-size:12px; margin:0; line-height:1.4;">${d.thesis}</p>
                 </div>
                 <button class="btn btn-pri" style="width:100%; text-align:center;" onclick="addSuggestionToTracked(${JSON.stringify(d).replace(/"/g, '&quot;')})">
-                    ➕ Add ${d.symbol} to Screener & Tracked List
+                    <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:4px;">add</span> Add ${d.symbol} to Screener & Tracked List
                 </button>
             `;
         }
@@ -1002,7 +1012,7 @@ function createFlywheelModals() {
             <div class="modal-body-lg">
                 <div class="modal-hdr">
                     <h2 style="display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:24px;color:var(--blue);">wb_twilight</span> Flywheel Daily Morning Order Planner</h2>
-                    <button class="rpx" onclick="document.getElementById('fwPlannerModal').classList.remove('show')">✕</button>
+                    <button class="rpx" onclick="document.getElementById('fwPlannerModal').classList.remove('show')"><span class="material-symbols-outlined" style="font-size:18px;">close</span></button>
                 </div>
                 <div class="modal-cnt" id="fwPlannerCnt"></div>
             </div>
@@ -1011,8 +1021,8 @@ function createFlywheelModals() {
         <div id="fwScenarioModal">
             <div class="modal-body-lg" style="width:740px">
                 <div class="modal-hdr">
-                    <h2 id="fwScenTitle">⚖️ Trade Scenario Analysis</h2>
-                    <button class="rpx" onclick="document.getElementById('fwScenarioModal').classList.remove('show')">✕</button>
+                    <h2 id="fwScenTitle" style="display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:20px;color:var(--blue);">balance</span> Trade Scenario Analysis</h2>
+                    <button class="rpx" onclick="document.getElementById('fwScenarioModal').classList.remove('show')"><span class="material-symbols-outlined" style="font-size:18px;">close</span></button>
                 </div>
                 <div class="modal-cnt" id="fwScenCnt"></div>
             </div>
@@ -1131,14 +1141,14 @@ async function confirmWithGemini(symbol, action, strike, strategy) {
                 targetEl.innerHTML = `<strong style="color:var(--green);font-size:12px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> VERIFIED PASS</strong><br>Gemini AI Check: No immediate earnings crush expected in next 7 days. Option Level 1 risk is 100% defined and covered. Execute as LIMIT order at Mid-Price target.`;
             }
         } catch(e) {
-            targetEl.innerHTML = `<strong style="color:var(--green);font-size:12px;">🟢 VERIFIED PASS</strong><br>Gemini AI Check: No immediate earnings crush expected in next 7 days. Option Level 1 risk is 100% defined and covered. Execute as LIMIT order at Mid-Price target.`;
+            targetEl.innerHTML = `<strong style="color:var(--green);font-size:12px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">check_circle</span> VERIFIED PASS</strong><br>Gemini AI Check: No immediate earnings crush expected in next 7 days. Option Level 1 risk is 100% defined and covered. Execute as LIMIT order at Mid-Price target.`;
         }
     }
 }
 
 function copyBrokerOrder(text) {
     navigator.clipboard.writeText(text);
-    alert("📋 Broker Order Copied to Clipboard!\n\nPaste this exact instruction in your Schwab/Fidelity app:\n" + text);
+    alert("Broker Order Copied to Clipboard!\n\nPaste this exact instruction in your Schwab/Fidelity app:\n" + text);
 }
 
 async function openTradeScenario(symbol) {

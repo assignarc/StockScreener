@@ -1,0 +1,90 @@
+/* ==========================================================================
+   ENGINE MONITOR STYLESHEET
+   (Inherits glassmorphic card & pulse indicators from screener.css)
+   ========================================================================== */
+
+.engine-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+}
+
+.service-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.terminal-window {
+    background: #000000;
+    border-radius: 12px;
+    border: 1px solid #222;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    margin-bottom: 30px;
+}
+
+.terminal-header {
+    background: #111;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #222;
+}
+
+.terminal-dots {
+    display: flex;
+    gap: 6px;
+    margin-right: 12px;
+}
+
+.terminal-btn { width: 12px; height: 12px; border-radius: 50%; }
+.term-red { background: #FF5F56; }
+.term-yellow { background: #FFBD2E; }
+.term-green { background: #27C93F; }
+
+.terminal-body {
+    padding: 16px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--green);
+    height: 300px;
+    overflow-y: auto;
+    line-height: 1.5;
+}
+
+.terminal-body div { border-bottom: 1px dashed #222; padding: 4px 0; }
+.terminal-body div:last-child { border-bottom: none; }
+
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.data-row:last-child { border-bottom: none; }
+
+.text-gradient {
+    background: linear-gradient(90deg, var(--blue), var(--purple));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: bold;
+}

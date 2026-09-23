@@ -11,9 +11,23 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
+/**
+ * AiController
+ *
+ * REST API controller exposing AI-driven Capital Flywheel strategy generation,
+ * option chain analysis, pre-trade verification, and expiration reviews.
+ */
 #[Route('/api/ai', name: 'api_ai_')]
 class AiController extends AbstractController
 {
+    /**
+     * Initializes the AI controller with routing, broker, repository, and caching services.
+     *
+     * @param LlmServiceRouter       $llmService      Multi-provider LLM router.
+     * @param BrokerManagerService  $brokerManager   Multi-broker management service.
+     * @param StockRepository       $stockRepository Stock repository for equity profiles.
+     * @param PersistentCacheService $cache           Persistent SQLite caching service.
+     */
     public function __construct(
         private LlmServiceRouter $llmService,
         private BrokerManagerService $brokerManager,
@@ -23,7 +37,9 @@ class AiController extends AbstractController
 
     /**
      * Returns AI-generated Capital Flywheel strategy ideas using live portfolio data.
-     * The static hardcoded discover suggestions list has been replaced with a live LLM call.
+     * Checks persistent cache first before executing live LLM generation.
+     *
+     * @return JsonResponse JSON response containing strategy ideas.
      */
     #[Route('/flywheel-ideas', name: 'flywheel_ideas', methods: ['GET'])]
     public function flywheelIdeas(): JsonResponse
@@ -42,6 +58,9 @@ class AiController extends AbstractController
 
     /**
      * Live AI option chain analysis for a specific symbol.
+     *
+     * @param string $symbol Stock symbol to analyze.
+     * @return JsonResponse JSON response containing strike recommendations and volatility assessment.
      */
     #[Route('/option-chain-analysis/{symbol}', name: 'option_chain_analysis', methods: ['GET'])]
     public function optionChainAnalysis(string $symbol): JsonResponse
@@ -57,7 +76,10 @@ class AiController extends AbstractController
     }
 
     /**
-     * AI pre-trade verification / risk check before order submission.
+     * AI pre-trade verification and risk check before order submission.
+     *
+     * @param Request $request HTTP request containing proposed trade payload.
+     * @return JsonResponse JSON response containing risk rating, approval status, and guardrail warnings.
      */
     #[Route('/verify-trade', name: 'verify_trade', methods: ['POST'])]
     public function verifyTrade(Request $request): JsonResponse
@@ -70,6 +92,10 @@ class AiController extends AbstractController
 
     /**
      * AI review of an active option position nearing expiration.
+     *
+     * @param string $symbol Target underlying ticker.
+     * @param string $strike Option contract strike price.
+     * @return JsonResponse JSON response containing close vs roll analysis and recommendations.
      */
     #[Route('/review-option/{symbol}/{strike}', name: 'review_option', methods: ['GET'])]
     public function reviewOption(string $symbol, string $strike): JsonResponse
@@ -94,6 +120,8 @@ class AiController extends AbstractController
     /**
      * AI-powered discover suggestions — replaces the old static hardcoded stock list.
      * Falls back to curated defaults when API key is not configured.
+     *
+     * @return JsonResponse JSON response containing formatted discover suggestion cards.
      */
     #[Route('/discover-suggestions', name: 'discover_suggestions', methods: ['GET'])]
     public function discoverSuggestions(): JsonResponse
