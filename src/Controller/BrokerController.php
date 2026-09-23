@@ -24,10 +24,14 @@ class BrokerController extends AbstractController
      *
      * @param BrokerManagerService $brokerManager Multi-broker management service.
      * @param StockRepository      $stockRepository Stock repository for equity profiles.
+     * @param \App\Service\AdvisorService $advisorService Investment advisor intelligence service.
+     * @param \App\Service\TaxEngine $taxEngine Tax calculation engine.
      */
     public function __construct(
         private BrokerManagerService $brokerManager,
-        private StockRepository $stockRepository
+        private StockRepository $stockRepository,
+        private \App\Service\AdvisorService $advisorService,
+        private \App\Service\TaxEngine $taxEngine
     ) {}
 
     /**
@@ -60,6 +64,25 @@ class BrokerController extends AbstractController
     public function aggregatedPortfolio(): JsonResponse
     {
         return $this->json($this->brokerManager->getAggregatedPortfolio());
+    }
+
+    /**
+     * Returns actionable advisor insights and daily nuggets (Tax Savings, Income, Growth).
+     *
+     * @return JsonResponse Advisor recommendations.
+     */
+    #[Route('/advisor/insights', name: 'advisor_insights', methods: ['GET'])]
+    public function advisorInsights(): JsonResponse
+    {
+        $portfolio = $this->brokerManager->getAggregatedPortfolio();
+        $history = $this->brokerManager->getAggregatedHistory(365);
+        $taxReport = $this->taxEngine->calculateTaxRealizations($history, $portfolio);
+        $insights = $this->advisorService->generateActionableInsights($portfolio, ['unrealized_lots' => $taxReport]);
+
+        return $this->json([
+            'status' => 'success',
+            'data' => $insights,
+        ]);
     }
 
     /**

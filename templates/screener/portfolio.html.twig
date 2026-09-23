@@ -50,6 +50,25 @@
             </div>
         </div>
 
+        <!-- EXECUTIVE ADVISOR INTELLIGENCE NUGGETS BANNER -->
+        <div class="advisor-nuggets-container" id="advisorNuggetsSection">
+            <div class="advisor-nuggets-header">
+                <div class="advisor-title">
+                    <span class="material-symbols-outlined" style="color:var(--purple); font-size:22px;">psychology</span>
+                    <span>Executive Advisor Insights & Daily Golden Nuggets</span>
+                </div>
+                <button type="button" class="hbtn" style="font-size:11px; padding:4px 10px;" onclick="loadAdvisorInsights()">
+                    <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">refresh</span> Refresh Insights
+                </button>
+            </div>
+            <div class="advisor-grid" id="advisorNuggetsGrid">
+                <!-- Dynamically populated via API -->
+                <div style="grid-column: 1 / -1; color:var(--muted); font-size:12px; display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size:16px;">sync</span> Analyzing portfolio holdings for tax savings, yield enhancement, and growth...
+                </div>
+            </div>
+        </div>
+
         <!-- PORTFOLIO SUMMARY CARDS -->
         <div class="port-summary">
             <div class="port-card">
@@ -2347,6 +2366,79 @@ async function triggerAiReview(symbol, strike) {
         `;
     }
 }
+
+async function loadAdvisorInsights() {
+    const grid = document.getElementById('advisorNuggetsGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = `
+        <div style="grid-column: 1 / -1; color:var(--muted); font-size:12px; display:flex; align-items:center; gap:8px;">
+            <span class="material-symbols-outlined" style="font-size:16px; animation:spin 2s linear infinite;">sync</span>
+            Scanning portfolio for tax savings, cash yield enhancements, and risk alerts...
+        </div>
+    `;
+
+    try {
+        const res = await fetch('/api/broker/advisor/insights');
+        if (!res.ok) throw new Error('Failed to fetch advisor insights');
+        const json = await res.json();
+        const nuggets = json.data?.summary_nuggets || [];
+
+        if (nuggets.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; color:var(--muted); font-size:12px;">
+                    No critical advisor warnings or actions required at this time. Portfolio is well-balanced.
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = nuggets.map(nug => {
+            let catClass = 'tax';
+            let iconName = 'savings';
+            if (nug.category.includes('Income')) {
+                catClass = 'income';
+                iconName = 'payments';
+            } else if (nug.category.includes('Growth') || nug.category.includes('Risk')) {
+                catClass = 'growth';
+                iconName = 'trending_up';
+            }
+
+            return `
+                <div class="nugget-card">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="nugget-tag ${catClass}">
+                                <span class="material-symbols-outlined" style="font-size:14px;">${iconName}</span>
+                                ${nug.category}
+                            </span>
+                            <span style="font-size:10px; font-weight:700; color:${nug.impact_level === 'High' ? 'var(--red)' : (nug.impact_level === 'Medium' ? 'var(--yellow)' : 'var(--muted)')};">
+                                ${nug.impact_level} Impact
+                            </span>
+                        </div>
+                        <div class="nugget-title">${nug.title}</div>
+                        <div class="nugget-desc">${nug.description}</div>
+                    </div>
+                    <div class="nugget-action">
+                        <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px; color:var(--blue);">lightbulb</span>
+                        ${nug.action}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch(err) {
+        console.error('Advisor Insights Error:', err);
+        grid.innerHTML = `
+            <div style="grid-column: 1 / -1; color:var(--red); font-size:12px;">
+                Unable to load advisor insights at this time.
+            </div>
+        `;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadAdvisorInsights();
+});
 </script>
 
 {% include 'screener/partials/_footer.html.twig' %}

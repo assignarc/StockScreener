@@ -1509,3 +1509,86 @@ select.fsel { padding: 6px 12px; background: var(--bg3); border: 1px solid var(-
 .pulse-red { background: var(--red); box-shadow: 0 0 10px var(--red); }
 @keyframes pulse { 0% { transform: scale(0.95); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.95); opacity: 0.8; } }
 
+/* ADVISOR NUGGETS BANNER & CARDS */
+.advisor-nuggets-container {
+    background: linear-gradient(135deg, rgba(15,20,28,0.95), rgba(22,27,38,0.98));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+.advisor-nuggets-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+.advisor-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Outfit', sans-serif;
+}
+.advisor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+}
+.nugget-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.nugget-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--blue);
+}
+.nugget-tag {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.nugget-tag.tax { background: rgba(56, 189, 248, 0.15); color: var(--blue); }
+.nugget-tag.income { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+.nugget-tag.growth { background: rgba(188, 140, 255, 0.15); color: var(--purple); }
+
+.nugget-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 10px 0 6px 0;
+    color: var(--text);
+}
+.nugget-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+    margin-bottom: 12px;
+}
+.nugget-action {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg3);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-left: 3px solid var(--blue);
+}
+
+
