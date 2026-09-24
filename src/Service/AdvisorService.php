@@ -130,28 +130,54 @@ class AdvisorService
     {
         $incomeInsights = [];
 
-        // 1. Idle Cash Yield Scan
-        $cashBalance = 0.0;
-        if (isset($portfolio['balances']['cash']) || isset($portfolio['cash_balance'])) {
-            $cashBalance = (float) ($portfolio['balances']['cash'] ?? $portfolio['cash_balance'] ?? 0);
+        // 1. Idle Unencumbered Cash Yield Scan
+        // Only evaluate unencumbered, free liquid cash not pledged to cash-secured puts or pending commitments
+        $unencumberedCash = 0.0;
+        if (isset($portfolio['availableCash'])) {
+            $unencumberedCash = (float) $portfolio['availableCash'];
+        } elseif (isset($portfolio['balances']['available_cash'])) {
+            $unencumberedCash = (float) $portfolio['balances']['available_cash'];
+        } elseif (isset($portfolio['balances']['cash']) || isset($portfolio['cash_balance'])) {
+            $unencumberedCash = (float) ($portfolio['balances']['cash'] ?? $portfolio['cash_balance'] ?? 0);
         }
 
-        if ($cashBalance > 5000) {
+        if ($unencumberedCash > 5000) {
             $incomeInsights[] = [
                 'type' => 'cash_yield',
                 'title' => 'Uninvested Cash Yield Enhancement',
                 'impact_level' => 'High',
                 'category' => 'Income Generation',
                 'description' => sprintf(
-                    'You currently hold $%.2f in liquid uninvested cash. Moving idle cash into ultra-short T-Bill ETFs (e.g. SGOV, BIL) or high-yield cash sweep can generate ~4.5%%-5.0%% annual yield.',
-                    $cashBalance
+                    'You currently hold $%.2f in liquid unencumbered cash. Moving idle cash into ultra-short T-Bill ETFs (e.g. SGOV, BIL) or high-yield cash sweep can generate ~4.5%%-5.0%% annual yield.',
+                    $unencumberedCash
                 ),
-                'action' => sprintf('Potential annual income boost: ~$%.2f with minimal credit risk.', $cashBalance * 0.045),
+                'action' => sprintf('Potential annual income boost: ~$%.2f with minimal credit risk.', $unencumberedCash * 0.045),
             ];
         }
 
-        // 2. Covered Call Income Opportunity for 100+ Shares
-        if (isset($portfolio['positions']) && is_array($portfolio['positions'])) {
+        // 2. Covered Call Income Opportunity for 100+ Unencumbered Shares
+        if (isset($portfolio['aggregatedEquities']) && is_array($portfolio['aggregatedEquities'])) {
+            foreach ($portfolio['aggregatedEquities'] as $eq) {
+                $availQty = (float) ($eq['availableShares'] ?? $eq['quantity'] ?? 0);
+                $symbol = strtoupper($eq['symbol'] ?? '');
+                if ($availQty >= 100 && !str_contains($symbol, ' ')) {
+                    $incomeInsights[] = [
+                        'type' => 'covered_call',
+                        'title' => sprintf('Covered Call Option Potential on %s', $symbol),
+                        'impact_level' => 'Medium',
+                        'category' => 'Income Generation',
+                        'description' => sprintf(
+                            'You own %d unencumbered shares of %s (%d full option contract unit available). Writing out-of-the-money covered calls can generate monthly option premium income.',
+                            (int) $availQty,
+                            $symbol,
+                            (int) floor($availQty / 100)
+                        ),
+                        'action' => 'Evaluate selling 30-45 DTE covered calls at a strike above your cost basis.',
+                    ];
+                    break; // Limit to top candidate
+                }
+            }
+        } elseif (isset($portfolio['positions']) && is_array($portfolio['positions'])) {
             foreach ($portfolio['positions'] as $pos) {
                 $qty = (float) ($pos['quantity'] ?? 0);
                 $symbol = strtoupper($pos['symbol'] ?? '');

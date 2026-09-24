@@ -73,12 +73,15 @@ class AppConfigService
         'local_llm.model'   => 'local-model',
 
         // Cache TTL configurations (seconds)
-        'cache.ttl.finnhub.quote'                => 300,    // 5 minutes
-        'cache.ttl.finnhub.earnings'             => 604800, // 7 days
-        'cache.ttl.finnhub.dividends'            => 604800, // 7 days
-        'cache.ttl.broker.portfolio'             => 60,     // 1 minute
-        'cache.ttl.broker.history'               => 604800, // 7 days
-        'cache.ttl.broker.chain'                 => 120,    // 2 minutes
+        'cache.ttl.finnhub.quote'                => 900,     // 15 minutes
+        'cache.ttl.finnhub.earnings'             => 604800,  // 7 days
+        'cache.ttl.finnhub.dividends'            => 604800,  // 7 days
+        'cache.ttl.finnhub.search'               => 1209600, // 14 days
+        'cache.ttl.finnhub.profile'              => 2592000, // 30 days
+        'cache.ttl.finnhub.splits'               => 2592000, // 30 days
+        'cache.ttl.broker.portfolio'             => 60,      // 1 minute
+        'cache.ttl.broker.history'               => 604800,  // 7 days
+        'cache.ttl.broker.chain'                 => 120,     // 2 minutes
 
         // API timeouts and limits
         'api.timeout.broker.default'             => 8.0,

@@ -43,7 +43,32 @@ class FinnhubService
     }
 
     /**
+     * Checks whether US Equity Markets (NYSE / NASDAQ) are currently open.
+     * Regular market trading hours: Monday - Friday, 09:30 - 16:00 US Eastern Time (ET).
+     *
+     * @return bool True if US markets are currently in active trading session.
+     */
+    public function isUsMarketOpen(): bool
+    {
+        try {
+            $nyTime = new \DateTimeImmutable('now', new \DateTimeZone('America/New_York'));
+            $dayOfWeek = (int) $nyTime->format('N'); // 1 (Mon) to 7 (Sun)
+            if ($dayOfWeek > 5) {
+                return false; // Weekend
+            }
+
+            $timeMinutes = ((int) $nyTime->format('H') * 60) + (int) $nyTime->format('i');
+            // 09:30 is 570 mins, 16:00 is 960 mins
+            return $timeMinutes >= 570 && $timeMinutes <= 960;
+        } catch (\Throwable $e) {
+            return true; // Fallback to allowing calls if timezone parsing fails
+        }
+    }
+
+    /**
      * Fetch real-time price quote for a ticker symbol.
+     * Live quotes are requested during US market hours and cached for 15 minutes.
+     * Outside market hours, cached or stale quote data is served to preserve API quota.
      *
      * @param string $symbol Equity ticker symbol.
      * @param string|null $apiKey Optional API key.
@@ -61,6 +86,16 @@ class FinnhubService
         $cacheKey = "finnhub.quote.{$symbol}";
         if ($forceRefresh) {
             $this->cache->delete($cacheKey);
+        }
+
+        $quoteTtl = (int) $this->appConfig->get('cache.ttl.finnhub.quote', 900);
+
+        // If outside market hours and not an explicit force refresh, serve cached or stale quote without hitting live API
+        if (!$this->isUsMarketOpen() && !$forceRefresh) {
+            $stale = $this->cache->getStale($cacheKey);
+            if ($stale !== null) {
+                return $stale;
+            }
         }
 
         return $this->cache->get($cacheKey, function() use ($symbol, $key) {
@@ -93,11 +128,12 @@ class FinnhubService
             }
 
             return null;
-        }, (int) $this->appConfig->get('cache.ttl.finnhub.quote', 300));
+        }, $quoteTtl);
     }
 
     /**
      * Parallel non-blocking batch quote retrieval via HTTP client streaming.
+     * Live quotes are requested during market hours and cached for 15 minutes.
      *
      * @param array $symbols List of ticker symbols.
      * @param string|null $apiKey Optional API key.
@@ -109,6 +145,8 @@ class FinnhubService
         $key = $this->getEffectiveApiKey($apiKey);
         $results = [];
         $pendingResponses = [];
+        $quoteTtl = (int) $this->appConfig->get('cache.ttl.finnhub.quote', 900);
+        $marketOpen = $this->isUsMarketOpen();
 
         foreach ($symbols as $sym) {
             $symbol = strtoupper(trim($sym));
@@ -126,6 +164,15 @@ class FinnhubService
             if ($cached !== null) {
                 $results[$symbol] = $cached;
                 continue;
+            }
+
+            // Outside market hours, fallback to stale cached quote if available
+            if (!$marketOpen && !$forceRefresh) {
+                $stale = $this->cache->getStale($cacheKey);
+                if ($stale !== null) {
+                    $results[$symbol] = $stale;
+                    continue;
+                }
             }
 
             if ($key) {
@@ -156,7 +203,7 @@ class FinnhubService
                             'o'  => $data['o'],
                             'pc' => $data['pc'],
                         ];
-                        $this->cache->set("finnhub.quote.{$symbol}", $quote, 300);
+                        $this->cache->set("finnhub.quote.{$symbol}", $quote, $quoteTtl);
                         $results[$symbol] = $quote;
                     }
                 }
@@ -208,7 +255,7 @@ class FinnhubService
             }
 
             return null;
-        }, 604800);
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.profile', 2592000));
     }
 
     /**
@@ -410,11 +457,12 @@ class FinnhubService
             }
 
             return null;
-        }, (int) $this->appConfig->get('cache.ttl.finnhub.profile', 604800));
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.profile', 2592000));
     }
 
     /**
      * Search Finnhub symbol directory for tickers matching query string.
+     * Cached for 14 days; new search terms will fetch from API on first lookup.
      *
      * @param string $query Query string.
      * @param string|null $apiKey Optional API key.
@@ -447,11 +495,12 @@ class FinnhubService
                 $this->logger->warning("Finnhub search error for {$query}: " . $e->getMessage());
             }
             return [];
-        }, 86400) ?? [];
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.search', 1209600)) ?? [];
     }
 
     /**
      * Fetch historical stock split adjustments for a symbol.
+     * Cached for 30 days.
      *
      * @param string $symbol Equity ticker symbol.
      * @param string|null $from Start date YYYY-MM-DD.
@@ -491,6 +540,6 @@ class FinnhubService
                 $this->logger->warning("Finnhub Stock Splits API error for {$symbol}: " . $e->getMessage());
             }
             return [];
-        }, (int) $this->appConfig->get('cache.ttl.finnhub.profile', 604800)) ?? [];
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.splits', 2592000)) ?? [];
     }
 }

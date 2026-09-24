@@ -154,6 +154,39 @@ class PersistentCacheService
     }
 
     /**
+     * Retrieve cached value even if expired (stale fallback when external API calls are suppressed).
+     *
+     * @param string $key Cache key string.
+     * @param bool $isSensitive When true, decrypts payload.
+     * @return mixed Stale or active cached value, or null.
+     */
+    public function getStale(string $key, bool $isSensitive = false): mixed
+    {
+        if (array_key_exists($key, $this->memoryCache)) {
+            return $this->memoryCache[$key];
+        }
+
+        try {
+            $cached = $this->cacheRepo->findOneBy(['cacheKey' => $key]);
+            if ($cached !== null) {
+                $rawVal = $cached->getValue();
+                $val = ($isSensitive && is_string($rawVal) && base64_decode($rawVal, true) !== false)
+                    ? $this->decryptValue($rawVal)
+                    : $rawVal;
+
+                if ($val !== null) {
+                    $this->memoryCache[$key] = $val;
+                    return $val;
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logger->warning("Persistent cache getStale read error for {$key}: " . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
      * Prune expired cache records from SQLite to prevent database bloat.
      *
      * @return int Number of purged rows.

@@ -241,7 +241,10 @@ System configurations are managed in [AppConfigService.php](src/Service/AppConfi
 
 - **`cache.ttl.broker.portfolio` (default `60`):** Caches live portfolio balances for 1 minute to keep numbers active without excessive broker API requests.
 - **`cache.ttl.broker.history` (default `604800`):** Caches transaction aggregates for 7 days.
-- **`cache.ttl.finnhub.dividends` and `cache.ttl.finnhub.earnings` (default `604800`):** Caches corporate payout events and calendar releases for 7 days to avoid Finnhub rate-limiting errors.
+- **`cache.ttl.finnhub.quote` (default `900`):** Caches real-time and batch stock quotes for 15 minutes. Live API calls are strictly restricted to US market hours (Mon–Fri 9:30 AM – 4:00 PM ET).
+- **`cache.ttl.finnhub.dividends` and `cache.ttl.finnhub.earnings` (default `604800`):** Caches corporate payout events and earnings calendars for 7 days.
+- **`cache.ttl.finnhub.search` (default `1209600`):** Caches symbol search queries for 14 days (new search terms query API immediately).
+- **`cache.ttl.finnhub.profile` and `cache.ttl.finnhub.splits` (default `2592000`):** Caches company profiles, CUSIP resolutions, and historical splits for 30 days (new tickers/CUSIPs query API immediately).
 - **Once-a-Day Gated History:** History fetching is restricted to query external endpoints only once a day. Subsequent requests on the same day read directly from the persistent SQLite cache (`var/data.db`). Users can manually bypass this gate using the **Force Pull Latest** button in the UI.
 
 For cache schema details, see [Database Schema and Persistent Caching](doc/database-caching.md).
