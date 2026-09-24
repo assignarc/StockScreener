@@ -1,26 +1,40 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Broker Authorization Complete — AI Option Engine{% endblock %}
+{% block title %}Broker Authorization Complete — MoonShot Portfolio{% endblock %}
 
 {% block body %}
-<div class="callback-card">
-    <div class="callback-icon">
-        <span class="material-symbols-outlined">check_circle</span>
+<div id="app">
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '<span class="material-symbols-outlined" style="vertical-align:middle; font-size:22px; color:var(--green);">verified</span> Broker <span>Authorization</span>',
+        headerBadge: 'OAuth 2.0 Handshake Verification'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
+
+    <div class="port-container" style="padding-top:40px; padding-bottom:60px;">
+        <div class="callback-card">
+            <div class="callback-icon">
+                <span class="material-symbols-outlined">check_circle</span>
+            </div>
+
+            <h1 class="callback-title">Broker Account Connected!</h1>
+
+            <p class="callback-desc">
+                Your brokerage OAuth authentication token has been securely encrypted and stored in your local SQLite database. You can now close this window or return to the main dashboard.
+            </p>
+
+            <div class="callback-actions">
+                <a href="/settings" class="hbtn hbtn-blue">
+                    <span class="material-symbols-outlined">settings</span> Return to Settings
+                </a>
+                <a href="/portfolio" class="hbtn hbtn-green">
+                    <span class="material-symbols-outlined">account_balance_wallet</span> View Portfolio
+                </a>
+            </div>
+        </div>
     </div>
 
-    <h1 class="callback-title">Broker Account Connected!</h1>
-
-    <p class="callback-desc">
-        Your brokerage OAuth authentication token has been securely encrypted and stored in your local SQLite database. You can now close this window or return to the main dashboard.
-    </p>
-
-    <div class="callback-actions">
-        <a href="/settings" class="hbtn hbtn-blue">
-            <span class="material-symbols-outlined">settings</span> Return to Settings
-        </a>
-        <a href="/portfolio" class="hbtn hbtn-green">
-            <span class="material-symbols-outlined">account_balance_wallet</span> View Portfolio
-        </a>
-    </div>
+    {% include 'screener/partials/_footer.html.twig' %}
 </div>
 {% endblock %}
+

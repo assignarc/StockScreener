@@ -65,7 +65,7 @@ To safeguard external API quotas and ensure application responsiveness, external
 | Cache Category | Cache Key Pattern | TTL Duration | Eviction / Refresh Policy |
 | :--- | :--- | :--- | :--- |
 | **Real-Time & Batch Quotes** | `finnhub.quote.{symbol}` | 900s (15 min) | Only fetched during US market hours (Mon–Fri 9:30 AM – 4:00 PM ET). Off-hours calls serve cached/stale data. |
-| **Corporate Dividends** | `finnhub.divs.{symbol}` | 604,800s (7 days) | Cached weekly; invalidated upon force refresh. |
+| **Corporate Dividends** | `finnhub.divs.{symbol}` | 2,592,000s (30 days) | Cached monthly; invalidated upon force refresh. |
 | **Corporate Earnings** | `finnhub.earnings.{from}.{to}.{symbol}` | 604,800s (7 days) | Cached weekly; refreshed prior to earnings cycles. |
 | **Symbol Search** | `finnhub.search.{queryHash}` | 1,209,600s (14 days) | Cached for 2 weeks; new/unseen symbols trigger live search immediately. |
 | **Company Profiles & CUSIP** | `finnhub.profile.{symbol}` / `finnhub.cusip.{cusip}` | 2,592,000s (30 days) | Cached for 30 days; new/unseen tickers or CUSIPs fetch live on first lookup. |

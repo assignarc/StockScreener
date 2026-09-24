@@ -1,0 +1,76 @@
+{# ── MANDATORY LEGAL DISCLAIMER MODAL ────────────────────────────────────── #}
+<div id="disclaimer-modal-overlay" class="modal-backdrop disclaimer-overlay" style="display: none;" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="disclaimer-modal-title">
+    <div class="disclaimer-modal-card">
+        <div class="disclaimer-modal-header">
+            <div class="disclaimer-modal-badge">
+                <span class="material-symbols-outlined disclaimer-badge-icon">gavel</span>
+                <span>Mandatory Platform Terms & Risk Disclosure</span>
+            </div>
+            <h2 id="disclaimer-modal-title" class="disclaimer-modal-title">
+                Educational Modeling & Risk Disclaimer
+            </h2>
+            <p class="disclaimer-modal-subtitle">
+                Please review and accept our terms before accessing real-time market data, AI trading analytics, and covered call modeling tools.
+            </p>
+        </div>
+
+        <div class="disclaimer-modal-content">
+            <div class="disclaimer-clause-card">
+                <div class="disclaimer-clause-icon">
+                    <span class="material-symbols-outlined">warning</span>
+                </div>
+                <div class="disclaimer-clause-text">
+                    <h4>Not Financial, Legal, or Investment Advice</h4>
+                    <p>
+                        <strong>{{ app_name|default('MoonShot Portfolio') }}</strong> is strictly an educational analysis, portfolio simulation, and quantitative modeling platform. Nothing on this website constitutes investment advice, financial planning, a solicitation, or a recommendation to buy or sell securities, options contracts, or any other financial instruments.
+                    </p>
+                </div>
+            </div>
+
+            <div class="disclaimer-clause-card">
+                <div class="disclaimer-clause-icon">
+                    <span class="material-symbols-outlined">psychology</span>
+                </div>
+                <div class="disclaimer-clause-text">
+                    <h4>Algorithmic & Simulated Projections</h4>
+                    <p>
+                        All signals, covered call ideas, cash-release estimates, AI recommendations, and risk scores are mathematical simulations generated from third-party APIs and statistical models. They are intended exclusively for pattern study and scenario modeling.
+                    </p>
+                </div>
+            </div>
+
+            <div class="disclaimer-clause-card">
+                <div class="disclaimer-clause-icon">
+                    <span class="material-symbols-outlined">shield</span>
+                </div>
+                <div class="disclaimer-clause-text">
+                    <h4>Substantial Risk of Loss & User Responsibility</h4>
+                    <p>
+                        Options trading carries significant risk of financial loss and is not appropriate for all market participants. You assume full, independent responsibility for all trading, investment decisions, and capital allocations. Past performance and simulations do not guarantee future returns.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="disclaimer-modal-footer">
+            <div class="disclaimer-agreement-check">
+                <label class="disclaimer-checkbox-label">
+                    <input type="checkbox" id="disclaimer-agree-checkbox" class="disclaimer-checkbox">
+                    <span class="disclaimer-checkbox-text">
+                        I acknowledge that this platform is for <strong>educational modeling only</strong>, understand the risk of loss in options trading, and agree to proceed at my own risk.
+                    </span>
+                </label>
+            </div>
+            <div class="disclaimer-actions">
+                <button type="button" id="disclaimer-accept-btn" class="btn btn-primary disclaimer-accept-btn" disabled>
+                    <span class="material-symbols-outlined">verified</span>
+                    <span id="disclaimer-accept-btn-text">I Understand & Accept Terms</span>
+                </button>
+            </div>
+            <div class="disclaimer-expiration-note">
+                <span class="material-symbols-outlined">schedule</span>
+                <span>Session authorization persists for 24 hours per device/server restart.</span>
+            </div>
+        </div>
+    </div>
+</div>

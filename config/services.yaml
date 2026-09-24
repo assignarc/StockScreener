@@ -8,6 +8,10 @@
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
     app.gemini_api_url_default: 'https://generativelanguage.googleapis.com/v1beta/models'
+    app.name: '%env(default:app_default_name:APP_NAME)%'
+    app.version: '%env(default:app_default_version:APP_VERSION)%'
+    app_default_name: 'MoonShot Portfolio'
+    app_default_version: '3.0'
 
 services:
     # default configuration for services in *this* file

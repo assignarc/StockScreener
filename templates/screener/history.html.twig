@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Historical Growth & Attribution — KHAPRE MoonShot Portfolio{% endblock %}
+{% block title %}Historical Growth & Attribution — MoonShot Portfolio{% endblock %}
 
 {% block body %}
 <div id="app">
@@ -11,7 +11,7 @@
     } %}
     {% include 'screener/partials/_nav.html.twig' %}
 
-    <div class="port-container" style="max-width: 100%; margin: 0 auto; padding: 24px; box-sizing: border-box;">
+    <div class="port-container">
 
         <!-- EXPLANATORY HERO BANNER -->
         <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(168, 85, 247, 0.03)); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 16px;">
@@ -165,6 +165,7 @@
         </div>
 
     </div>
+    {% include 'screener/partials/_footer.html.twig' %}
 </div>
 
 <!-- Chart.js Library -->

@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Flywheel Engine Monitor{% endblock %}
+{% block title %}Flywheel Engine Monitor & Internals — MoonShot Portfolio{% endblock %}
 
 {% block stylesheets %}
     <link rel="stylesheet" href="{{ asset('css/engine_monitor.css') }}">
@@ -9,230 +9,371 @@
 {% block body %}
 <div id="app">
     {% include 'screener/partials/_header.html.twig' with {
-        headerTitle: '<span class="material-symbols-outlined">memory</span> Engine <span class="text-gradient">Monitor</span>',
-        headerBadge: 'Live Diagnostics'
+        headerTitle: '<span class="material-symbols-outlined" style="color:var(--blue); font-size:24px;">memory</span> Engine <span>Monitor & Internals</span>',
+        headerBadge: 'AI & Telemetry Diagnostics'
     } %}
     {% include 'screener/partials/_nav.html.twig' %}
 
-    <div class="content engine-dashboard">
-        <!-- Header Section -->
-        <div class="glass-card status-header">
-            <div>
-                <h2 style="margin: 0; display: flex; align-items: center;">
-                    <span id="pulseIcon" class="pulse-indicator {% if not landscape %}offline{% endif %}"></span>
-                    Engine State: <span id="engineStateText" style="margin-left: 8px; color: {% if landscape %}var(--neon-green){% else %}#F44336{% endif %};">{% if landscape %}ACTIVE{% else %}OFFLINE{% endif %}</span>
-                </h2>
-                <div style="color: var(--text-muted); font-size: 13px; margin-top: 8px;">
-                    Last Run: <strong id="lastRunTime" style="color: #fff;">{{ landscape.timestamp ?? 'Never' }}</strong> 
-                    <span id="runDuration" style="margin-left: 10px; opacity: 0.8;">{% if landscape %}({{ landscape.durationMs }}ms){% endif %}</span>
+    <div class="engine-container">
+        
+        <!-- TELEMETRY & LIVE STATE STATUS HEADER -->
+        <div class="engine-status-bar">
+            <div class="engine-status-meta">
+                <div id="engineStatePill" class="engine-state-pill {% if landscape %}active{% else %}offline{% endif %}">
+                    <span id="pulseDot" class="pulse-dot {% if not landscape %}offline{% endif %}"></span>
+                    <span id="engineStateText">{% if landscape %}ACTIVE{% else %}OFFLINE{% endif %}</span>
+                </div>
+                
+                <div class="engine-meta-text">
+                    <span>Last Run:</span>
+                    <strong id="lastRunTime">{{ landscape.timestamp ?? 'Never' }}</strong>
+                    <span id="runDuration">{% if landscape %}({{ landscape.durationMs }}ms execution){% endif %}</span>
+                </div>
+
+                <div class="engine-meta-text" style="padding-left: 10px; border-left: 1px solid var(--border);">
+                    <span>Provider:</span>
+                    <strong id="providerName">{{ landscape.provider ?? 'Router Managed' }}</strong>
                 </div>
             </div>
             
-            <button class="btn-neon" onclick="runEngineLive()" id="runEngineBtn">
-                <span class="material-symbols-outlined" id="runEngineIcon">bolt</span> 
-                Trigger Run
-            </button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="engine-refresh-btn" onclick="fetchEngineStatus()" title="Refresh telemetry state">
+                    <span class="material-symbols-outlined">refresh</span>
+                    <span>Sync</span>
+                </button>
+                <button class="engine-trigger-btn" onclick="runEngineLive()" id="runEngineBtn">
+                    <span class="material-symbols-outlined" id="runEngineIcon">bolt</span> 
+                    <span>Trigger Run</span>
+                </button>
+            </div>
         </div>
         
-        <div class="grid-container">
-            <!-- Terminal Logs Section -->
-            <div class="glass-card full-width" style="padding: 0; background: #050505; border: 1px solid #333;">
+        <!-- SECTION 1: LIVE TERMINAL CONSOLE LOGS -->
+        <div class="engine-grid-top">
+            <div class="terminal-window">
                 <div class="terminal-header">
-                    <div class="terminal-btn term-red"></div>
-                    <div class="terminal-btn term-yellow"></div>
-                    <div class="terminal-btn term-green"></div>
-                    <span style="color: #666; font-size: 12px; margin-left: auto;">/var/log/engine.log</span>
+                    <div class="terminal-dots">
+                        <div class="terminal-btn term-red"></div>
+                        <div class="terminal-btn term-yellow"></div>
+                        <div class="terminal-btn term-green"></div>
+                    </div>
+                    <span class="terminal-title">flywheel.engine.daemon &bull; live stream</span>
                 </div>
                 <div class="terminal-body" id="engineLogsContainer">
                     {% if landscape and landscape.engineLogs %}
                         {% for log in landscape.engineLogs %}
-                            <div>{{ log }}</div>
+                            <div class="terminal-line">{{ log }}</div>
                         {% endfor %}
                     {% else %}
-                        <div style="color: #666;">Waiting for engine data...</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Portfolio Core State -->
-            <div class="glass-card">
-                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px; color: var(--neon-blue);">
-                    <span class="material-symbols-outlined">account_balance</span> Portfolio Cortex
-                </h3>
-                
-                <div id="portfolioDataContainer">
-                    {% if landscape and landscape.portfolioSummary %}
-                        <div class="data-row">
-                            <span>Net Liquidation Value</span>
-                            <span style="font-weight: bold;">${{ landscape.portfolioSummary.netLiquidationValue|number_format(2) }}</span>
-                        </div>
-                        <div class="data-row">
-                            <span>Total Idle Cash</span>
-                            <span style="color: var(--text-muted); font-weight: bold;">${{ landscape.portfolioSummary.cashBalance|number_format(2) }}</span>
-                        </div>
-                        <div class="data-row">
-                            <span>Unencumbered Cash</span>
-                            <span style="color: var(--neon-green); font-weight: bold;">${{ (landscape.portfolioSummary.availableCash ?? landscape.portfolioSummary.cashBalance)|number_format(2) }}</span>
-                        </div>
-                        <div class="data-row">
-                            <span>Tracked Accounts</span>
-                            <span class="badge-outline">{{ landscape.portfolioSummary.accountCount }}</span>
-                        </div>
-                        
-                        <div style="margin-top: 20px;">
-                            <strong style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Node Breakdown</strong>
-                            {% for acc in landscape.accounts|default([]) %}
-                                <div class="data-row" style="padding: 8px 0;">
-                                    <span style="font-size: 13px;">{{ acc.nickname ?? ('Acct ' ~ (acc.accountNumber ?? '')) }}</span>
-                                    <span style="font-size: 13px;">Cash: <span style="color: var(--neon-green);">${{ acc.cashAvailable|number_format(2) }}</span></span>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div style="color: var(--text-muted); text-align: center; padding: 30px;">Offline. No state cached.</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- AI LLM Evals -->
-            <div class="glass-card">
-                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px; color: var(--neon-purple);">
-                    <span class="material-symbols-outlined">psychology</span> Neuromorphic Evals
-                </h3>
-                
-                <div id="llmEvalsContainer" style="max-height: 400px; overflow-y: auto;">
-                    {% if landscape and landscape.existingContracts %}
-                        {% for eval in landscape.existingContracts %}
-                            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid {{ eval.aiDecision == 'CLOSE' ? 'var(--neon-blue)' : 'var(--text-muted)' }}">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <strong style="font-size: 16px;">{{ eval.underlyingSymbol ?? 'SYM' }} {{ eval.type }}</strong>
-                                    <span class="badge-outline {{ eval.aiDecision == 'CLOSE' ? 'badge-blue' : '' }}">{{ eval.aiDecision }}</span>
-                                </div>
-                                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
-                                    {{ eval.aiReasoning }}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div style="color: var(--text-muted); text-align: center; padding: 30px;">No contracts evaluated.</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Macro Market Intelligence -->
-            <div class="glass-card">
-                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px; color: var(--neon-blue);">
-                    <span class="material-symbols-outlined">public</span> Macro Market Intelligence
-                </h3>
-                
-                <div id="marketIntelContainer" style="max-height: 400px; overflow-y: auto;">
-                    {% if landscape and landscape.marketIntelligence %}
-                        {% if landscape.marketIntelligence.error is defined %}
-                            <div style="background: rgba(255,100,100,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--red, #ef4444); color: var(--red, #ef4444); text-align: center;">
-                                <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">error</span>
-                                {{ landscape.marketIntelligence.error }}
-                            </div>
-                        {% else %}
-                            <div style="margin-bottom: 12px;">
-                                <strong style="color: var(--text-color); font-size: 14px;">Major Events</strong>
-                            </div>
-                            {% for event in landscape.marketIntelligence.events|default([]) %}
-                                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--neon-blue);">
-                                    <strong style="font-size: 14px; display: block; margin-bottom: 4px;">{{ event.headline }}</strong>
-                                    <span style="font-size: 12px; color: var(--text-muted);">{{ event.impact }}</span>
-                                </div>
-                            {% endfor %}
-
-                            <div style="margin-top: 16px; margin-bottom: 12px;">
-                                <strong style="color: var(--text-color); font-size: 14px;">AI Stock Picks</strong>
-                            </div>
-                            {% for pick in landscape.marketIntelligence.stockPicks|default([]) %}
-                                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--neon-green);">
-                                    <strong style="font-size: 14px; color: var(--neon-green);">{{ pick.ticker }}</strong>
-                                    <span style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 4px;">{{ pick.reasoning }}</span>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% else %}
-                        <div style="color: var(--text-muted); text-align: center; padding: 30px;">No market data synthesized.</div>
-                    {% endif %}
-                </div>
-            </div>
-            <!-- JSON Flywheel Output -->
-            <div class="glass-card full-width">
-                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined">data_object</span> Idea Generation Matrix
-                </h3>
-                <div id="flywheelIdeasContainer" style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 16px; max-height: 400px; overflow-y: auto;">
-                    {% if landscape and landscape.newIdeas %}
-                        {% if landscape.newIdeas.error is defined %}
-                            <div style="background: rgba(255,100,100,0.1); padding: 15px; border-radius: 8px; border-left: 3px solid var(--red, #ef4444); color: var(--red, #ef4444); text-align: center;">
-                                <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">error</span>
-                                {{ landscape.newIdeas.error }}
-                            </div>
-                        {% elseif landscape.newIdeas.ideas %}
-                            {% for idea in landscape.newIdeas.ideas %}
-                                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--neon-purple);">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                        <strong style="font-size: 16px;">{{ idea.ticker }} - {{ idea.title }}</strong>
-                                        <span class="badge-outline" style="color: var(--neon-purple); border-color: var(--neon-purple);">{{ idea.strategyType }}</span>
-                                    </div>
-                                    <div style="margin-bottom: 8px; font-size: 13px;">
-                                        <span style="color: var(--neon-green); font-weight: bold;">Est. Premium: {{ idea.estimatedPremium }}</span> | 
-                                        <span style="color: var(--neon-blue); font-weight: bold;">APY: {{ idea.APY ?? idea.annualizedYield ?? 'N/A' }}</span> | 
-                                        Strike: {{ idea.targetStrike ?? idea.strike ?? 'N/A' }}
-                                    </div>
-                                    <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
-                                        {{ idea.reasoning }}
-                                    </div>
-                                    <div style="font-size: 12px; color: var(--yellow, #fbbf24); display: flex; align-items: center; gap: 4px;">
-                                        <span class="material-symbols-outlined" style="font-size: 14px;">shield</span> {{ idea.riskGuardrail }}
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <div style="color: var(--text-muted); text-align: center; padding: 30px;">No flywheel ideas generated.</div>
-                        {% endif %}
-                    {% else %}
-                        <div style="color: var(--text-muted); text-align: center; padding: 30px;">No flywheel ideas generated.</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- JSON Covered Calls Output -->
-            <div class="glass-card full-width">
-                <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined">auto_awesome</span> Covered Call Suggestions
-                </h3>
-                <div id="flywheelCallsContainer" style="background: rgba(0,0,0,0.4); border-radius: 8px; padding: 16px; max-height: 400px; overflow-y: auto;">
-                    {% if landscape and landscape.coveredCalls and landscape.coveredCalls.suggestions is defined %}
-                        {% for call in landscape.coveredCalls.suggestions %}
-                            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--neon-green);">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <strong style="font-size: 16px;">{{ call.symbol }} - {{ call.tradeActionText }}</strong>
-                                    <span class="badge-outline badge-green">{{ call.eligibleContracts }} Contract(s)</span>
-                                </div>
-                                <div style="margin-bottom: 8px; font-size: 13px;">
-                                    <span style="color: var(--neon-green); font-weight: bold;">+ ${{ call.estTotalIncome }} Premium</span> | 
-                                    <span style="color: var(--neon-blue); font-weight: bold;">APY: {{ call.annualizedYieldPct }}%</span> | 
-                                    Strike: ${{ call.suggestedStrike }} ({{ call.otmPercentage }}% OTM)
-                                </div>
-                                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
-                                    {{ call.reasoning }}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div style="color: var(--text-muted); text-align: center;">No covered calls cached.</div>
+                        <div class="terminal-line warn">Waiting for engine execution data or background daemon...</div>
                     {% endif %}
                 </div>
             </div>
         </div>
+
+        <!-- SECTION 2: 3-COLUMN CORE DIAGNOSTICS (PORTFOLIO, NEUROMORPHIC EVALS, MACRO INTEL) -->
+        <div class="engine-grid-3col">
+            
+            <!-- 1. Portfolio Cortex -->
+            <div class="engine-card">
+                <div class="engine-card-header">
+                    <h3 class="engine-card-title">
+                        <span class="material-symbols-outlined" style="color: var(--blue);">account_balance</span>
+                        Portfolio Cortex
+                    </h3>
+                    <span class="diag-badge blue">State Cache</span>
+                </div>
+                
+                <div id="portfolioDataContainer">
+                    {% if landscape and landscape.portfolioSummary %}
+                        <div class="diag-row">
+                            <span class="label">Net Liquidation Value</span>
+                            <span class="value" style="font-family: 'Outfit', sans-serif; font-size: 16px;">${{ landscape.portfolioSummary.netLiquidationValue|number_format(2) }}</span>
+                        </div>
+                        <div class="diag-row">
+                            <span class="label">Total Idle Cash</span>
+                            <span class="value">${{ landscape.portfolioSummary.cashBalance|number_format(2) }}</span>
+                        </div>
+                        <div class="diag-row">
+                            <span class="label">Unencumbered Cash</span>
+                            <span class="value" style="color: var(--green);">${{ (landscape.portfolioSummary.availableCash ?? landscape.portfolioSummary.cashBalance)|number_format(2) }}</span>
+                        </div>
+                        <div class="diag-row">
+                            <span class="label">Connected Broker Nodes</span>
+                            <span class="diag-badge purple">{{ landscape.portfolioSummary.accountCount }} Active</span>
+                        </div>
+                        
+                        <div class="diag-node-section">
+                            <div class="diag-node-title">Account Liquidity Breakdown</div>
+                            {% for acc in landscape.accounts|default([]) %}
+                                <div class="diag-row" style="padding: 6px 0;">
+                                    <span style="font-size: 12px; color: var(--text);">{{ acc.nickname ?? ('Account ' ~ (acc.accountNumber ?? '')) }}</span>
+                                    <span style="font-size: 12px; color: var(--green); font-weight: 700;">${{ acc.cashAvailable|number_format(2) }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="diag-empty-state">
+                            <span class="material-symbols-outlined">cloud_off</span>
+                            <span>Offline. No state cached yet.</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 2. Neuromorphic Evals -->
+            <div class="engine-card">
+                <div class="engine-card-header">
+                    <h3 class="engine-card-title">
+                        <span class="material-symbols-outlined" style="color: var(--purple);">psychology</span>
+                        Neuromorphic Evals
+                    </h3>
+                    <span class="diag-badge purple">AI Exit Logic</span>
+                </div>
+                
+                <div id="llmEvalsContainer" class="diag-feed-container">
+                    {% if landscape and landscape.existingContracts and landscape.existingContracts|length > 0 %}
+                        {% for eval in landscape.existingContracts %}
+                            <div class="diag-item-card {{ eval.aiDecision == 'CLOSE' ? 'border-blue' : 'border-muted' }} {% if loop.index > 4 %}diag-item-hidden{% endif %}">
+                                <div class="diag-item-top">
+                                    <span class="diag-item-symbol">{{ eval.underlyingSymbol ?? 'SYM' }} {{ eval.type ?? '' }}</span>
+                                    <span class="diag-badge {{ eval.aiDecision == 'CLOSE' ? 'blue' : 'muted' }}">{{ eval.aiDecision ?? 'HOLD' }}</span>
+                                </div>
+                                <div class="diag-item-metrics">
+                                    <span>Profit: <strong style="color: var(--green);">{{ eval.profitPct ?? 0 }}%</strong></span>
+                                    <span>Strike: <strong>${{ eval.strike ?? 'N/A' }}</strong></span>
+                                    <span>Gain: <strong style="color: var(--green);">+${{ eval.realizedGain ?? 0 }}</strong></span>
+                                </div>
+                                <div class="diag-item-reasoning">
+                                    {{ eval.aiReasoning }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        {% if landscape.existingContracts|length > 4 %}
+                            <button type="button" class="diag-view-more-btn" onclick="toggleFeedViewMore(this, 'llmEvalsContainer')">
+                                <span class="material-symbols-outlined">expand_more</span>
+                                <span class="btn-text">View More ({{ landscape.existingContracts|length - 4 }} remaining)</span>
+                            </button>
+                        {% endif %}
+                    {% else %}
+                        <div class="diag-empty-state">
+                            <span class="material-symbols-outlined">task_alt</span>
+                            <span>No open contracts requiring AI exit actions.</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 3. Macro Market Intelligence -->
+            <div class="engine-card">
+                <div class="engine-card-header">
+                    <h3 class="engine-card-title">
+                        <span class="material-symbols-outlined" style="color: var(--blue);">public</span>
+                        Macro Intelligence
+                    </h3>
+                    <span class="diag-badge blue">LLM Synthesis</span>
+                </div>
+                
+                <div id="marketIntelContainer" class="diag-feed-container">
+                    {% if landscape and landscape.marketIntelligence %}
+                        {% if landscape.marketIntelligence.error is defined %}
+                            <div class="diag-item-card" style="border-left: 4px solid var(--red); background: rgba(248, 81, 73, 0.08);">
+                                <div style="display: flex; align-items: center; gap: 8px; color: var(--red); font-size: 13px; font-weight: 700;">
+                                    <span class="material-symbols-outlined">error</span>
+                                    <span>{{ landscape.marketIntelligence.error }}</span>
+                                </div>
+                            </div>
+                        {% else %}
+                            {% set totalIntel = 0 %}
+                            {% if landscape.marketIntelligence.events is defined and landscape.marketIntelligence.events|length > 0 %}
+                                <div class="diag-node-title">Catalyst & Macro Events</div>
+                                {% for event in landscape.marketIntelligence.events %}
+                                    {% set totalIntel = totalIntel + 1 %}
+                                    <div class="diag-item-card border-blue {% if totalIntel > 4 %}diag-item-hidden{% endif %}" style="padding: 10px 12px; margin-bottom: 8px;">
+                                        <strong style="font-size: 13px; display: block; margin-bottom: 4px; color: var(--text);">{{ event.headline }}</strong>
+                                        <span style="font-size: 12px; color: var(--muted); line-height: 1.4;">{{ event.impact }}</span>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            {% if landscape.marketIntelligence.stockPicks is defined and landscape.marketIntelligence.stockPicks|length > 0 %}
+                                <div class="diag-node-title" style="margin-top: 14px;">Market Ticker Scans</div>
+                                {% for pick in landscape.marketIntelligence.stockPicks %}
+                                    {% set totalIntel = totalIntel + 1 %}
+                                    <div class="diag-item-card border-green {% if totalIntel > 4 %}diag-item-hidden{% endif %}" style="padding: 10px 12px; margin-bottom: 8px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <strong style="font-size: 13px; color: var(--green);">{{ pick.ticker }}</strong>
+                                            <span class="diag-badge green">Opportunity</span>
+                                        </div>
+                                        <span style="font-size: 12px; color: var(--muted); display: block; margin-top: 4px; line-height: 1.4;">{{ pick.reasoning }}</span>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+
+                            {% if totalIntel > 4 %}
+                                <button type="button" class="diag-view-more-btn" onclick="toggleFeedViewMore(this, 'marketIntelContainer')">
+                                    <span class="material-symbols-outlined">expand_more</span>
+                                    <span class="btn-text">View More ({{ totalIntel - 4 }} remaining)</span>
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                    {% else %}
+                        <div class="diag-empty-state">
+                            <span class="material-symbols-outlined">newspaper</span>
+                            <span>No macro intelligence synthesized yet.</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SECTION 3: 2-COLUMN BOTTOM OPPORTUNITIES (IDEA MATRIX & COVERED CALL SUGGESTIONS) -->
+        <div class="engine-grid-2col">
+            
+            <!-- 1. Idea Generation Matrix -->
+            <div class="engine-card">
+                <div class="engine-card-header">
+                    <h3 class="engine-card-title">
+                        <span class="material-symbols-outlined" style="color: var(--purple);">lightbulb</span>
+                        Idea Generation Matrix
+                    </h3>
+                    <span class="diag-badge purple">Flywheel Signals</span>
+                </div>
+                
+                <div id="flywheelIdeasContainer" class="diag-feed-container">
+                    {% if landscape and landscape.newIdeas %}
+                        {% if landscape.newIdeas.error is defined %}
+                            <div class="diag-item-card" style="border-left: 4px solid var(--red); background: rgba(248, 81, 73, 0.08);">
+                                <div style="display: flex; align-items: center; gap: 8px; color: var(--red); font-size: 13px;">
+                                    <span class="material-symbols-outlined">error</span>
+                                    <span>{{ landscape.newIdeas.error }}</span>
+                                </div>
+                            </div>
+                        {% elseif landscape.newIdeas.ideas is defined and landscape.newIdeas.ideas|length > 0 %}
+                            {% for idea in landscape.newIdeas.ideas %}
+                                <div class="diag-item-card border-purple {% if loop.index > 4 %}diag-item-hidden{% endif %}">
+                                    <div class="diag-item-top">
+                                        <span class="diag-item-symbol">{{ idea.ticker }} &bull; {{ idea.title }}</span>
+                                        <span class="diag-badge purple">{{ idea.strategyType }}</span>
+                                    </div>
+                                    <div class="diag-item-metrics">
+                                        <span>Est. Premium: <strong style="color: var(--green);">{{ idea.estimatedPremium }}</strong></span>
+                                        <span>APY: <strong style="color: var(--blue);">{{ idea.APY ?? idea.annualizedYield ?? 'N/A' }}</strong></span>
+                                        <span>Strike: <strong>{{ idea.targetStrike ?? idea.strike ?? 'N/A' }}</strong></span>
+                                    </div>
+                                    <div class="diag-item-reasoning">
+                                        {{ idea.reasoning }}
+                                    </div>
+                                    {% if idea.riskGuardrail is defined and idea.riskGuardrail %}
+                                        <div class="diag-item-guardrail">
+                                            <span class="material-symbols-outlined" style="font-size: 16px;">shield</span>
+                                            <span>{{ idea.riskGuardrail }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                            {% if landscape.newIdeas.ideas|length > 4 %}
+                                <button type="button" class="diag-view-more-btn" onclick="toggleFeedViewMore(this, 'flywheelIdeasContainer')">
+                                    <span class="material-symbols-outlined">expand_more</span>
+                                    <span class="btn-text">View More ({{ landscape.newIdeas.ideas|length - 4 }} remaining)</span>
+                                </button>
+                            {% endif %}
+                        {% else %}
+                            <div class="diag-empty-state">
+                                <span class="material-symbols-outlined">bubble_chart</span>
+                                <span>No flywheel ideas generated in latest cycle.</span>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="diag-empty-state">
+                            <span class="material-symbols-outlined">bubble_chart</span>
+                            <span>No flywheel ideas generated yet.</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 2. Covered Call Suggestions -->
+            <div class="engine-card">
+                <div class="engine-card-header">
+                    <h3 class="engine-card-title">
+                        <span class="material-symbols-outlined" style="color: var(--green);">auto_awesome</span>
+                        Covered Call Suggestions
+                    </h3>
+                    <span class="diag-badge green">Monetization Queue</span>
+                </div>
+                
+                <div id="flywheelCallsContainer" class="diag-feed-container">
+                    {% if landscape and landscape.coveredCalls and landscape.coveredCalls.suggestions is defined and landscape.coveredCalls.suggestions|length > 0 %}
+                        {% for call in landscape.coveredCalls.suggestions %}
+                            <div class="diag-item-card border-green {% if loop.index > 4 %}diag-item-hidden{% endif %}">
+                                <div class="diag-item-top">
+                                    <span class="diag-item-symbol">{{ call.symbol }} &bull; {{ call.tradeActionText }}</span>
+                                    <span class="diag-badge green">{{ call.eligibleContracts }} Contract(s)</span>
+                                </div>
+                                <div class="diag-item-metrics">
+                                    <span>Est Income: <strong style="color: var(--green);">+${{ call.estTotalIncome|number_format(2) }}</strong></span>
+                                    <span>APY: <strong style="color: var(--blue);">{{ call.annualizedYieldPct }}%</strong></span>
+                                    <span>Strike: <strong>${{ call.suggestedStrike }} ({{ call.otmPercentage }}% OTM)</strong></span>
+                                </div>
+                                <div class="diag-item-reasoning">
+                                    {{ call.reasoning }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        {% if landscape.coveredCalls.suggestions|length > 4 %}
+                            <button type="button" class="diag-view-more-btn" onclick="toggleFeedViewMore(this, 'flywheelCallsContainer')">
+                                <span class="material-symbols-outlined">expand_more</span>
+                                <span class="btn-text">View More ({{ landscape.coveredCalls.suggestions|length - 4 }} remaining)</span>
+                            </button>
+                        {% endif %}
+                    {% else %}
+                        <div class="diag-empty-state">
+                            <span class="material-symbols-outlined">inventory_2</span>
+                            <span>No unencumbered 100-share blocks available for covered calls.</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
     </div>
+
+    {% include 'screener/partials/_footer.html.twig' %}
 </div>
 
 <script>
 let pollingInterval = null;
+const feedExpandedStates = {
+    llmEvalsContainer: false,
+    marketIntelContainer: false,
+    flywheelIdeasContainer: false,
+    flywheelCallsContainer: false
+};
+
+function toggleFeedViewMore(btn, containerId) {
+    const isExpanded = feedExpandedStates[containerId] = !feedExpandedStates[containerId];
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const items = container.querySelectorAll('.diag-item-card');
+    items.forEach((item, index) => {
+        if (index >= 4) {
+            item.classList.toggle('diag-item-hidden', !isExpanded);
+        }
+    });
+
+    if (btn) {
+        btn.classList.toggle('expanded', isExpanded);
+        const icon = btn.querySelector('.material-symbols-outlined');
+        const text = btn.querySelector('.btn-text');
+        const count = items.length - 4;
+        if (icon) icon.textContent = isExpanded ? 'expand_less' : 'expand_more';
+        if (text) text.textContent = isExpanded ? 'View Less' : `View More (${count} remaining)`;
+    }
+}
 
 function runEngineLive() {
     const btn = document.getElementById('runEngineBtn');
@@ -251,14 +392,13 @@ function runEngineLive() {
         }
     }).then(res => res.json())
       .then(data => {
-          // Keep it disabled for a while to prevent spamming
           setTimeout(() => {
               icon.textContent = 'bolt';
               icon.classList.remove('icon-spin');
               btn.disabled = false;
           }, 3000);
           
-          // Poll faster for a bit since we just started it
+          // Poll aggressively for 30s after triggering
           clearInterval(pollingInterval);
           startPolling(2000);
           setTimeout(() => {
@@ -278,182 +418,328 @@ function updateDashboardUI(landscape) {
     if (!landscape) return;
     
     // Status Header
-    document.getElementById('pulseIcon').className = 'pulse-indicator';
-    const stateEl = document.getElementById('engineStateText');
-    stateEl.textContent = 'ACTIVE';
-    stateEl.style.color = 'var(--neon-green)';
+    const statePill = document.getElementById('engineStatePill');
+    const pulseDot = document.getElementById('pulseDot');
+    const stateText = document.getElementById('engineStateText');
     
-    document.getElementById('lastRunTime').textContent = landscape.timestamp || 'Just now';
-    document.getElementById('runDuration').textContent = `(${landscape.durationMs || 0}ms)`;
+    if (statePill) statePill.className = 'engine-state-pill active';
+    if (pulseDot) pulseDot.className = 'pulse-dot';
+    if (stateText) stateText.textContent = 'ACTIVE';
+    
+    const lastRunTime = document.getElementById('lastRunTime');
+    if (lastRunTime) lastRunTime.textContent = landscape.timestamp || 'Just now';
+    
+    const runDuration = document.getElementById('runDuration');
+    if (runDuration) runDuration.textContent = `(${landscape.durationMs || 0}ms execution)`;
+
+    const providerName = document.getElementById('providerName');
+    if (providerName && landscape.provider) providerName.textContent = landscape.provider;
 
     // Terminal Logs
     if (landscape.engineLogs && landscape.engineLogs.length > 0) {
-        const logsHtml = landscape.engineLogs.map(log => `<div>${log}</div>`).join('');
-        const logContainer = document.getElementById('engineLogsContainer');
+        const logsHtml = landscape.engineLogs.map(log => {
+            let lineClass = 'terminal-line';
+            if (log.includes('ERROR')) lineClass += ' error';
+            else if (log.includes('Warning') || log.includes('Snoozing')) lineClass += ' warn';
+            else if (log.includes('successfully') || log.includes('Started')) lineClass += ' success';
+            else if (log.includes('Fetching') || log.includes('Evaluating')) lineClass += ' info';
+            return `<div class="${lineClass}">${escapeHtml(log)}</div>`;
+        }).join('');
         
-        // Auto scroll if at bottom
-        const isScrolledToBottom = logContainer.scrollHeight - logContainer.clientHeight <= logContainer.scrollTop + 1;
-        logContainer.innerHTML = logsHtml;
-        if (isScrolledToBottom) {
-            logContainer.scrollTop = logContainer.scrollHeight;
+        const logContainer = document.getElementById('engineLogsContainer');
+        if (logContainer) {
+            const isScrolledToBottom = logContainer.scrollHeight - logContainer.clientHeight <= logContainer.scrollTop + 5;
+            logContainer.innerHTML = logsHtml;
+            if (isScrolledToBottom) {
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
         }
     }
     
     // Portfolio Core State
     if (landscape.portfolioSummary) {
-        const nlv = parseFloat(landscape.portfolioSummary.netLiquidationValue).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        const cash = parseFloat(landscape.portfolioSummary.cashBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const nlv = parseFloat(landscape.portfolioSummary.netLiquidationValue || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const cash = parseFloat(landscape.portfolioSummary.cashBalance || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const availCash = parseFloat(landscape.portfolioSummary.availableCash ?? landscape.portfolioSummary.cashBalance ?? 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
         let accountBreakdownHtml = '';
-        if (landscape.accounts) {
+        if (landscape.accounts && landscape.accounts.length > 0) {
             accountBreakdownHtml = landscape.accounts.map(acc => {
-                const name = acc.nickname || `Acct ${acc.accountNumber}`;
-                const aCash = parseFloat(acc.cashAvailable).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const name = acc.nickname || `Account ${acc.accountNumber}`;
+                const aCash = parseFloat(acc.cashAvailable || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
                 return `
-                    <div class="data-row" style="padding: 8px 0;">
-                        <span style="font-size: 13px;">${name}</span>
-                        <span style="font-size: 13px;">Cash: <span style="color: var(--neon-green);">$${aCash}</span></span>
+                    <div class="diag-row" style="padding: 6px 0;">
+                        <span style="font-size: 12px; color: var(--text);">${escapeHtml(name)}</span>
+                        <span style="font-size: 12px; color: var(--green); font-weight: 700;">$${aCash}</span>
                     </div>
                 `;
             }).join('');
         }
 
-        document.getElementById('portfolioDataContainer').innerHTML = `
-            <div class="data-row">
-                <span>Net Liquidation Value</span>
-                <span style="font-weight: bold;">$${nlv}</span>
-            </div>
-            <div class="data-row">
-                <span>Total Idle Cash</span>
-                <span style="color: var(--text-muted); font-weight: bold;">$${cash}</span>
-            </div>
-            <div class="data-row">
-                <span>Unencumbered Cash</span>
-                <span style="color: var(--neon-green); font-weight: bold;">$${Number(landscape.portfolioSummary.availableCash || landscape.portfolioSummary.cashBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-            </div>
-            <div class="data-row">
-                <span>Tracked Accounts</span>
-                <span class="badge-outline">${landscape.portfolioSummary.accountCount}</span>
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <strong style="color: var(--text-muted); font-size: 12px; text-transform: uppercase;">Node Breakdown</strong>
-                ${accountBreakdownHtml}
-            </div>
-        `;
+        const portContainer = document.getElementById('portfolioDataContainer');
+        if (portContainer) {
+            portContainer.innerHTML = `
+                <div class="diag-row">
+                    <span class="label">Net Liquidation Value</span>
+                    <span class="value" style="font-family: 'Outfit', sans-serif; font-size: 16px;">$${nlv}</span>
+                </div>
+                <div class="diag-row">
+                    <span class="label">Total Idle Cash</span>
+                    <span class="value">$${cash}</span>
+                </div>
+                <div class="diag-row">
+                    <span class="label">Unencumbered Cash</span>
+                    <span class="value" style="color: var(--green);">$${availCash}</span>
+                </div>
+                <div class="diag-row">
+                    <span class="label">Connected Broker Nodes</span>
+                    <span class="diag-badge purple">${landscape.portfolioSummary.accountCount || 0} Active</span>
+                </div>
+                
+                <div class="diag-node-section">
+                    <div class="diag-node-title">Account Liquidity Breakdown</div>
+                    ${accountBreakdownHtml}
+                </div>
+            `;
+        }
     }
 
     // AI Evals
-    if (landscape.existingContracts && landscape.existingContracts.length > 0) {
-        document.getElementById('llmEvalsContainer').innerHTML = landscape.existingContracts.map(eval => {
-            const sym = eval.underlyingSymbol || 'SYM';
-            const decision = eval.aiDecision || 'HOLD';
-            const colorClass = decision === 'CLOSE' ? 'badge-blue' : '';
-            const borderCol = decision === 'CLOSE' ? 'var(--neon-blue)' : 'var(--text-muted)';
-            
-            return `
-                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid ${borderCol}">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <strong style="font-size: 16px;">${sym} ${eval.type || ''}</strong>
-                        <span class="badge-outline ${colorClass}">${decision}</span>
+    const evalsContainer = document.getElementById('llmEvalsContainer');
+    if (evalsContainer && landscape.existingContracts) {
+        if (landscape.existingContracts.length > 0) {
+            const isExp = feedExpandedStates.llmEvalsContainer;
+            let evalsHtml = landscape.existingContracts.map((eval, idx) => {
+                const sym = eval.underlyingSymbol || 'SYM';
+                const decision = eval.aiDecision || 'HOLD';
+                const colorClass = decision === 'CLOSE' ? 'blue' : 'muted';
+                const borderClass = decision === 'CLOSE' ? 'border-blue' : 'border-muted';
+                const profit = eval.profitPct || 0;
+                const gain = parseFloat(eval.realizedGain || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                const strike = eval.strike || 'N/A';
+                const hiddenClass = (idx >= 4 && !isExp) ? 'diag-item-hidden' : '';
+                
+                return `
+                    <div class="diag-item-card ${borderClass} ${hiddenClass}">
+                        <div class="diag-item-top">
+                            <span class="diag-item-symbol">${escapeHtml(sym)} ${escapeHtml(eval.type || '')}</span>
+                            <span class="diag-badge ${colorClass}">${escapeHtml(decision)}</span>
+                        </div>
+                        <div class="diag-item-metrics">
+                            <span>Profit: <strong style="color: var(--green);">${profit}%</strong></span>
+                            <span>Strike: <strong>$${strike}</strong></span>
+                            <span>Gain: <strong style="color: var(--green);">+$${gain}</strong></span>
+                        </div>
+                        <div class="diag-item-reasoning">
+                            ${escapeHtml(eval.aiReasoning || '')}
+                        </div>
                     </div>
-                    <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
-                        ${eval.aiReasoning || ''}
-                    </div>
+                `;
+            }).join('');
+
+            if (landscape.existingContracts.length > 4) {
+                const remaining = landscape.existingContracts.length - 4;
+                evalsHtml += `
+                    <button type="button" class="diag-view-more-btn ${isExp ? 'expanded' : ''}" onclick="toggleFeedViewMore(this, 'llmEvalsContainer')">
+                        <span class="material-symbols-outlined">${isExp ? 'expand_less' : 'expand_more'}</span>
+                        <span class="btn-text">${isExp ? 'View Less' : `View More (${remaining} remaining)`}</span>
+                    </button>
+                `;
+            }
+
+            evalsContainer.innerHTML = evalsHtml;
+        } else {
+            evalsContainer.innerHTML = `
+                <div class="diag-empty-state">
+                    <span class="material-symbols-outlined">task_alt</span>
+                    <span>No open contracts requiring AI exit actions.</span>
                 </div>
             `;
-        }).join('');
+        }
     }
 
     // Market Intelligence
-    if (landscape.marketIntelligence) {
+    const intelContainer = document.getElementById('marketIntelContainer');
+    if (intelContainer && landscape.marketIntelligence) {
         let intelHtml = '';
+        const isExp = feedExpandedStates.marketIntelContainer;
+        let itemIndex = 0;
         
         if (landscape.marketIntelligence.error) {
             intelHtml = `
-                <div style="background: rgba(255,100,100,0.1); padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--red, #ef4444); color: var(--red, #ef4444); text-align: center;">
-                    <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">error</span>
-                    ${landscape.marketIntelligence.error}
+                <div class="diag-item-card" style="border-left: 4px solid var(--red); background: rgba(248, 81, 73, 0.08);">
+                    <div style="display: flex; align-items: center; gap: 8px; color: var(--red); font-size: 13px;">
+                        <span class="material-symbols-outlined">error</span>
+                        <span>${escapeHtml(landscape.marketIntelligence.error)}</span>
+                    </div>
                 </div>
             `;
         } else {
             if (landscape.marketIntelligence.events && landscape.marketIntelligence.events.length > 0) {
-                intelHtml += '<div style="margin-bottom: 12px;"><strong style="color: var(--text-color); font-size: 14px;">Major Events</strong></div>';
-                intelHtml += landscape.marketIntelligence.events.map(event => `
-                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--neon-blue);">
-                        <strong style="font-size: 14px; display: block; margin-bottom: 4px;">${event.headline || ''}</strong>
-                        <span style="font-size: 12px; color: var(--text-muted);">${event.impact || ''}</span>
-                    </div>
-                `).join('');
+                intelHtml += '<div class="diag-node-title">Catalyst & Macro Events</div>';
+                intelHtml += landscape.marketIntelligence.events.map(event => {
+                    itemIndex++;
+                    const hiddenClass = (itemIndex > 4 && !isExp) ? 'diag-item-hidden' : '';
+                    return `
+                        <div class="diag-item-card border-blue ${hiddenClass}" style="padding: 10px 12px; margin-bottom: 8px;">
+                            <strong style="font-size: 13px; display: block; margin-bottom: 4px; color: var(--text);">${escapeHtml(event.headline || '')}</strong>
+                            <span style="font-size: 12px; color: var(--muted); line-height: 1.4;">${escapeHtml(event.impact || '')}</span>
+                        </div>
+                    `;
+                }).join('');
             }
 
             if (landscape.marketIntelligence.stockPicks && landscape.marketIntelligence.stockPicks.length > 0) {
-                intelHtml += '<div style="margin-top: 16px; margin-bottom: 12px;"><strong style="color: var(--text-color); font-size: 14px;">AI Stock Picks</strong></div>';
-                intelHtml += landscape.marketIntelligence.stockPicks.map(pick => `
-                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid var(--neon-green);">
-                        <strong style="font-size: 14px; color: var(--neon-green);">${pick.ticker || ''}</strong>
-                        <span style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 4px;">${pick.reasoning || ''}</span>
-                    </div>
-                `).join('');
+                intelHtml += '<div class="diag-node-title" style="margin-top: 14px;">Market Ticker Scans</div>';
+                intelHtml += landscape.marketIntelligence.stockPicks.map(pick => {
+                    itemIndex++;
+                    const hiddenClass = (itemIndex > 4 && !isExp) ? 'diag-item-hidden' : '';
+                    return `
+                        <div class="diag-item-card border-green ${hiddenClass}" style="padding: 10px 12px; margin-bottom: 8px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong style="font-size: 13px; color: var(--green);">${escapeHtml(pick.ticker || '')}</strong>
+                                <span class="diag-badge green">Opportunity</span>
+                            </div>
+                            <span style="font-size: 12px; color: var(--muted); display: block; margin-top: 4px; line-height: 1.4;">${escapeHtml(pick.reasoning || '')}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            if (itemIndex > 4) {
+                const remaining = itemIndex - 4;
+                intelHtml += `
+                    <button type="button" class="diag-view-more-btn ${isExp ? 'expanded' : ''}" onclick="toggleFeedViewMore(this, 'marketIntelContainer')">
+                        <span class="material-symbols-outlined">${isExp ? 'expand_less' : 'expand_more'}</span>
+                        <span class="btn-text">${isExp ? 'View Less' : `View More (${remaining} remaining)`}</span>
+                    </button>
+                `;
             }
         }
         
         if (intelHtml !== '') {
-            document.getElementById('marketIntelContainer').innerHTML = intelHtml;
+            intelContainer.innerHTML = intelHtml;
         }
     }
 
     // Ideas
-    if (landscape.newIdeas) {
+    const ideasContainer = document.getElementById('flywheelIdeasContainer');
+    if (ideasContainer && landscape.newIdeas) {
         if (landscape.newIdeas.error) {
-            document.getElementById('flywheelIdeasContainer').innerHTML = `
-                <div style="background: rgba(255,100,100,0.1); padding: 15px; border-radius: 8px; border-left: 3px solid var(--red, #ef4444); color: var(--red, #ef4444); text-align: center;">
-                    <span class="material-symbols-outlined" style="vertical-align: middle; margin-right: 8px;">error</span>
-                    ${landscape.newIdeas.error}
+            ideasContainer.innerHTML = `
+                <div class="diag-item-card" style="border-left: 4px solid var(--red); background: rgba(248, 81, 73, 0.08);">
+                    <div style="display: flex; align-items: center; gap: 8px; color: var(--red); font-size: 13px;">
+                        <span class="material-symbols-outlined">error</span>
+                        <span>${escapeHtml(landscape.newIdeas.error)}</span>
+                    </div>
                 </div>
             `;
         } else if (landscape.newIdeas.ideas && landscape.newIdeas.ideas.length > 0) {
-            document.getElementById('flywheelIdeasContainer').innerHTML = landscape.newIdeas.ideas.map(idea => `
-                <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--neon-purple);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <strong style="font-size: 16px;">${idea.ticker || ''} - ${idea.title || ''}</strong>
-                        <span class="badge-outline" style="color: var(--neon-purple); border-color: var(--neon-purple);">${idea.strategyType || ''}</span>
+            const isExp = feedExpandedStates.flywheelIdeasContainer;
+            let ideasHtml = landscape.newIdeas.ideas.map((idea, idx) => {
+                const hiddenClass = (idx >= 4 && !isExp) ? 'diag-item-hidden' : '';
+                return `
+                    <div class="diag-item-card border-purple ${hiddenClass}">
+                        <div class="diag-item-top">
+                            <span class="diag-item-symbol">${escapeHtml(idea.ticker || '')} &bull; ${escapeHtml(idea.title || '')}</span>
+                            <span class="diag-badge purple">${escapeHtml(idea.strategyType || '')}</span>
+                        </div>
+                        <div class="diag-item-metrics">
+                            <span>Est. Premium: <strong style="color: var(--green);">${escapeHtml(idea.estimatedPremium || '')}</strong></span>
+                            <span>APY: <strong style="color: var(--blue);">${escapeHtml(idea.APY || idea.annualizedYield || 'N/A')}</strong></span>
+                            <span>Strike: <strong>${escapeHtml(idea.targetStrike || idea.strike || 'N/A')}</strong></span>
+                        </div>
+                        <div class="diag-item-reasoning">
+                            ${escapeHtml(idea.reasoning || '')}
+                        </div>
+                        ${idea.riskGuardrail ? `
+                            <div class="diag-item-guardrail">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">shield</span>
+                                <span>${escapeHtml(idea.riskGuardrail)}</span>
+                            </div>
+                        ` : ''}
                     </div>
-                    <div style="margin-bottom: 8px; font-size: 13px;">
-                        <span style="color: var(--neon-green); font-weight: bold;">Est. Premium: ${idea.estimatedPremium || ''}</span> | 
-                        <span style="color: var(--neon-blue); font-weight: bold;">APY: ${idea.APY || idea.annualizedYield || ''}</span> | 
-                        Strike: ${idea.targetStrike || idea.strike || ''}
-                    </div>
-                    <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4; margin-bottom: 8px;">
-                        ${idea.reasoning || ''}
-                    </div>
-                    <div style="font-size: 12px; color: var(--yellow, #fbbf24); display: flex; align-items: center; gap: 4px;">
-                        <span class="material-symbols-outlined" style="font-size: 14px;">shield</span> ${idea.riskGuardrail || ''}
-                    </div>
+                `;
+            }).join('');
+
+            if (landscape.newIdeas.ideas.length > 4) {
+                const remaining = landscape.newIdeas.ideas.length - 4;
+                ideasHtml += `
+                    <button type="button" class="diag-view-more-btn ${isExp ? 'expanded' : ''}" onclick="toggleFeedViewMore(this, 'flywheelIdeasContainer')">
+                        <span class="material-symbols-outlined">${isExp ? 'expand_less' : 'expand_more'}</span>
+                        <span class="btn-text">${isExp ? 'View Less' : `View More (${remaining} remaining)`}</span>
+                    </button>
+                `;
+            }
+
+            ideasContainer.innerHTML = ideasHtml;
+        } else {
+            ideasContainer.innerHTML = `
+                <div class="diag-empty-state">
+                    <span class="material-symbols-outlined">bubble_chart</span>
+                    <span>No flywheel ideas generated in latest cycle.</span>
                 </div>
-            `).join('');
+            `;
         }
     }
     
     // Covered Calls
-    if (landscape.coveredCalls && landscape.coveredCalls.suggestions) {
-        document.getElementById('flywheelCallsContainer').innerHTML = landscape.coveredCalls.suggestions.map(call => `
-            <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid var(--neon-green);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <strong style="font-size: 16px;">${call.symbol} - ${call.tradeActionText}</strong>
-                    <span class="badge-outline badge-green">${call.eligibleContracts} Contract(s)</span>
+    const callsContainer = document.getElementById('flywheelCallsContainer');
+    if (callsContainer && landscape.coveredCalls) {
+        if (landscape.coveredCalls.suggestions && landscape.coveredCalls.suggestions.length > 0) {
+            const isExp = feedExpandedStates.flywheelCallsContainer;
+            let callsHtml = landscape.coveredCalls.suggestions.map((call, idx) => {
+                const hiddenClass = (idx >= 4 && !isExp) ? 'diag-item-hidden' : '';
+                return `
+                    <div class="diag-item-card border-green ${hiddenClass}">
+                        <div class="diag-item-top">
+                            <span class="diag-item-symbol">${escapeHtml(call.symbol || '')} &bull; ${escapeHtml(call.tradeActionText || '')}</span>
+                            <span class="diag-badge green">${call.eligibleContracts || 1} Contract(s)</span>
+                        </div>
+                        <div class="diag-item-metrics">
+                            <span>Est Income: <strong style="color: var(--green);">+$${parseFloat(call.estTotalIncome || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
+                            <span>APY: <strong style="color: var(--blue);">${call.annualizedYieldPct || 0}%</strong></span>
+                            <span>Strike: <strong>$${call.suggestedStrike || 0} (${call.otmPercentage || 0}% OTM)</strong></span>
+                        </div>
+                        <div class="diag-item-reasoning">
+                            ${escapeHtml(call.reasoning || '')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (landscape.coveredCalls.suggestions.length > 4) {
+                const remaining = landscape.coveredCalls.suggestions.length - 4;
+                callsHtml += `
+                    <button type="button" class="diag-view-more-btn ${isExp ? 'expanded' : ''}" onclick="toggleFeedViewMore(this, 'flywheelCallsContainer')">
+                        <span class="material-symbols-outlined">${isExp ? 'expand_less' : 'expand_more'}</span>
+                        <span class="btn-text">${isExp ? 'View Less' : `View More (${remaining} remaining)`}</span>
+                    </button>
+                `;
+            }
+
+            callsContainer.innerHTML = callsHtml;
+        } else {
+            callsContainer.innerHTML = `
+                <div class="diag-empty-state">
+                    <span class="material-symbols-outlined">inventory_2</span>
+                    <span>No unencumbered 100-share blocks available for covered calls.</span>
                 </div>
-                <div style="margin-bottom: 8px; font-size: 13px;">
-                    <span style="color: var(--neon-green); font-weight: bold;">+ $${call.estTotalIncome} Premium</span> | 
-                    <span style="color: var(--neon-blue); font-weight: bold;">APY: ${call.annualizedYieldPct}%</span> | 
-                    Strike: $${call.suggestedStrike} (${call.otmPercentage}% OTM)
-                </div>
-                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">
-                    ${call.reasoning}
-                </div>
-            </div>
-        `).join('');
+            `;
+        }
     }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
 function fetchEngineStatus() {
@@ -468,6 +754,7 @@ function fetchEngineStatus() {
 }
 
 function startPolling(intervalMs) {
+    if (pollingInterval) clearInterval(pollingInterval);
     pollingInterval = setInterval(fetchEngineStatus, intervalMs);
 }
 
@@ -475,6 +762,5 @@ function startPolling(intervalMs) {
 document.addEventListener('DOMContentLoaded', () => {
     startPolling(5000);
 });
-
 </script>
 {% endblock %}

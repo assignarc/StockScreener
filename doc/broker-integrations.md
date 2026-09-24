@@ -115,7 +115,7 @@ For historical records predating API availability or offline accounts, the appli
 
 Market data for equities and corporate event calendars is ingested from Finnhub with persistent SQLite caching:
 - **Quote Data (`/api/v1/quote`)**: Real-time and batch stock prices. Cached for **15 minutes** (`900s`). Requests are restricted to **US market hours** (Mon–Fri 9:30 AM – 4:00 PM ET); outside market hours, cached/stale quotes are served to protect API quotas.
-- **Dividend Calendar (`/api/v1/stock/dividend2`)**: Ex-dividend dates, pay dates, and per-share amounts. Cached for **7 days** (`604,800s`).
+- **Dividend Calendar (`/api/v1/stock/dividend2`)**: Ex-dividend dates, pay dates, and per-share amounts. Cached for **30 days** (`2,592,000s`).
 - **Earnings Calendar (`/api/v1/calendar/earnings`)**: Historical and upcoming corporate earnings release dates. Cached for **7 days** (`604,800s`).
 - **Symbol Search (`/api/v1/search`)**: Ticker lookups and directory search. Cached for **14 days** (`1,209,600s`); new search queries fetch immediately from the API.
 - **Company Profiles & CUSIP (`/api/v1/stock/profile2`)**: Corporate metadata and CUSIP mappings. Cached for **30 days** (`2,592,000s`); new tickers/CUSIPs trigger an instant live query.

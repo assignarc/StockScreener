@@ -466,6 +466,18 @@ async function loadLivePrices() {
     fetchStocks();
 }
 
+function toggleAuditDrawer() {
+    const container = document.getElementById('auditContainer');
+    const text = document.getElementById('toggleAuditText');
+    const icon = document.getElementById('toggleAuditIcon');
+    if (!container) return;
+
+    const isHidden = container.style.display === 'none';
+    container.style.display = isHidden ? 'block' : 'none';
+    if (text) text.innerText = isHidden ? 'Hide Audit & Math' : 'Inspect Full Math & APIs';
+    if (icon) icon.innerText = isHidden ? 'expand_less' : 'expand_more';
+}
+
 async function openResearchPanel(stockOrSymbol) {
     let stock = stockOrSymbol;
     if (typeof stockOrSymbol === 'string') {
@@ -479,34 +491,103 @@ async function openResearchPanel(stockOrSymbol) {
     if (!stock) return;
 
     document.getElementById('rpTitle').innerText = `${stock.symbol} — ${stock.name || stock.symbol}`;
-    document.getElementById('rpPrice').innerText = `$${stock.price ? stock.price.toFixed(2) : '—'}`;
-    document.getElementById('rpTarget').innerText = `$${stock.targetPrice ? stock.targetPrice.toFixed(2) : '—'}`;
-    document.getElementById('rpUpside').innerText = `+${stock.upsideVal ? stock.upsideVal.toFixed(1) : 0}%`;
-    document.getElementById('rpMarketCap').innerText = stock.marketCap || '—';
-    document.getElementById('rpRating').innerText = stock.analystRating || '—';
-    document.getElementById('rpRevGrowth').innerText = stock.revGrowth || '—';
-    document.getElementById('rpGrossMargin').innerText = stock.grossMargin || '—';
-    document.getElementById('rpCashRunway').innerText = stock.cashRunway || '—';
-    document.getElementById('rpShortInt').innerText = stock.shortInterest || '—';
-    document.getElementById('rpScore').innerText = `${stock.score || 70} / 100`;
+    
+    // TIER 1: Populate Executive Decision Card ("The Sausage")
+    const dyn = stock.dynamicSignal || {};
+    const exec = dyn.executive || {};
+    const audit = dyn.audit || {};
 
-    if (stock.flywheel) {
-        const badge = document.getElementById('rpSignalBadge');
-        badge.className = `badge-sig badge-${stock.flywheel.signal}`;
-        badge.innerText = stock.flywheel.signalBadge;
-
-        document.getElementById('rpStrategy').innerText = stock.flywheel.recommendedStrategy;
-        document.getElementById('rpStrike').innerText = stock.flywheel.strikeSuggestion;
-        document.getElementById('rpHorizon').innerText = stock.flywheel.horizon;
-        document.getElementById('rpRiskReward').innerText = stock.flywheel.riskRewardRatio;
-        document.getElementById('rpFlywheelRole').innerText = stock.flywheel.flywheelRole;
+    const sigType = exec.signalType || (stock.flywheel ? stock.flywheel.signal : 'WHEEL');
+    const badge = document.getElementById('rpSignalBadge');
+    if (badge) {
+        badge.className = `badge-sig badge-${sigType}`;
+        badge.innerText = sigType;
     }
 
-    document.getElementById('rpThesis').innerText = stock.thesis || 'No thesis provided.';
-    document.getElementById('rpCatalysts').innerText = stock.catalysts || 'No catalysts provided.';
-    document.getElementById('rpRisks').innerText = stock.keyRisks || 'No risks provided.';
+    const execStrat = document.getElementById('rpExecStrategyName');
+    if (execStrat) execStrat.innerText = exec.strategyName || (stock.flywheel ? stock.flywheel.recommendedStrategy : 'Defined-Risk Strategy');
 
-    renderChart(stock);
+    const execTier = document.getElementById('rpExecTierName');
+    if (execTier) execTier.innerText = exec.tierName || 'Capital Compounder';
+
+    const execThesis = document.getElementById('rpExecThesis');
+    if (execThesis) execThesis.innerText = exec.thesis || stock.thesis || 'Analyzing multi-API fundamental and options momentum.';
+
+    const execAlloc = document.getElementById('rpExecAllocation');
+    if (execAlloc) execAlloc.innerText = `$${(exec.recommendedAllocation || 1000).toLocaleString()}`;
+
+    const execEntry = document.getElementById('rpExecEntryDate');
+    if (execEntry) execEntry.innerText = exec.entryDate || 'Today';
+
+    const execExit = document.getElementById('rpExecExitDate');
+    if (execExit) execExit.innerText = exec.targetExitDate || `${exec.targetDte || 45} Days`;
+
+    const execDte = document.getElementById('rpExecDteNote');
+    if (execDte) execDte.innerText = `${exec.targetDte || 45} Days DTE (Target: $${(exec.suggestedStrike || stock.targetPrice || stock.price).toFixed(2)})`;
+
+    const execProfit = document.getElementById('rpExecProfitRule');
+    if (execProfit) execProfit.innerText = exec.profitExitRule || '+80% max profit';
+
+    const execStop = document.getElementById('rpExecStopLossRule');
+    if (execStop) execStop.innerText = exec.stopLossRule || '100% defined max loss';
+
+    // TIER 2: Populate Institutional Underwriting Details ("The Sausage-Making")
+    const pMean = document.getElementById('rpPriceTargetMean');
+    if (pMean) pMean.innerText = `$${(audit.analystMeanTarget || stock.targetPrice || stock.price).toFixed(2)}`;
+
+    const pRange = document.getElementById('rpPriceTargetRange');
+    if (pRange) {
+        const low = (audit.analystLowTarget || (stock.price * 0.9)).toFixed(2);
+        const high = (audit.analystHighTarget || (stock.targetPrice || stock.price * 1.2)).toFixed(2);
+        pRange.innerText = `$${low} - $${high}`;
+    }
+
+    const pVotes = document.getElementById('rpAnalystConsensusVotes');
+    if (pVotes) {
+        const v = audit.analystVotes;
+        if (v && v.total > 0) {
+            pVotes.innerText = `${v.buy} Buy / ${v.hold} Hold / ${v.sell} Sell (${v.bullishPct || 0}% Bullish)`;
+        } else {
+            pVotes.innerText = stock.analystRating || 'BUY Consensus';
+        }
+    }
+
+    const elPrice = document.getElementById('rpPrice');
+    if (elPrice) elPrice.innerText = `$${stock.price ? stock.price.toFixed(2) : '—'}`;
+
+    const elUpside = document.getElementById('rpUpside');
+    if (elUpside) elUpside.innerText = `+${stock.upsideVal ? stock.upsideVal.toFixed(1) : (audit.impliedUpsidePct || 0)}%`;
+
+    const elEarnings = document.getElementById('rpEarningsDate');
+    if (elEarnings) elEarnings.innerText = (audit.catalyst && audit.catalyst.nextEarningsDate) || 'No date set';
+
+    const elDaysEarn = document.getElementById('rpDaysToEarnings');
+    if (elDaysEarn) elDaysEarn.innerText = (audit.catalyst && audit.catalyst.daysToEarnings !== null) ? `${audit.catalyst.daysToEarnings} Days Out` : '—';
+
+    const elTimingRat = document.getElementById('rpTimingRationale');
+    if (elTimingRat) elTimingRat.innerText = (audit.catalyst && audit.catalyst.timingRationale) || 'Standard Theta cycle';
+
+    const elRev = document.getElementById('rpRevGrowth');
+    if (elRev) elRev.innerText = stock.revGrowth || '—';
+
+    const elMargin = document.getElementById('rpGrossMargin');
+    if (elMargin) elMargin.innerText = stock.grossMargin || '—';
+
+    const elScore = document.getElementById('rpScore');
+    if (elScore) elScore.innerText = `${stock.score || 70} / 100`;
+
+    const elUserCash = document.getElementById('rpUserCash');
+    if (elUserCash) elUserCash.innerText = `$${(portfolioData ? portfolioData.cashBalance : (audit.portfolioGuardrail ? audit.portfolioGuardrail.userAvailableCash : 10000)).toLocaleString()}`;
+
+    const elThesis = document.getElementById('rpThesis');
+    if (elThesis) elThesis.innerText = stock.thesis || exec.thesis || 'No thesis provided.';
+
+    const elCat = document.getElementById('rpCatalysts');
+    if (elCat) elCat.innerText = stock.catalysts || 'Analyst momentum and options open interest growth.';
+
+    const elRisks = document.getElementById('rpRisks');
+    if (elRisks) elRisks.innerText = stock.keyRisks || 'Broader market volatility and sector rotation.';
+
     fetchSchwabOptionChain(stock.symbol);
 
     document.getElementById('rp').classList.add('open');
@@ -1034,91 +1115,420 @@ function createFlywheelModals() {
 function renderFlywheelPlannerContent(data, cnt) {
     let html = '';
 
-    // Early Exit Profit Locks (BTC) / LLM Existing Position Reviews
     const early = data.earlyExitsBTC || [];
-    if (early.length > 0) {
-        html += `<div id="earlyExit" style="background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.3);border-radius:10px;padding:16px;margin-bottom:20px;">
-            <h3 style="font-size:13px;color:var(--green);margin-bottom:6px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">smart_toy</span> LLM Existing Contracts Review</h3>
-            <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">AI analysis of your open option positions based on live chain data.</p>`;
-        early.forEach((item) => {
-            const isClose = item.aiDecision === 'CLOSE';
-            const actionText = item.aiAction || 'Hold Position';
-            const targetPrice = item.aiTargetPrice || 'N/A';
-            const reasoning = item.aiReasoning || item.reasoning || '';
-            const statusStr = item.aiStatus || 'Open';
+    const calls = data.coveredCallsSTO || [];
+    const risk = data.riskSummary || {};
 
-            html += `<div class="card-trade" style="border-left: 4px solid ${isClose ? 'var(--blue)' : 'var(--muted)'};">
-                <div class="trade-hdr">
+    let totalPotentialIncome = 0;
+    calls.forEach(c => {
+        totalPotentialIncome += (parseFloat(c.estTotalIncome) || 0);
+    });
+
+    let totalFreedCollateral = 0;
+    let btcCount = 0;
+    early.forEach(e => {
+        if (e.aiDecision === 'CLOSE' || e.action === 'BTC') {
+            btcCount++;
+            totalFreedCollateral += (parseFloat(e.freedCollateral) || 0);
+        }
+    });
+
+    // 1. TOP EXECUTIVE SUMMARY STATS GRID
+    html += `
+        <div class="planner-stats-grid">
+            <div class="planner-stat-card">
+                <div class="p-lbl">Staged Call Income</div>
+                <div class="p-val g">+$${totalPotentialIncome.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div class="p-sub">${calls.length} Actionable Staged Trade${calls.length === 1 ? '' : 's'}</div>
+                <span class="material-symbols-outlined p-icon">payments</span>
+            </div>
+            <div class="planner-stat-card">
+                <div class="p-lbl">Early Profit Exits (BTC)</div>
+                <div class="p-val" style="color:var(--blue);">${btcCount} Contract${btcCount === 1 ? '' : 's'}</div>
+                <div class="p-sub">$${totalFreedCollateral.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Collateral to Free</div>
+                <span class="material-symbols-outlined p-icon">lock_open</span>
+            </div>
+            <div class="planner-stat-card">
+                <div class="p-lbl">Monthly Risk Guardrail</div>
+                <div class="p-val" style="color:var(--yellow);">$${(risk.configuredCap || userRiskCap || 10000).toLocaleString()}</div>
+                <div class="p-sub">$${(risk.availableRiskRemaining || 0).toLocaleString()} Remaining Risk Budget</div>
+                <span class="material-symbols-outlined p-icon">shield</span>
+            </div>
+            <div class="planner-stat-card">
+                <div class="p-lbl">Execution Safety Status</div>
+                <div class="p-val g" style="display:flex; align-items:center; gap:6px; font-size:18px; margin-top:8px;">
+                    <span class="material-symbols-outlined" style="font-size:22px;">verified_user</span> Level 1 Basic
+                </div>
+                <div class="p-sub">100% Cash-Collateralized & Covered</div>
+                <span class="material-symbols-outlined p-icon">gavel</span>
+            </div>
+        </div>
+    `;
+
+    // 2. SECTION: EARLY PROFIT EXITS & POSITION AUDIT (BTC)
+    if (early.length > 0) {
+        html += `
+            <div class="planner-section" id="earlyExitSection">
+                <div class="planner-section-hdr">
                     <div>
-                        <span class="fw-badge ${isClose ? 'fw-badge-btc' : ''}" style="${!isClose ? 'background:var(--bg3);color:var(--muted);' : ''}">${item.aiDecision || 'REVIEW'}</span> 
-                        <strong>${item.underlyingSymbol || item.symbol}</strong> $${item.strike} ${item.type || item.optionType}
+                        <h3 class="planner-section-title" style="color:var(--green);">
+                            <span class="material-symbols-outlined">auto_awesome</span> Early Profit Exits & Contract Reviews
+                            <span class="hbadge" style="background:rgba(34,197,94,0.15); color:var(--green); border-color:rgba(34,197,94,0.3);">${early.length} Positions Audited</span>
+                        </h3>
+                        <div style="font-size:12px; color:var(--muted); margin-top:2px;">
+                            AI-driven option expiration audit. Buying back contracts at 50%–80% profit frees collateral for high-yield compounding.
+                        </div>
                     </div>
-                    <div style="text-align:right;">
-                        <div style="color:${isClose ? 'var(--green)' : 'var(--text)'};font-weight:800;font-size:13px;">Target: ${targetPrice}</div>
-                        ${item.profitPct !== undefined ? `<div style="color:var(--green);font-weight:700;font-size:11px;">+${item.profitPct}% Profit (+$${item.realizedGain})</div>` : ''}
+                </div>
+
+                <div class="planner-cards-grid">
+        `;
+
+        early.forEach((item, idx) => {
+            const isClose = item.aiDecision === 'CLOSE' || item.action === 'BTC';
+            const actionText = item.aiAction || item.tradeActionText || (isClose ? 'Buy To Close' : 'Hold Position');
+            const targetPrice = item.aiTargetPrice || (item.limitPrice ? `$${item.limitPrice}` : 'Mid Market');
+            const reasoning = item.aiReasoning || item.reasoning || 'Contract is progressing within expected delta bounds.';
+            const statusStr = item.aiStatus || 'Active Position';
+            const ticker = item.underlyingSymbol || item.symbol || 'OPT';
+            const strike = item.strike || '';
+            const type = item.type || item.optionType || 'CALL';
+            const profitPct = item.profitPct !== undefined ? item.profitPct : null;
+            const realizedGain = item.realizedGain !== undefined ? item.realizedGain : null;
+
+            html += `
+                <div class="pcard ${isClose ? 'pcard-btc' : ''}">
+                    <div>
+                        <div class="pcard-hdr">
+                            <div>
+                                <div class="pcard-ticker">
+                                    <span>${ticker}</span>
+                                    <span class="hbadge" style="font-size:10px; background:${isClose ? 'rgba(34,197,94,0.15)' : 'var(--bg2)'}; color:${isClose ? 'var(--green)' : 'var(--muted)'};">
+                                        ${item.aiDecision || (isClose ? 'CLOSE' : 'HOLD')}
+                                    </span>
+                                </div>
+                                <div style="font-size:11px; color:var(--muted); margin-top:2px;">
+                                    $${strike} ${type} • ${item.contracts || 1} Contract(s)
+                                </div>
+                            </div>
+                            <div class="pcard-income-badge">
+                                ${profitPct !== null ? `<div class="g" style="font-size:15px; font-weight:800;">+${profitPct}% Profit</div>` : `<div style="font-size:13px; font-weight:700; color:var(--text);">${statusStr}</div>`}
+                                ${realizedGain !== null ? `<div style="font-size:10px; color:var(--muted);">+$${realizedGain} Gain</div>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="pcard-action-box" style="background:${isClose ? 'rgba(34,197,94,0.08)' : 'var(--bg2)'}; border-color:${isClose ? 'rgba(34,197,94,0.25)' : 'var(--border)'}; color:${isClose ? 'var(--green)' : 'var(--text)'};">
+                            <span class="material-symbols-outlined" style="font-size:16px;">${isClose ? 'check_circle' : 'info'}</span>
+                            <span>${actionText}</span>
+                        </div>
+
+                        <div class="pcard-metrics-grid">
+                            <div>Limit Target: <strong>${targetPrice}</strong></div>
+                            <div>Freed Collateral: <strong class="g">$${item.freedCollateral || '0'}</strong></div>
+                            <div>Order Type: <strong>LIMIT (Mid)</strong></div>
+                            <div>Status: <strong>${statusStr}</strong></div>
+                        </div>
+
+                        <div class="pcard-reasoning">
+                            <strong>AI Rationale:</strong> ${reasoning}
+                        </div>
+                    </div>
+
+                    <div class="pcard-actions">
+                        ${isClose ? `
+                            <button type="button" class="hbtn hbtn-green full-span" style="font-size:11px; padding:8px 12px; justify-content:center;" onclick="copyBrokerOrder('Buy To Close ${item.contracts || 1}x ${ticker} $${strike} ${type} at limit ${targetPrice}')">
+                                <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">content_copy</span> Copy 1-Click BTC Order
+                            </button>
+                        ` : `
+                            <button type="button" class="hbtn full-span" style="font-size:11px; padding:8px 12px; justify-content:center; background:var(--bg2);" onclick="openTradeScenario('${ticker}')">
+                                <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">visibility</span> Inspect Option Position
+                            </button>
+                        `}
                     </div>
                 </div>
-                <div style="font-size:12px; margin-bottom:6px;">
-                    <strong>Status:</strong> ${statusStr} <br>
-                    <strong>Recommended Action:</strong> ${actionText}
-                </div>
-                <div style="font-size:12px;line-height:1.6;color:var(--muted);background:rgba(0,0,0,0.1);padding:8px;border-radius:4px;">
-                    <strong>AI Reasoning:</strong> ${reasoning}
-                </div>
-                ${isClose ? `
-                <div class="trade-actions" style="margin-top:10px;">
-                    <button class="btn-sm btn-copy" onclick="copyBrokerOrder('Buy To Close ${item.contracts}x ${item.underlyingSymbol || item.symbol} $${item.strike} ${item.type || item.optionType} at limit ${targetPrice}')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span> Copy BTC Order</button>
-                </div>` : ''}
-            </div>`;
+            `;
         });
-        html += `</div>`;
+
+        html += `
+                </div>
+            </div>
+        `;
     }
 
-    // Staged Morning Covered Calls / Puts
-    const calls = data.coveredCallsSTO || [];
-    html += `<div id="coveredCalls">
-        <h3 style="font-size:13px;color:var(--blue);margin-bottom:6px;display:flex;align-items:center;gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">wb_twilight</span> Staged Morning Recommendations (100% Covered & Collateralized)</h3>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:12px;">Execute these orders in your brokerage app during morning login. All trades strictly fit your $${userRiskCap.toLocaleString()} monthly risk limit.</p>`;
+    // 3. SECTION: STAGED MORNING COVERED CALLS & FLYWHEEL ORDERS
+    html += `
+        <div class="planner-section" id="coveredCallsSection">
+            <div class="planner-section-hdr">
+                <div>
+                    <h3 class="planner-section-title" style="color:var(--blue);">
+                        <span class="material-symbols-outlined">wb_twilight</span> Staged Morning Covered Call Recommendations
+                        <span class="hbadge" style="background:rgba(56,189,248,0.15); color:var(--blue); border-color:rgba(56,189,248,0.3);">${calls.length} Staged Opportunity${calls.length === 1 ? '' : 's'}</span>
+                    </h3>
+                    <div style="font-size:12px; color:var(--muted); margin-top:2px;">
+                        Execute these orders in your brokerage during morning market open. All recommendations preserve your cost basis buffer.
+                    </div>
+                </div>
+            </div>
+
+            <div class="planner-cards-grid" id="plannerCoveredCallsGrid">
+    `;
 
     if (calls.length > 0) {
         calls.forEach((c) => {
-            html += `<div class="card-trade">
-                <div class="trade-hdr">
-                    <div><span class="fw-badge fw-badge-sto">STO Covered Call</span> <strong>${c.symbol}</strong> $${c.suggestedStrike} CALL (${c.otmPercentage}% OTM)</div>
-                    <div style="color:var(--blue);font-weight:800;">+$${c.estTotalIncome} Premium (${c.annualizedYieldPct}% APY)</div>
+            const sym = c.symbol;
+            html += `
+                <div class="pcard pcard-sto planner-call-card">
+                    <div>
+                        <div class="pcard-hdr">
+                            <div>
+                                <div class="pcard-ticker">
+                                    <span>${sym}</span>
+                                    <span class="hbadge" style="font-size:10px; background:rgba(56,189,248,0.15); color:var(--blue);">
+                                        STO Covered Call
+                                    </span>
+                                </div>
+                                <div style="font-size:11px; color:var(--muted); margin-top:2px;">
+                                    ${c.eligibleContracts || 1} Contract(s) • ${c.accountLocation || 'Primary Account'}
+                                </div>
+                            </div>
+                            <div class="pcard-income-badge">
+                                <div class="g" style="font-size:16px; font-weight:800;">+$${c.estTotalIncome}</div>
+                                <div style="font-size:11px; color:var(--green); font-weight:700;">${c.annualizedYieldPct}% APY</div>
+                            </div>
+                        </div>
+
+                        <div class="pcard-action-box">
+                            <span class="material-symbols-outlined" style="font-size:16px; color:var(--blue);">bolt</span>
+                            <span>${c.tradeActionText}</span>
+                        </div>
+
+                        <div class="pcard-metrics-grid">
+                            <div>Current Price: <strong>$${c.currentPrice}</strong></div>
+                            <div>Target Strike: <strong class="g">$${c.suggestedStrike} (+${c.otmPercentage}% OTM)</strong></div>
+                            <div>Horizon DTE: <strong style="color:var(--purple);">${c.dteHorizon}</strong></div>
+                            <div>Annualized Yield: <strong class="g">${c.annualizedYieldPct}% APY</strong></div>
+                        </div>
+
+                        <div class="pcard-reasoning">
+                            <strong>Execution Rationale:</strong> ${c.reasoning}
+                        </div>
+
+                        <div id="aiRes_${sym}_STO" style="display:none; font-size:11px; padding:10px; background:var(--bg); border-radius:8px; margin-bottom:12px; border:1px solid var(--border); line-height:1.5;"></div>
+                    </div>
+
+                    <div class="pcard-actions">
+                        <button type="button" class="hbtn hbtn-purple" style="font-size:11px; padding:7px 10px; justify-content:center;" onclick="confirmWithGemini('${sym}', 'STO', ${c.suggestedStrike}, 'Covered Call')">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:3px;">smart_toy</span> AI Verify
+                        </button>
+                        <button type="button" class="hbtn hbtn-blue" style="font-size:11px; padding:7px 10px; justify-content:center;" onclick="copyBrokerOrder('${c.tradeActionText}')">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:3px;">content_copy</span> Copy Order
+                        </button>
+                        <button type="button" class="hbtn full-span" style="font-size:11px; padding:6px 10px; justify-content:center; background:var(--bg2);" onclick="openTradeScenario('${sym}')">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:3px;">balance</span> Trade Scenario (+10% / 0% / -10%)
+                        </button>
+                    </div>
                 </div>
-                <div style="font-size:12px;line-height:1.6;">${c.reasoning}</div>
-                <div style="font-size:11px;color:var(--muted);">Horizon: ${c.dteHorizon} | Location: ${c.accountLocation}</div>
-                <div class="trade-actions">
-                    <button class="btn-sm btn-ai" onclick="confirmWithGemini('${c.symbol}', 'STO', ${c.suggestedStrike}, 'Covered Call')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">smart_toy</span> Re-Scan with Gemini AI</button>
-                    <button class="btn-sm btn-copy" onclick="copyBrokerOrder('${c.tradeActionText}')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span> Copy Broker Order</button>
-                    <button class="btn-sm btn-sec" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);" onclick="openTradeScenario('${c.symbol}')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">balance</span> View Scenario Pros & Cons</button>
-                </div>
-                <div id="aiRes_${c.symbol}_STO" style="display:none;font-size:11px;padding:10px;background:var(--bg);border-radius:6px;margin-top:6px;border:1px solid var(--border);"></div>
-            </div>`;
+            `;
         });
     } else {
-        html += `<p style="font-size:12px;color:var(--muted);">No unencumbered 100-share blocks available for Covered Calls. Consider Cash-Secured Puts to acquire shares at discount.</p>`;
+        html += `
+            <div style="grid-column: 1 / -1; padding:30px; text-align:center; background:var(--bg3); border-radius:12px; border:1px dashed var(--border);">
+                <span class="material-symbols-outlined" style="font-size:32px; color:var(--muted); margin-bottom:8px;">inventory_2</span>
+                <div style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px;">No Unencumbered 100-Share Blocks Available</div>
+                <p style="font-size:12px; color:var(--muted); margin:0 0 14px 0;">All current stock holdings are either fully pledged to existing Covered Calls or under 100 shares.</p>
+                <a href="/screener" class="hbtn hbtn-green" style="display:inline-flex; align-items:center; gap:6px;">
+                    <span class="material-symbols-outlined" style="font-size:16px;">bolt</span> Scan Cash-Secured Puts to Acquire Shares at Discount
+                </a>
+            </div>
+        `;
     }
 
-    html += `</div>`;
+    html += `
+            </div>
+
+            <div id="plannerCoveredCallsToggleWrap" style="display:none; text-align:center; margin-top:20px; padding-top:16px; border-top:1px dashed rgba(88,166,255,0.2);">
+                <button type="button" id="btnTogglePlannerCalls" class="hbtn hbtn-blue" style="font-size:12px; padding:8px 22px; display:inline-flex; align-items:center; gap:6px;" onclick="togglePlannerCoveredCalls()">
+                    <span class="material-symbols-outlined" id="togglePlannerCallsIcon" style="font-size:16px;">expand_more</span>
+                    <span id="togglePlannerCallsText">Show More Staged Calls</span>
+                </button>
+            </div>
+        </div>
+    `;
+
     cnt.innerHTML = html;
+
+    requestAnimationFrame(() => {
+        initPlannerCoveredCallsVisibility();
+    });
 }
 
+let plannerCallsExpanded = false;
+let plannerAllCallCards = [];
+let plannerFirstRowCount = 3;
+
+function initPlannerCoveredCallsVisibility() {
+    const grid = document.getElementById('plannerCoveredCallsGrid');
+    const toggleWrap = document.getElementById('plannerCoveredCallsToggleWrap');
+    if (!grid) return;
+
+    plannerAllCallCards = Array.from(grid.querySelectorAll('.planner-call-card'));
+    if (plannerAllCallCards.length <= 1) {
+        if (toggleWrap) toggleWrap.style.display = 'none';
+        return;
+    }
+
+    plannerCallsExpanded = false;
+    updatePlannerCallsDisplay();
+}
+
+function updatePlannerCallsDisplay() {
+    const grid = document.getElementById('plannerCoveredCallsGrid');
+    const toggleWrap = document.getElementById('plannerCoveredCallsToggleWrap');
+    const btnText = document.getElementById('togglePlannerCallsText');
+    const btnIcon = document.getElementById('togglePlannerCallsIcon');
+
+    if (!grid || plannerAllCallCards.length === 0) return;
+
+    if (!plannerCallsExpanded) {
+        const computed = window.getComputedStyle(grid);
+        const gridCols = computed.getPropertyValue('grid-template-columns');
+        let cols = 3;
+        if (gridCols && gridCols !== 'none') {
+            cols = gridCols.split(' ').filter(c => c.trim().length > 0).length;
+        } else if (grid.offsetWidth) {
+            cols = Math.floor(grid.offsetWidth / 336); // 320px + 16px gap
+        }
+        plannerFirstRowCount = Math.max(1, cols);
+    }
+
+    plannerAllCallCards.forEach((card, idx) => {
+        if (plannerCallsExpanded) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = (idx < plannerFirstRowCount) ? 'flex' : 'none';
+        }
+    });
+
+    if (toggleWrap) {
+        if (plannerAllCallCards.length > plannerFirstRowCount) {
+            toggleWrap.style.display = 'block';
+            const hiddenCount = plannerAllCallCards.length - plannerFirstRowCount;
+            if (plannerCallsExpanded) {
+                if (btnText) btnText.textContent = 'Show Less Recommendations';
+                if (btnIcon) btnIcon.textContent = 'expand_less';
+            } else {
+                if (btnText) btnText.textContent = `Show More Staged Calls (${hiddenCount} more)`;
+                if (btnIcon) btnIcon.textContent = 'expand_more';
+            }
+        } else {
+            toggleWrap.style.display = 'none';
+        }
+    }
+}
+
+function togglePlannerCoveredCalls() {
+    plannerCallsExpanded = !plannerCallsExpanded;
+    updatePlannerCallsDisplay();
+}
+
+window.addEventListener('resize', () => {
+    if (!plannerCallsExpanded && plannerAllCallCards.length > 0) {
+        updatePlannerCallsDisplay();
+    }
+});
+
 function renderFlywheelPlannerFallback(cnt) {
-    cnt.innerHTML = `<div class="card-trade">
-        <div class="trade-hdr">
-            <div><span class="fw-badge fw-badge-sto">STO Covered Call</span> <strong>NVDA</strong> $235.00 CALL (5.8% OTM)</div>
-            <div style="color:var(--blue);font-weight:800;">+$1,244.00 Premium (29.2% APY)</div>
+    cnt.innerHTML = `
+        <div class="planner-stats-grid">
+            <div class="planner-stat-card">
+                <div class="p-lbl">Staged Call Income</div>
+                <div class="p-val g">+$1,244.00</div>
+                <div class="p-sub">1 Staged Trade</div>
+                <span class="material-symbols-outlined p-icon">payments</span>
+            </div>
+            <div class="planner-stat-card">
+                <div class="p-lbl">Monthly Risk Guardrail</div>
+                <div class="p-val" style="color:var(--yellow);">$10,000</div>
+                <div class="p-sub">$6,200 Remaining Risk Budget</div>
+                <span class="material-symbols-outlined p-icon">shield</span>
+            </div>
+            <div class="planner-stat-card">
+                <div class="p-lbl">Execution Safety Status</div>
+                <div class="p-val g" style="display:flex; align-items:center; gap:6px; font-size:18px; margin-top:8px;">
+                    <span class="material-symbols-outlined" style="font-size:22px;">verified_user</span> Level 1 Basic
+                </div>
+                <div class="p-sub">100% Cash-Collateralized & Covered</div>
+                <span class="material-symbols-outlined p-icon">gavel</span>
+            </div>
         </div>
-        <div style="font-size:12px;line-height:1.6;">Sell 2x NVDA $235 Covered Calls (35 DTE) against 200 unencumbered NVDA shares. Generates +$1,244 instant cash credit with zero margin risk.</div>
-        <div class="trade-actions">
-            <button class="btn-sm btn-ai" onclick="confirmWithGemini('NVDA', 'STO', 235, 'Covered Call')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">smart_toy</span> Re-Scan with Gemini AI</button>
-            <button class="btn-sm btn-copy" onclick="copyBrokerOrder('Sell 2x NVDA Call $235.00 for +$1,244.00')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">content_copy</span> Copy Broker Order</button>
-            <button class="btn-sm btn-sec" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);" onclick="openTradeScenario('NVDA')"><span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;">balance</span> View Scenario Pros & Cons</button>
+
+        <div class="planner-section">
+            <div class="planner-section-hdr">
+                <div>
+                    <h3 class="planner-section-title" style="color:var(--blue);">
+                        <span class="material-symbols-outlined">wb_twilight</span> Staged Morning Covered Call Recommendations
+                    </h3>
+                    <div style="font-size:12px; color:var(--muted); margin-top:2px;">
+                        Sample staged trade recommendation for morning market open.
+                    </div>
+                </div>
+            </div>
+
+            <div class="planner-cards-grid">
+                <div class="pcard pcard-sto">
+                    <div>
+                        <div class="pcard-hdr">
+                            <div>
+                                <div class="pcard-ticker">
+                                    <span>NVDA</span>
+                                    <span class="hbadge" style="font-size:10px; background:rgba(56,189,248,0.15); color:var(--blue);">
+                                        STO Covered Call
+                                    </span>
+                                </div>
+                                <div style="font-size:11px; color:var(--muted); margin-top:2px;">
+                                    2 Contract(s) • Primary Account
+                                </div>
+                            </div>
+                            <div class="pcard-income-badge">
+                                <div class="g" style="font-size:16px; font-weight:800;">+$1,244.00</div>
+                                <div style="font-size:11px; color:var(--green); font-weight:700;">29.2% APY</div>
+                            </div>
+                        </div>
+
+                        <div class="pcard-action-box">
+                            <span class="material-symbols-outlined" style="font-size:16px; color:var(--blue);">bolt</span>
+                            <span>Sell 2x NVDA $235.00 Calls (35 DTE)</span>
+                        </div>
+
+                        <div class="pcard-metrics-grid">
+                            <div>Current Price: <strong>$222.10</strong></div>
+                            <div>Target Strike: <strong class="g">$235.00 (+5.8% OTM)</strong></div>
+                            <div>Horizon DTE: <strong style="color:var(--purple);">35 Days</strong></div>
+                            <div>Annualized Yield: <strong class="g">29.2% APY</strong></div>
+                        </div>
+
+                        <div class="pcard-reasoning">
+                            <strong>Execution Rationale:</strong> Sell 2x NVDA $235 Covered Calls (35 DTE) against 200 unencumbered NVDA shares. Generates +$1,244 instant cash credit with zero margin risk.
+                        </div>
+
+                        <div id="aiRes_NVDA_STO" style="display:none; font-size:11px; padding:10px; background:var(--bg); border-radius:8px; margin-bottom:12px; border:1px solid var(--border); line-height:1.5;"></div>
+                    </div>
+
+                    <div class="pcard-actions">
+                        <button type="button" class="hbtn hbtn-purple" style="font-size:11px; padding:7px 10px; justify-content:center;" onclick="confirmWithGemini('NVDA', 'STO', 235, 'Covered Call')">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:3px;">smart_toy</span> AI Verify
+                        </button>
+                        <button type="button" class="hbtn hbtn-blue" style="font-size:11px; padding:7px 10px; justify-content:center;" onclick="copyBrokerOrder('Sell 2x NVDA Call $235.00 for +$1,244.00')">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:3px;">content_copy</span> Copy Order
+                        </button>
+                        <button type="button" class="hbtn full-span" style="font-size:11px; padding:6px 10px; justify-content:center; background:var(--bg2);" onclick="openTradeScenario('NVDA')">
+                            <span class="material-symbols-outlined" style="font-size:14px; margin-right:3px;">balance</span> Trade Scenario (+10% / 0% / -10%)
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div id="aiRes_NVDA_STO" style="display:none;font-size:11px;padding:10px;background:var(--bg);border-radius:6px;margin-top:6px;border:1px solid var(--border);"></div>
-    </div>`;
+    `;
 }
 
 async function confirmWithGemini(symbol, action, strike, strategy) {

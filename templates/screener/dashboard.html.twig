@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Executive Financial Dashboard — KHAPRE MoonShot Portfolio{% endblock %}
+{% block title %}Executive Financial Dashboard — MoonShot Portfolio{% endblock %}
 
 {% block body %}
 <div id="app">
@@ -39,30 +39,61 @@
 
     <!-- DASHBOARD CONTENT -->
     <div class="dash-container">
-        <!-- COMMAND CENTER STAT CARDS -->
+        <!-- COMMAND CENTER STAT CARDS WITH DIRECT DRILL-DOWN LINKS -->
         <div class="dash-grid" id="dashStats">
-            <div class="dash-card">
-                <div class="lbl">Net Liquidation Value</div>
-                <div class="val g">${% if portfolio.netLiquidationValue is defined %}{{ portfolio.netLiquidationValue|number_format(2) }}{% else %}0.00{% endif %}</div>
-            </div>
-            <div class="dash-card">
-                <div class="lbl">Total / Unencumbered Cash</div>
-                <div class="val y">
-                    <span style="color:var(--text-muted); font-size:0.8em;">${% if portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %}</span> / 
-                    <span style="color:var(--neon-green);">${% if portfolio.availableCash is defined %}{{ portfolio.availableCash|number_format(2) }}{% elseif portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %}</span>
+            <a href="/portfolio" class="dash-card clickable" title="Drill down into full Net Liquidation Value & Portfolio Accounts">
+                <div>
+                    <div class="lbl">Net Liquidation Value</div>
+                    <div class="val g">${% if portfolio.netLiquidationValue is defined %}{{ portfolio.netLiquidationValue|number_format(2) }}{% else %}0.00{% endif %}</div>
                 </div>
-            </div>
-            <div class="dash-card">
-                <div class="lbl">Connected Accounts / Holdings</div>
-                <div class="val" style="color:var(--blue);">
-                    {% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / 
-                    {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities
+                <div class="drill-link">
+                    <span>Portfolio Breakdown</span> <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span>
                 </div>
-            </div>
-            <div class="dash-card">
-                <div class="lbl">Tracked Screener Candidates</div>
-                <div class="val" style="color:var(--purple);">{{ totalStocks }} Candidates</div>
-            </div>
+            </a>
+            <a href="/portfolio" class="dash-card clickable" title="Drill down into Cash Balances & Collateral Breakdown">
+                <div>
+                    <div class="lbl">Total / Unencumbered Cash</div>
+                    <div class="val y">
+                        <span style="color:var(--text-muted); font-size:0.8em;">${% if portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %}</span> / 
+                        <span style="color:var(--neon-green);">${% if portfolio.availableCash is defined %}{{ portfolio.availableCash|number_format(2) }}{% elseif portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %}</span>
+                    </div>
+                </div>
+                <div class="drill-link">
+                    <span>Cash Liquidity</span> <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span>
+                </div>
+            </a>
+            <a href="/portfolio/tax" class="dash-card clickable" title="Drill down into Tax Center & Realized Gains / Loss Netting">
+                <div>
+                    <div class="lbl">Est. Tax Liability ({{ currentTaxYear|default('2026') }})</div>
+                    <div class="val r" style="color:var(--red);">
+                        ${% if taxLiability.totalEstimatedTaxLiability is defined %}{{ taxLiability.totalEstimatedTaxLiability|number_format(2) }}{% else %}0.00{% endif %}
+                    </div>
+                </div>
+                <div class="drill-link" style="color:var(--red);">
+                    <span>Tax Center & Schedule D</span> <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span>
+                </div>
+            </a>
+            <a href="/portfolio" class="dash-card clickable" title="Drill down into Connected Broker Accounts & Position Holdings">
+                <div>
+                    <div class="lbl">Connected Accounts / Holdings</div>
+                    <div class="val" style="color:var(--blue);">
+                        {% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / 
+                        {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities
+                    </div>
+                </div>
+                <div class="drill-link">
+                    <span>Holdings Matrix</span> <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span>
+                </div>
+            </a>
+            <a href="/screener" class="dash-card clickable" title="Drill down into Capital Flywheel Stock Screener & Quantitative Signals">
+                <div>
+                    <div class="lbl">Tracked Screener Candidates</div>
+                    <div class="val" style="color:var(--purple);">{{ totalStocks }} Candidates</div>
+                </div>
+                <div class="drill-link" style="color:var(--purple);">
+                    <span>Stock Screener</span> <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span>
+                </div>
+            </a>
         </div>
 
         <!-- CAPITAL FLYWHEEL ENGINE ALLOCATOR WIDGET -->
@@ -78,20 +109,27 @@
                 </div>
             </div>
             <div class="fw-stats">
-                <div class="fw-pill fw-pill-call">
-                    <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_up</span> CALLs (60%):</span>
-                    <span>${{ (cashVal * 0.60)|number_format(0) }}</span>
-                </div>
-                <div class="fw-pill fw-pill-wheel">
-                    <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">autorenew</span> WHEEL (25%):</span>
-                    <span>${{ (cashVal * 0.25)|number_format(0) }}</span>
-                </div>
-                <div class="fw-pill fw-pill-put">
-                    <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_down</span> PUTs (15%):</span>
-                    <span>${{ (cashVal * 0.15)|number_format(0) }}</span>
-                </div>
+                <a href="/planner" style="text-decoration:none;" title="Drill down to Daily Trade Package">
+                    <div class="fw-pill fw-pill-call" style="cursor:pointer;">
+                        <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_up</span> CALLs (60%):</span>
+                        <span>${{ (cashVal * 0.60)|number_format(0) }}</span>
+                    </div>
+                </a>
+                <a href="/screener" style="text-decoration:none;" title="Drill down to Cash-Secured Wheel Screener">
+                    <div class="fw-pill fw-pill-wheel" style="cursor:pointer;">
+                        <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">autorenew</span> WHEEL (25%):</span>
+                        <span>${{ (cashVal * 0.25)|number_format(0) }}</span>
+                    </div>
+                </a>
+                <a href="/discover" style="text-decoration:none;" title="Drill down to AI Put Hedges & Market Discoveries">
+                    <div class="fw-pill fw-pill-put" style="cursor:pointer;">
+                        <span><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_down</span> PUTs (15%):</span>
+                        <span>${{ (cashVal * 0.15)|number_format(0) }}</span>
+                    </div>
+                </a>
             </div>
         </div>
+
         <!-- PORTFOLIO COVERED CALL TRADE ASSISTANT PLAYBOOK (COLLAPSIBLE ACCORDION WITH RATIONALE) -->
         <details class="dash-widget-green" id="dashSuggestions" open style="border:1px solid rgba(0,230,118,0.3); border-radius:12px; padding:16px; margin-bottom:20px;">
             <summary style="cursor:pointer; list-style:none; outline:none;">
@@ -107,19 +145,26 @@
                     </div>
                     <div style="display:flex; gap:10px; align-items:center;">
                         <span style="font-size:11px; color:var(--text-muted);">Click header to collapse/expand</span>
-                        <a href="/portfolio" class="hbtn hbtn-green" onclick="event.stopPropagation();"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> Portfolio & Accounts</a>
+                        <a href="/portfolio" class="hbtn hbtn-green" onclick="event.stopPropagation();" title="Drill down into full portfolio positions & orders"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> Portfolio & Accounts →</a>
                     </div>
                 </div>
             </summary>
 
-            <div id="coveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px; margin-top:16px;">
+            <div id="coveredCallTradeCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; margin-top:16px;">
                 <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">Scanning unencumbered stock positions...</div>
+            </div>
+            
+            <div id="coveredCallToggleContainer" style="display:none; text-align:center; margin-top:16px; padding-top:12px; border-top:1px dashed rgba(0,230,118,0.2);">
+                <button type="button" id="btnToggleCoveredCalls" class="hbtn hbtn-green" style="font-size:12px; padding:6px 18px; display:inline-flex; align-items:center; gap:6px;" onclick="toggleCoveredCallsVisibility()">
+                    <span class="material-symbols-outlined" id="toggleCoveredCallsIcon" style="font-size:16px;">expand_more</span>
+                    <span id="toggleCoveredCallsText">Show More Actionable Trades</span>
+                </button>
             </div>
         </details>
 
 
         <!-- GEMINI AI PORTFOLIO ASSISTANT WIDGET -->
-        <div class="dash-widget-purple" id="dashAiIdeas">
+        <div class="dash-widget-purple" id="dashAiIdeas" style="margin-bottom:24px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
                 <div>
                     <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0 0 4px 0; color:var(--purple); display:flex; align-items:center; gap:8px;">
@@ -130,107 +175,164 @@
                         AI-driven options trade analysis evaluating your ${% if portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %} total / ${% if portfolio.availableCash is defined %}{{ portfolio.availableCash|number_format(2) }}{% elseif portfolio.cashBalance is defined %}{{ portfolio.cashBalance|number_format(2) }}{% else %}0.00{% endif %} unencumbered cash reserves, unencumbered stocks, and market volatility.
                     </div>
                 </div>
-                <div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <a href="/discover" class="hbtn" style="background:var(--bg3); border:1px solid var(--border); color:var(--purple); font-size:12px; display:inline-flex; align-items:center; gap:4px;" title="Drill down into full AI Market Ideas & Discoveries">
+                        <span class="material-symbols-outlined" style="font-size:14px;">explore</span> View Discover Hub →
+                    </a>
                     <button class="hbtn hbtn-purple" onclick="loadGeminiAiIdeas(true)">
-                        <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">auto_awesome</span> Refresh Gemini AI Analysis
+                        <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">auto_awesome</span> Refresh AI Analysis
                     </button>
                 </div>
             </div>
-
 
             <div id="geminiAiCardsGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
                 <div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">Querying Gemini AI for portfolio trade ideas...</div>
             </div>
         </div>
 
+        <!-- 2-COLUMN SIDE-BY-SIDE: CASH & COLLATERAL STATUS + TOP PORTFOLIO HOLDINGS -->
+        <div class="dash-2col">
 
-
-
-        <!-- ACCOUNT-LEVEL CASH & COLLATERAL STATUS -->
-        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom: 20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:0; display:flex; align-items:center; gap:6px;">
-                    <span class="material-symbols-outlined" style="font-size:18px; color:var(--blue);">account_balance</span> Account-Level Cash & Collateral Status
-                </h4>
-            </div>
-            <div style="border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
-                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
-                    <thead>
-                        <tr style="background:var(--bg3); border-bottom:1px solid var(--border);">
-                            <th style="padding:10px;">Account Nickname</th>
-                            <th style="text-align:right; padding:10px;">Net Liquidation Value</th>
-                            <th style="text-align:right; padding:10px;">Total Idle Cash</th>
-                            <th style="text-align:right; padding:10px;">Positions</th>
-                            <th style="text-align:right; padding:10px;">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if portfolio.accounts is defined and portfolio.accounts|length > 0 %}
-                            {% for acc in portfolio.accounts %}
-                                <tr style="border-bottom:1px solid var(--border);">
-                                    <td style="padding:10px;"><strong>{{ acc.nickname|default('Account') }}</strong> <div style="font-size:10px; color:var(--muted);">{{ acc.accountNumber ?? acc.id ?? 'N/A' }} ({{ (acc.type|default('N/A'))|upper }})</div></td>
-                                    <td style="text-align:right; padding:10px;">${{ (acc.liquidationValue|default(0))|number_format(2) }}</td>
-                                    <td style="text-align:right; padding:10px;"><strong class="g">${{ (acc.cashAvailable|default(0))|number_format(2) }}</strong></td>
-                                    <td style="text-align:right; padding:10px;">{{ acc.positionsCount|default(0) }}</td>
-                                    <td style="text-align:right; padding:10px;">
-                                        {% if acc.authorized|default(false) %}
-                                            <span class="badge bg-green"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">check_circle</span> ACTIVE</span>
-                                        {% else %}
-                                            <span class="badge bg-red"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">error</span> {{ acc.status|default('UNAUTHORIZED') }}</span>
-                                        {% endif %}
-                                    </td>
+            <!-- 1. ACCOUNT-LEVEL CASH & COLLATERAL STATUS -->
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                        <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:0; display:flex; align-items:center; gap:6px;">
+                            <span class="material-symbols-outlined" style="font-size:18px; color:var(--blue);">account_balance</span> Account-Level Cash & Collateral Status
+                        </h4>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <a href="/portfolio" class="hbtn" style="background:var(--bg3); font-size:11px; padding:5px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--text);" title="Drill down into Portfolio Accounts">
+                                <span class="material-symbols-outlined" style="font-size:14px; color:var(--blue);">work</span> All Accounts
+                            </a>
+                            <a href="/portfolio/tax" class="hbtn" style="background:var(--bg3); font-size:11px; padding:5px 12px; display:inline-flex; align-items:center; gap:4px; color:var(--text);" title="Drill down into Tax Center">
+                                <span class="material-symbols-outlined" style="font-size:14px; color:var(--yellow);">account_balance_wallet</span> Tax Center
+                            </a>
+                        </div>
+                    </div>
+                    <div style="border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:12.5px;">
+                            <thead>
+                                <tr style="background:var(--bg3); border-bottom:1px solid var(--border);">
+                                    <th style="padding:10px;">Account Nickname</th>
+                                    <th style="text-align:right; padding:10px;">Net Liq</th>
+                                    <th style="text-align:right; padding:10px;">Idle Cash</th>
+                                    <th style="text-align:right; padding:10px;">Positions</th>
+                                    <th style="text-align:right; padding:10px;">Status</th>
+                                    <th style="text-align:center; padding:10px;">Drill Down</th>
                                 </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr><td colspan="5" style="text-align:center; padding:20px;" class="m">No connected accounts.</td></tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody>
+                                {% if portfolio.accounts is defined and portfolio.accounts|length > 0 %}
+                                    {% for acc in portfolio.accounts %}
+                                         {% set isRetire = (acc.nickname|default('') ~ ' ' ~ acc.type|default(''))|upper matches '/(IRA|ROTH|SEP|PCRA|401K)/' %}
+                                         {% set accIdStr = acc.id|default(acc.accountNumber|default(loop.index)) %}
+                                         <tr style="border-bottom:1px solid var(--border);">
+                                             <td style="padding:10px;">
+                                                 <a href="/portfolio?tab=holdings&account={{ accIdStr }}#account_card_{{ accIdStr }}" style="color:var(--text); text-decoration:none; font-weight:700;" class="hover-blue" title="Drill down to this account in Portfolio">
+                                                     {{ acc.nickname|default('Account') }}
+                                                 </a>
+                                                 <div style="font-size:10px; color:var(--muted);">
+                                                     {{ acc.accountNumber ?? acc.id ?? 'N/A' }} ({{ (acc.type|default('N/A'))|upper }})
+                                                 </div>
+                                             </td>
+                                             <td style="text-align:right; padding:10px;">${{ (acc.liquidationValue|default(0))|number_format(2) }}</td>
+                                             <td style="text-align:right; padding:10px;"><strong class="g">${{ (acc.cashAvailable|default(0))|number_format(2) }}</strong></td>
+                                             <td style="text-align:right; padding:10px;">
+                                                 <a href="/portfolio?tab=holdings&account={{ accIdStr }}#account_card_{{ accIdStr }}" style="color:var(--blue); text-decoration:underline; font-weight:600;" title="View positions in Portfolio">
+                                                     {{ acc.positionsCount|default(0) }}
+                                                 </a>
+                                             </td>
+                                             <td style="text-align:right; padding:10px;">
+                                                 {% if acc.authorized|default(false) %}
+                                                     <span class="badge bg-green"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">check_circle</span> ACTIVE</span>
+                                                 {% else %}
+                                                     <span class="badge bg-red"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">error</span> {{ acc.status|default('UNAUTHORIZED') }}</span>
+                                                 {% endif %}
+                                             </td>
+                                             <td style="text-align:center; padding:10px;">
+                                                 <div style="display:inline-flex; gap:4px; align-items:center;">
+                                                     <a href="/portfolio?tab=holdings&account={{ accIdStr }}#account_card_{{ accIdStr }}" class="slick-pill-btn" style="font-size:11px; padding:3px 7px;" title="Drill down to Portfolio Holdings for this account">
+                                                         <span class="material-symbols-outlined" style="font-size:13px;">visibility</span> Holdings
+                                                     </a>
+                                                     {% if not isRetire %}
+                                                         <a href="/portfolio/tax?account={{ acc.nickname|default(acc.accountNumber) }}" class="slick-pill-btn" style="font-size:11px; padding:3px 7px;" title="Drill down to Tax Center for this account">
+                                                             <span class="material-symbols-outlined" style="font-size:13px; color:var(--yellow);">receipt_long</span> Tax
+                                                         </a>
+                                                     {% else %}
+                                                         <span class="hbadge" style="font-size:9px; background:rgba(168,85,247,0.1); color:var(--purple); border-color:rgba(168,85,247,0.3);" title="Tax Exempt / Deferred IRA">
+                                                             IRA
+                                                         </span>
+                                                     {% endif %}
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                     {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="6" style="text-align:center; padding:20px;" class="m">No connected accounts.</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- TOP PORTFOLIO HOLDINGS OVERVIEW TABLE -->
-        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:0; display:flex; align-items:center; gap:6px;">
-                    <span class="material-symbols-outlined" style="font-size:18px; color:var(--green);">trending_up</span> Top Portfolio Holdings (Live Brokerage Accounts)
-                </h4>
-                <a href="/portfolio" class="hbtn" style="background:var(--bg3); border:1px solid var(--border); color:var(--blue);">View All Accounts →</a>
-            </div>
-            <div style="border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Ticker</th>
-                            <th>Asset Class</th>
-                            <th style="text-align:right;">Quantity / Shares</th>
-                            <th style="text-align:right;">Avg Cost</th>
-                            <th style="text-align:right;">Market Value</th>
-                            <th style="text-align:right;">Unrealized P/L</th>
-                            <th style="text-align:right;">Weight</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if portfolio.aggregatedEquities is defined and portfolio.aggregatedEquities|length > 0 %}
-                            {% for e in portfolio.aggregatedEquities|slice(0, 5) %}
-                                <tr>
-                                    <td><strong>{{ e.symbol }}</strong></td>
-                                    <td><span class="m">{{ e.assetType }}</span></td>
-                                    <td style="text-align:right;">{{ e.quantity }}</td>
-                                    <td style="text-align:right;">${{ e.averagePrice|number_format(2) }}</td>
-                                    <td style="text-align:right;"><strong>${{ e.marketValue|number_format(2) }}</strong></td>
-                                    <td style="text-align:right;" class="{% if e.unrealizedPL >= 0 %}g{% else %}r{% endif %}">
-                                        <strong>{% if e.unrealizedPL >= 0 %}+{% endif %}${{ e.unrealizedPL|number_format(2) }} ({{ e.unrealizedPLPct }}%)</strong>
-                                    </td>
-                                    <td style="text-align:right;"><strong style="color:var(--purple);">{{ e.allocationPct }}%</strong></td>
+            <!-- 2. TOP PORTFOLIO HOLDINGS OVERVIEW TABLE -->
+            <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                        <h4 style="font-size:13px; color:var(--text); font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin:0; display:flex; align-items:center; gap:6px;">
+                            <span class="material-symbols-outlined" style="font-size:18px; color:var(--green);">trending_up</span> Top Portfolio Holdings (Live Brokerage Accounts)
+                        </h4>
+                        <a href="/portfolio?tab=holdings&view=security" class="hbtn" style="background:var(--bg3); border:1px solid var(--border); color:var(--blue); font-size:11px; padding:5px 12px; display:inline-flex; align-items:center; gap:4px;" title="Drill down to all active portfolio holdings aggregated">
+                            <span>All Positions</span> <span class="material-symbols-outlined" style="font-size:14px;">arrow_forward</span>
+                        </a>
+                    </div>
+                    <div style="border:1px solid var(--border); border-radius:8px; overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:12.5px;">
+                            <thead>
+                                <tr style="background:var(--bg3); border-bottom:1px solid var(--border);">
+                                    <th style="padding:10px;">Ticker</th>
+                                    <th style="padding:10px;">Asset Class</th>
+                                    <th style="text-align:right; padding:10px;">Shares</th>
+                                    <th style="text-align:right; padding:10px;">Avg Cost</th>
+                                    <th style="text-align:right; padding:10px;">Market Value</th>
+                                    <th style="text-align:right; padding:10px;">Unrealized P/L</th>
+                                    <th style="text-align:right; padding:10px;">Weight</th>
                                 </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr><td colspan="7" style="text-align:center; padding:20px;" class="m">No active positions.</td></tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody>
+                                {% if portfolio.aggregatedEquities is defined and portfolio.aggregatedEquities|length > 0 %}
+                                    {% for e in portfolio.aggregatedEquities|slice(0, 5) %}
+                                        <tr style="border-bottom:1px solid var(--border);">
+                                            <td style="padding:10px;">
+                                                <div style="display:flex; align-items:center; gap:6px;">
+                                                    <a href="/portfolio?tab=holdings&symbol={{ e.symbol }}" style="color:var(--text); text-decoration:none; font-weight:700;" class="hover-blue" title="Drill down to {{ e.symbol }} in Portfolio Holdings">
+                                                        {{ e.symbol }}
+                                                    </a>
+                                                    <a href="/screener?symbol={{ e.symbol }}" style="color:var(--blue); font-size:11px; display:inline-flex; align-items:center;" title="Inspect in Screener">
+                                                        <span class="material-symbols-outlined" style="font-size:13px;">bolt</span>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                            <td style="padding:10px;"><span class="m">{{ e.assetType }}</span></td>
+                                            <td style="text-align:right; padding:10px;">{{ e.quantity }}</td>
+                                            <td style="text-align:right; padding:10px;">${{ e.averagePrice|number_format(2) }}</td>
+                                            <td style="text-align:right; padding:10px;"><strong>${{ e.marketValue|number_format(2) }}</strong></td>
+                                            <td style="text-align:right; padding:10px;" class="{% if e.unrealizedPL >= 0 %}g{% else %}r{% endif %}">
+                                                <strong>{% if e.unrealizedPL >= 0 %}+{% endif %}${{ e.unrealizedPL|number_format(2) }} ({{ e.unrealizedPLPct }}%)</strong>
+                                            </td>
+                                            <td style="text-align:right; padding:10px;"><strong style="color:var(--purple);">{{ e.allocationPct }}%</strong></td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr><td colspan="7" style="text-align:center; padding:20px;" class="m">No active positions.</td></tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -305,8 +407,74 @@ async function loadGeminiAiIdeas(isRefresh = false) {
     }
 }
 
+let allCoveredCallElements = [];
+let coveredCallsExpanded = false;
+let firstRowCount = 1;
+
+function getVisibleColumnCount(gridElement) {
+    if (!gridElement || !gridElement.offsetWidth) return 4;
+    const computed = window.getComputedStyle(gridElement);
+    const gridCols = computed.getPropertyValue('grid-template-columns');
+    if (gridCols && gridCols !== 'none') {
+        const cols = gridCols.split(' ').filter(c => c.trim().length > 0);
+        return Math.max(1, cols.length);
+    }
+    const width = gridElement.offsetWidth;
+    const estimatedCols = Math.floor(width / 254); // 240px min + 14px gap
+    return Math.max(1, estimatedCols);
+}
+
+function updateCoveredCallsDisplay() {
+    const grid = document.getElementById('coveredCallTradeCards');
+    const toggleContainer = document.getElementById('coveredCallToggleContainer');
+    const btnText = document.getElementById('toggleCoveredCallsText');
+    const btnIcon = document.getElementById('toggleCoveredCallsIcon');
+
+    if (!grid || allCoveredCallElements.length === 0) return;
+
+    if (!coveredCallsExpanded) {
+        firstRowCount = getVisibleColumnCount(grid);
+    }
+
+    allCoveredCallElements.forEach((el, index) => {
+        if (coveredCallsExpanded) {
+            el.style.display = 'flex';
+        } else {
+            el.style.display = (index < firstRowCount) ? 'flex' : 'none';
+        }
+    });
+
+    if (toggleContainer) {
+        if (allCoveredCallElements.length > firstRowCount) {
+            toggleContainer.style.display = 'block';
+            const hiddenCount = allCoveredCallElements.length - firstRowCount;
+            if (coveredCallsExpanded) {
+                if (btnText) btnText.textContent = 'Show Less Trades';
+                if (btnIcon) btnIcon.textContent = 'expand_less';
+            } else {
+                if (btnText) btnText.textContent = `Show More Actionable Trades (${hiddenCount} more)`;
+                if (btnIcon) btnIcon.textContent = 'expand_more';
+            }
+        } else {
+            toggleContainer.style.display = 'none';
+        }
+    }
+}
+
+function toggleCoveredCallsVisibility() {
+    coveredCallsExpanded = !coveredCallsExpanded;
+    updateCoveredCallsDisplay();
+}
+
+window.addEventListener('resize', () => {
+    if (!coveredCallsExpanded && allCoveredCallElements.length > 0) {
+        updateCoveredCallsDisplay();
+    }
+});
+
 async function loadCoveredCallSuggestions() {
     const grid = document.getElementById('coveredCallTradeCards');
+    const toggleContainer = document.getElementById('coveredCallToggleContainer');
     try {
         const res = await fetch('/api/flywheel/covered-call-suggestions');
         const json = await res.json();
@@ -318,11 +486,15 @@ async function loadCoveredCallSuggestions() {
 
             if (suggestions.length === 0) {
                 grid.innerHTML = '<div class="m" style="grid-column:1/-1; text-align:center; padding:15px;">All portfolio shares are either pledged or under 100 shares. No Covered Call trades available right now.</div>';
+                if (toggleContainer) toggleContainer.style.display = 'none';
                 return;
             }
 
             grid.innerHTML = '';
-            suggestions.forEach(s => {
+            allCoveredCallElements = [];
+            coveredCallsExpanded = false;
+
+            suggestions.forEach((s) => {
                 const card = document.createElement('div');
                 card.style.background = 'var(--bg3)';
                 card.style.border = '1px solid var(--border)';
@@ -364,6 +536,12 @@ async function loadCoveredCallSuggestions() {
 
                 `;
                 grid.appendChild(card);
+                allCoveredCallElements.push(card);
+            });
+
+            // Calculate exact row capacity and apply initial visibility
+            requestAnimationFrame(() => {
+                updateCoveredCallsDisplay();
             });
         }
     } catch(e) {

@@ -1,63 +1,71 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Initial Setup Wizard | KHAPRE MoonShot Portfolio{% endblock %}
+{% block title %}Initial Setup Wizard | MoonShot Portfolio{% endblock %}
 
 {% block stylesheets %}
     <link rel="stylesheet" href="{{ asset('css/setup.css') }}">
 {% endblock %}
 
 {% block body %}
-<div style="max-width:960px; margin:0 auto; padding:30px 20px;">
-    
-    <!-- Top Header -->
-    <div style="text-align:center; margin-bottom:32px;">
-        <div style="display:inline-flex; align-items:center; gap:10px; background:var(--bg3); padding:6px 16px; border-radius:20px; border:1px solid var(--border); margin-bottom:12px;">
-            <span class="material-symbols-outlined" style="color:var(--blue); font-size:18px;">bolt</span>
-            <span style="font-size:12px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:1px;">First-Run Configuration Wizard</span>
-        </div>
-        <h1 style="font-family:'Outfit',sans-serif; font-size:32px; font-weight:800; margin:0 0 8px 0; background:linear-gradient(135deg, #fff 40%, var(--blue) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
-            Welcome to KHAPRE MoonShot Portfolio
-        </h1>
-        <p style="color:var(--muted); font-size:14px; margin:0 auto; max-width:640px; line-height:1.6;">
-            Your zero-configuration, self-healing options screener and capital flywheel system. Complete these quick steps to connect your market data and broker integrations.
-        </p>
-    </div>
+<div class="setup-wrap">
 
-    <!-- Stepper Indicator -->
-    <div style="display:flex; justify-content:space-between; align-items:center; position:relative; margin-bottom:36px; background:var(--bg2); border:1px solid var(--border); padding:16px 24px; border-radius:14px;">
-        <div class="wiz-step-btn active" id="stepIndicator1" onclick="showWizardStep(1)">
-            <div class="step-num">1</div>
-            <div class="step-lbl">Database JIT</div>
-        </div>
-        <div class="step-line"></div>
-        <div class="wiz-step-btn" id="stepIndicator2" onclick="showWizardStep(2)">
-            <div class="step-num">2</div>
-            <div class="step-lbl">Finnhub API</div>
-        </div>
-        <div class="step-line"></div>
-        <div class="wiz-step-btn" id="stepIndicator3" onclick="showWizardStep(3)">
-            <div class="step-num">3</div>
-            <div class="step-lbl">Broker Selection</div>
-        </div>
-        <div class="step-line"></div>
-        <div class="wiz-step-btn" id="stepIndicator4" onclick="showWizardStep(4)">
-            <div class="step-num">4</div>
-            <div class="step-lbl">AI Intelligence</div>
-        </div>
-        <div class="step-line"></div>
-        <div class="wiz-step-btn" id="stepIndicator5" onclick="showWizardStep(5)">
-            <div class="step-num">5</div>
-            <div class="step-lbl">Launch</div>
+    <!-- UNIFIED BRAND HEADER & NAVIGATION -->
+    {% include 'screener/partials/_header.html.twig' with {
+        headerTitle: '<span class="material-symbols-outlined" style="vertical-align:middle; font-size:22px; color:var(--blue);">rocket_launch</span> Initial <span>Setup Wizard</span>',
+        headerBadge: 'First-Run Zero-Config Onboarding'
+    } %}
+    {% include 'screener/partials/_nav.html.twig' %}
+
+    <!-- Hero -->
+    <div class="setup-hero">
+        <div class="setup-hero-inner">
+            <div style="display:inline-flex; align-items:center; gap:8px; background:var(--bg3); padding:4px 14px; border-radius:20px; border:1px solid var(--border); margin-bottom:10px;">
+                <span class="material-symbols-outlined" style="color:var(--blue); font-size:16px;">bolt</span>
+                <span style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:1px;">First-Run Configuration Wizard</span>
+            </div>
+            <h1>Welcome to MoonShot Portfolio</h1>
+            <p>Your zero-configuration, self-healing options screener and capital flywheel system. Complete these quick steps to connect your market data and broker integrations.</p>
         </div>
     </div>
 
-    <!-- WIZARD STEP 1: JUST-IN-TIME DATABASE -->
-    <div class="wiz-panel" id="wizStep1">
-        <div class="card" style="padding:28px; border-radius:16px;">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-                <div style="background:rgba(63,185,80,0.18); color:var(--green); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                    <span class="material-symbols-outlined" style="font-size:22px;">check_circle</span>
-                </div>
+    <!-- Main Container -->
+    <div class="setup-container">
+
+        <!-- Stepper Indicator -->
+        <div class="setup-stepper-card">
+            <div class="wiz-step-btn active" id="stepIndicator1" onclick="showWizardStep(1)">
+                <div class="step-num">1</div>
+                <div class="step-lbl">Database JIT</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="wiz-step-btn" id="stepIndicator2" onclick="showWizardStep(2)">
+                <div class="step-num">2</div>
+                <div class="step-lbl">Finnhub API</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="wiz-step-btn" id="stepIndicator3" onclick="showWizardStep(3)">
+                <div class="step-num">3</div>
+                <div class="step-lbl">Broker Selection</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="wiz-step-btn" id="stepIndicator4" onclick="showWizardStep(4)">
+                <div class="step-num">4</div>
+                <div class="step-lbl">AI Intelligence</div>
+            </div>
+            <div class="step-line"></div>
+            <div class="wiz-step-btn" id="stepIndicator5" onclick="showWizardStep(5)">
+                <div class="step-num">5</div>
+                <div class="step-lbl">Launch</div>
+            </div>
+        </div>
+
+        <!-- WIZARD STEP 1: JUST-IN-TIME DATABASE -->
+        <div class="wiz-panel active" id="wizStep1">
+            <div class="card" style="padding:28px; border-radius:16px;">
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                    <div style="background:rgba(63,185,80,0.18); color:var(--green); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                        <span class="material-symbols-outlined" style="font-size:22px;">check_circle</span>
+                    </div>
                 <div>
                     <h2 style="font-size:20px; margin:0 0 4px 0; color:var(--text); font-family:'Outfit',sans-serif;">Step 1: Just-In-Time Database Provisioning</h2>
                     <div style="font-size:12px; color:var(--muted);">All SQLite schema tables and seed parameters are automatically ready in <code>var/data.db</code>.</div>
@@ -373,7 +381,11 @@
         </div>
     </div>
 
-</div>
+        {% include 'screener/partials/_legal_disclaimer.html.twig' %}
+    </div><!-- /setup-container -->
+
+    {% include 'screener/partials/_footer.html.twig' %}
+</div><!-- /setup-wrap -->
 
 
 

@@ -6,7 +6,6 @@
         <div class="brand-text-block">
             <div class="brand-tagline">Capital Flywheel System</div>
             <div class="brand-title">
-                <span>KHAPRE</span>
                 <span class="brand-accent">MoonShot</span>
                 <span class="brand-sub">Portfolio</span>
             </div>
@@ -26,23 +25,9 @@
 
     <!-- HEADER RIGHT CONTROLS & STATUS -->
     <div class="hright">
-        <!-- API & AI TELEMETRY COUNTER -->
-        <div style="display:flex; align-items:center; gap:8px; background:var(--bg2); border:1px solid var(--border); padding:4px 10px; border-radius:20px; font-size:11px; color:var(--text-muted);" title="Live API rate limit & AI Token consumption meter">
-            <span style="display:inline-flex; align-items:center; gap:3px;">
-                <span class="material-symbols-outlined" style="font-size:13px; color:var(--green);">api</span>
-                <span>Schwab: <strong style="color:var(--text);">14/120 RPM</strong></span>
-            </span>
-            <span style="color:var(--border);">|</span>
-            <span style="display:inline-flex; align-items:center; gap:3px;">
-                <span class="material-symbols-outlined" style="font-size:13px; color:var(--purple);">psychology</span>
-                <span>AI: <strong style="color:var(--purple);">14.2k Tokens</strong></span>
-            </span>
-        </div>
-
         {% if showLiveLoadBtn is defined and showLiveLoadBtn %}
             <button class="hbtn hbtn-load"><span class="material-symbols-outlined">play_arrow</span> Load Live Quotes</button>
         {% endif %}
-        <a href="/planner" class="hbtn hbtn-fw"><span class="material-symbols-outlined">wb_twilight</span> Morning Planner</a>
         <a href="/settings" class="hbtn" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text);"><span class="material-symbols-outlined">settings</span> Settings</a>
         <button class="theme-toggle-btn" onclick="toggleTheme()">Light Mode</button>
     </div>

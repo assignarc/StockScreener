@@ -1,6 +1,19 @@
 /* ==========================================================================
    STOCK SCREENER & FLYWHEEL INDEX STYLESHEET
+   Standardized with MoonShot Portfolio Design System tokens
    ========================================================================== */
+
+/* ── Container Layout ─────────────────────────────────────────────────── */
+.screener-container {
+    width: 100%;
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 
 /* MODAL & OVERLAY */
 #overlay {
@@ -15,16 +28,18 @@
 }
 #overlay.show { display: flex; }
 
-/* FLYWHEEL CAPITAL ALLOCATOR WIDGET */
+/* FLYWHEEL CAPITAL ALLOCATOR CARD WIDGET */
 .fw-panel {
-    padding: 14px 24px;
-    background: linear-gradient(135deg, rgba(31,38,55,0.9), rgba(22,27,38,0.95));
-    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
+    box-shadow: var(--card-shadow);
 }
 .fw-title {
     display: flex;
@@ -33,7 +48,7 @@
     font-family: 'Outfit', sans-serif;
     font-size: 14px;
     font-weight: 700;
-    color: #e6edf3;
+    color: var(--text);
 }
 .fw-icon {
     background: rgba(88,166,255,0.15);
@@ -76,15 +91,45 @@
 .fw-pill-wheel { background: rgba(210,153,34,0.15); color: var(--yellow); border: 1px solid rgba(210,153,34,0.3); }
 .fw-pill-put { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
 
+[data-theme="light"] .fw-panel {
+    background: #ffffff;
+    border: 1px solid #d8dee4;
+}
+[data-theme="light"] .fw-input-wrap {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+}
+
+/* SCREENER CARD WRAPPER */
+.screener-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+
+/* LEVEL 1 STRATEGY BANNER */
+.screener-level1-banner {
+    padding: 14px 20px;
+    background: rgba(88,166,255,0.06);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 /* CONTROLS */
 .controls {
-    padding: 12px 24px;
+    padding: 12px 20px;
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
     border-bottom: 1px solid var(--border);
     align-items: center;
-    background: var(--bg);
+    background: var(--bg2);
 }
 .fbtn {
     padding: 6px 14px;
@@ -141,7 +186,7 @@ select.fsel {
 
 /* STATUS & STATS BAR */
 #statusBar {
-    padding: 10px 24px;
+    padding: 10px 20px;
     font-size: 12px;
     color: var(--muted);
     border-bottom: 1px solid var(--border);
@@ -158,7 +203,7 @@ select.fsel {
     border-bottom: 1px solid var(--border);
     background: var(--border);
 }
-.sc { padding: 14px 20px; background: var(--bg); text-align: center; }
+.sc { padding: 14px 20px; background: var(--bg2); text-align: center; }
 .sc .v { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 700; color: var(--blue); }
 .sc .l { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
 
@@ -192,9 +237,9 @@ tr:hover td { background: rgba(255,255,255,.02); cursor: pointer; }
 .rHIGH { background: rgba(248,81,73,.15); color: var(--red); }
 
 .badge-sig { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; display: inline-block; letter-spacing: 0.3px; }
-.badge-CALL { background: rgba(63,185,80,0.18); color: #3fb950; border: 1px solid rgba(63,185,80,0.4); }
-.badge-PUT { background: rgba(248,81,73,0.18); color: #f85149; border: 1px solid rgba(248,81,73,0.4); }
-.badge-WHEEL { background: rgba(210,153,34,0.18); color: #d29922; border: 1px solid rgba(210,153,34,0.4); }
+.badge-CALL { background: rgba(63,185,80,0.18); color: var(--green); border: 1px solid rgba(63,185,80,0.4); }
+.badge-PUT { background: rgba(248,81,73,0.18); color: var(--red); border: 1px solid rgba(248,81,73,0.4); }
+.badge-WHEEL { background: rgba(210,153,34,0.18); color: var(--yellow); border: 1px solid rgba(210,153,34,0.4); }
 
 .wstar { cursor: pointer; font-size: 15px; color: var(--muted); margin-right: 6px; transition: color 0.15s; }
 .wstar.active { color: var(--yellow); }
@@ -236,11 +281,69 @@ tr:hover td { background: rgba(255,255,255,.02); cursor: pointer; }
 .rpg { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
 .card { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
 .card h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 12px; }
-.row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(46,53,69,.5); font-size: 12px; }
+.row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
 .row:last-child { border: none; }
-.row .v { font-weight: 600; }
+.row .v { font-weight: 600; color: var(--text); }
 .tb { background: var(--bg3); border-radius: 8px; padding: 14px; margin-bottom: 12px; font-size: 12px; line-height: 1.6; border: 1px solid var(--border); }
 .tb h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 6px; }
+
+/* FLYWHEEL OPTIONS RECOMMENDATION CARD */
+.fw-rec-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+    box-shadow: var(--card-shadow);
+}
+.fw-rec-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.fw-rec-title {
+    color: var(--blue);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Outfit', sans-serif;
+}
+.fw-rec-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    font-size: 12px;
+}
+.fw-rec-grid strong {
+    color: var(--text);
+}
+.fw-rec-full {
+    grid-column: 1 / -1;
+}
+
+[data-theme="light"] .fw-rec-card {
+    background: #ffffff;
+    border: 1px solid #d8dee4;
+    border-left: 3px solid var(--blue);
+}
+[data-theme="light"] .tb {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+[data-theme="light"] .card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+[data-theme="light"] .rph {
+    background: #f1f5f9;
+}
+[data-theme="light"] #rp {
+    background: #ffffff;
+}
 
 /* COLUMN POPOVER TOOLTIPS */
 th { position: relative; }

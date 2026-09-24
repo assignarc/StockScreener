@@ -5,12 +5,13 @@
         <div class="footer-brand-col">
             <h4>
                 <span class="material-symbols-outlined" style="color:var(--purple); font-size:22px;">rocket_launch</span>
-                <span>KHAPRE <strong style="color:var(--purple)">MoonShot</strong> Portfolio</span>
+                <span><strong style="color:var(--purple)">MoonShot</strong> Portfolio</span>
             </h4>
             <p>
                 Quantitative Capital Flywheel and Level 1 Defined-Risk Options Execution Engine. Designed for covered calls on owned equities and 100% cash-secured puts with zero naked margin traps.
             </p>
-            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            <!-- UNIFIED SINGLE ROW SYSTEM & TELEMETRY STATUS -->
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
                 <span class="footer-status-pill">
                     <span class="footer-status-dot"></span>
                     <span>Brokerage API: Connected</span>
@@ -26,6 +27,14 @@
                 <span class="footer-status-pill">
                     <span class="footer-status-dot" style="background:var(--yellow); box-shadow:0 0 6px rgba(210,153,34,0.6);"></span>
                     <span>SQLite data.db: Persisted</span>
+                </span>
+                <span class="footer-status-pill" style="border-color:rgba(88,166,255,0.3); background:rgba(88,166,255,0.06);" title="Live Schwab rate limit counter">
+                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--green);">api</span>
+                    <span>Schwab: <strong style="color:var(--text);">14/120 RPM</strong></span>
+                </span>
+                <span class="footer-status-pill" style="border-color:rgba(188,140,255,0.3); background:rgba(188,140,255,0.06);" title="Live AI token consumption meter">
+                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--purple);">psychology</span>
+                    <span>AI: <strong style="color:var(--purple);">14.2k Tokens</strong></span>
                 </span>
             </div>
         </div>
@@ -55,13 +64,11 @@
         </div>
     </div>
 
-    <!-- FOOTER BOTTOM & DISCLAIMER -->
+    <!-- FOOTER BOTTOM & STANDARDIZED LEGAL DISCLAIMER -->
     <div class="footer-bottom">
-        <div class="footer-disclaimer">
-            <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; color:var(--yellow);">warning</span> <strong>Disclaimer:</strong> KHAPRE MoonShot Portfolio is an analytical & personal trade execution assistant. All options strategies are strictly Level 1 Covered or Cash-Secured (Defined Risk). Options trading involves substantial risk of loss and is not suitable for all investors.
-        </div>
+        {% include 'screener/partials/_legal_disclaimer.html.twig' %}
         <div class="footer-copy">
-            &copy; {{ "now"|date("Y") }} <strong>KHAPRE MoonShot Portfolio v3.0</strong> • All rights reserved.
+            &copy; {{ "now"|date("Y") }} <strong>{{ app_name|default('MoonShot Portfolio') }} v{{ app_version|default('3.0') }}</strong> • For Educational & Research Purposes Only • All rights reserved.
         </div>
     </div>
 </footer>

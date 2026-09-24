@@ -1,0 +1,246 @@
+/* ==========================================================================
+   HELP & DOCUMENTATION STYLESHEET
+   Standardized with MoonShot Portfolio Design System tokens
+   ========================================================================== */
+
+/* ── Container Layout ─────────────────────────────────────────────────── */
+.help-container {
+    width: 100%;
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+/* ── Hero Banner ──────────────────────────────────────────────────────── */
+.help-hero {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    box-shadow: var(--card-shadow);
+}
+
+.help-hero-left {
+    max-width: 800px;
+}
+
+.help-hero-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.help-hero-subtitle {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+}
+
+.help-hero-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* ── Interactive Section Filter Tabs ──────────────────────────────────── */
+.help-nav-pills {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.help-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.help-pill-btn:hover {
+    color: var(--text);
+    border-color: var(--blue);
+}
+
+.help-pill-btn.active {
+    background: var(--accent-glow);
+    border-color: var(--blue);
+    color: var(--blue);
+}
+
+/* ── Help Content Grid ────────────────────────────────────────────────── */
+.help-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.help-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.help-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.help-card-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.help-card-body {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.help-guide-block {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    border-left: 4px solid var(--border);
+}
+
+.help-guide-block.border-blue { border-left-color: var(--blue); }
+.help-guide-block.border-green { border-left-color: var(--green); }
+.help-guide-block.border-yellow { border-left-color: var(--yellow); }
+.help-guide-block.border-purple { border-left-color: var(--purple); }
+
+.help-guide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.help-guide-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.help-guide-desc {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.help-steps-list {
+    margin: 0 0 0 18px;
+    padding: 0;
+    font-size: 12.5px;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.help-steps-list li {
+    margin-bottom: 6px;
+}
+
+.help-steps-list li:last-child {
+    margin-bottom: 0;
+}
+
+.help-steps-list code {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 11.5px;
+    color: var(--blue);
+}
+
+.help-steps-list a {
+    color: var(--blue);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.help-steps-list a:hover {
+    text-decoration: underline;
+}
+
+/* ── FAQ & Strategy Rules Accordion ───────────────────────────────────── */
+.help-faq-item {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.help-faq-q {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.help-faq-a {
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+}
+
+@media (max-width: 900px) {
+    .help-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .help-grid {
+        grid-template-columns: 1fr;
+    }
+}

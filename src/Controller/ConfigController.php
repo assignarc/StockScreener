@@ -128,4 +128,44 @@ class ConfigController extends AbstractController
             'stats'   => $this->cache->getStats(),
         ]);
     }
+
+    /**
+     * Checks if the user has accepted the legal disclaimer within the last 24 hours.
+     *
+     * @return JsonResponse Status indicating whether disclaimer has been accepted and is active.
+     */
+    #[Route('/api/disclaimer/status', name: 'api_disclaimer_status', methods: ['GET'])]
+    public function getDisclaimerStatus(): JsonResponse
+    {
+        $acceptedAt = $this->cache->get('user.disclaimer.accepted_at', ttlSeconds: 86400);
+        $isAccepted = ($acceptedAt !== null && $acceptedAt !== false);
+
+        return $this->json([
+            'status' => 'success',
+            'accepted' => $isAccepted,
+            'acceptedAt' => $acceptedAt,
+            'expiresInSeconds' => $isAccepted ? 86400 : 0,
+        ]);
+    }
+
+    /**
+     * Records the user's explicit acceptance of the legal disclaimer with 24-hour expiration.
+     *
+     * @param Request $request HTTP request.
+     * @return JsonResponse Confirmation response.
+     */
+    #[Route('/api/disclaimer/accept', name: 'api_disclaimer_accept', methods: ['POST'])]
+    public function acceptDisclaimer(Request $request): JsonResponse
+    {
+        $now = (new \DateTimeImmutable())->format(\DateTimeInterface::ATOM);
+        // Persist acceptance in SQLite persistent cache for exactly 24 hours (86,400 seconds)
+        $this->cache->set('user.disclaimer.accepted_at', $now, ttlSeconds: 86400);
+
+        return $this->json([
+            'status' => 'success',
+            'message' => 'Legal disclaimer accepted successfully.',
+            'acceptedAt' => $now,
+            'ttlSeconds' => 86400,
+        ]);
+    }
 }

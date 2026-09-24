@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}System Settings & Rules — KHAPRE MoonShot Portfolio{% endblock %}
+{% block title %}System Settings & Rules — MoonShot Portfolio{% endblock %}
 
 {% block stylesheets %}
     <link rel="stylesheet" href="{{ asset('css/settings.css') }}">
@@ -18,397 +18,448 @@
 
     <!-- Hero -->
     <div class="settings-hero">
-        <h2><span class="material-symbols-outlined" style="vertical-align:middle; font-size:24px; color:var(--blue); margin-right:4px;">tune</span> Quantitative Strategy Rules & Parameters</h2>
-        <p>All values are persisted to <code>data.db</code> and take effect immediately across all Flywheel algorithms. Defaults are restored if a field is cleared.</p>
+        <div class="settings-hero-inner">
+            <h2><span class="material-symbols-outlined" style="vertical-align:middle; font-size:24px; color:var(--blue); margin-right:4px;">tune</span> Quantitative Strategy Rules & Parameters</h2>
+            <p>All values are persisted to <code>data.db</code> and take effect immediately across all Flywheel algorithms. Defaults are restored if a field is cleared.</p>
+        </div>
     </div>
 
-    <!-- Settings form -->
-    <div class="settings-content">
+    <!-- Main Settings Container with Sidebar Navigation -->
+    <div class="settings-container">
 
-        <!-- ── Brokerage Connections — Read-only status panel ──────────── -->
-        <div class="cfg-section" id="cfgBrokerCredentials">
-            <div class="cfg-section-header" style="justify-content:space-between;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">account_balance</span>
-                    <div>
-                        <h2>Brokerage Connections</h2>
-                        <p>Currently configured broker connections. To add, remove or reconfigure — use the Setup Wizard.</p>
-                    </div>
-                </div>
-                <a href="/setup#step3" class="hbtn hbtn-blue" style="font-size:12px; padding:8px 16px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:700; flex-shrink:0;">
-                    <span class="material-symbols-outlined">manage_accounts</span> Manage in Setup Wizard
-                </a>
-            </div>
+        <!-- Sticky Sidebar Navigation -->
+        <div class="settings-sidebar">
+            <button type="button" class="settings-tab-btn active" onclick="switchSettingsTab('tabBrokersAi', this)">
+                <span class="material-symbols-outlined">hub</span>
+                <span>Brokers & AI</span>
+                <span class="settings-tab-badge">Active</span>
+            </button>
+            <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('tabTradingRules', this)">
+                <span class="material-symbols-outlined">analytics</span>
+                <span>Signal Rules</span>
+            </button>
+            <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('tabCoveredCalls', this)">
+                <span class="material-symbols-outlined">call</span>
+                <span>Covered Calls & Exits</span>
+            </button>
+            <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('tabCacheApi', this)">
+                <span class="material-symbols-outlined">tune</span>
+                <span>Cache TTL & APIs</span>
+            </button>
+            <button type="button" class="settings-tab-btn" onclick="switchSettingsTab('tabStorage', this)">
+                <span class="material-symbols-outlined">database</span>
+                <span>Storage & Tools</span>
+            </button>
+        </div>
 
-            <!-- Read-only broker connection status cards -->
-            <div class="flex-col gap-sm" id="brokerReadonlyCards">
-                {% for inst in brokerInstances %}
-                <div class="broker-card">
-                    <span class="material-symbols-outlined broker-card-icon">account_balance</span>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex-align-center gap-sm flex-wrap">
-                            <span class="hbadge badge-blue">Connection {{ loop.index }}</span>
-                            <strong class="broker-card-title">{{ inst.nickname|default('Broker ' ~ loop.index) }}</strong>
-                            <span class="font-mono text-muted">
-                                {% if inst.type == 'schwab' %}Charles Schwab (OAuth 2.0)
-                                {% elseif inst.type == 'ibkr' %}Interactive Brokers (IBKR)
-                                {% elseif inst.type == 'alpaca' %}Alpaca Markets
-                                {% elseif inst.type == 'fidelity' %}Fidelity Investments
-                                {% elseif inst.type == 'etrade' %}E*TRADE / Morgan Stanley
-                                {% else %}{{ inst.type }}{% endif %}
-                            </span>
+        <!-- Settings Tab Content Area -->
+        <div class="settings-content">
+
+            <!-- ── TAB 1: Broker & AI Connections ────────────────────────── -->
+            <div class="settings-tab-pane" id="tabBrokersAi">
+                <!-- Brokerage Connections — Read-only status panel -->
+                <div class="cfg-section" id="cfgBrokerCredentials">
+                    <div class="cfg-section-header" style="justify-content:space-between;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">account_balance</span>
+                            <div>
+                                <h2>Brokerage Connections</h2>
+                                <p>Currently configured broker connections. To add, remove or reconfigure — use the Setup Wizard.</p>
+                            </div>
                         </div>
-                        <div class="broker-card-subtitle">
-                            {% if inst.app_key is not empty %}
-                                <span class="font-mono">Key: {{ inst.app_key|slice(0,8) }}••••••••</span>
-                                &nbsp;·&nbsp;
-                                <span class="text-green">
-                                    <span class="material-symbols-outlined font-sm">check_circle</span>
-                                    Credentials configured
-                                </span>
-                            {% else %}
-                                <span class="text-yellow">
-                                    <span class="material-symbols-outlined font-sm">warning</span>
-                                    No credentials set — configure in Setup Wizard
-                                </span>
+                        <a href="/setup#step3" class="hbtn hbtn-blue" style="font-size:12px; padding:8px 16px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-weight:700; flex-shrink:0;">
+                            <span class="material-symbols-outlined">manage_accounts</span> Manage in Setup Wizard
+                        </a>
+                    </div>
+
+                    <!-- Read-only broker connection status cards -->
+                    <div class="flex-col gap-sm" id="brokerReadonlyCards" style="padding:16px 24px;">
+                        {% for inst in brokerInstances %}
+                        <div class="broker-card">
+                            <span class="material-symbols-outlined broker-card-icon">account_balance</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex-align-center gap-sm flex-wrap">
+                                    <span class="hbadge badge-blue">Connection {{ loop.index }}</span>
+                                    <strong class="broker-card-title">{{ inst.nickname|default('Broker ' ~ loop.index) }}</strong>
+                                    <span class="font-mono text-muted">
+                                        {% if inst.type == 'schwab' %}Charles Schwab (OAuth 2.0)
+                                        {% elseif inst.type == 'ibkr' %}Interactive Brokers (IBKR)
+                                        {% elseif inst.type == 'alpaca' %}Alpaca Markets
+                                        {% elseif inst.type == 'fidelity' %}Fidelity Investments
+                                        {% elseif inst.type == 'etrade' %}E*TRADE / Morgan Stanley
+                                        {% else %}{{ inst.type }}{% endif %}
+                                    </span>
+                                </div>
+                                <div class="broker-card-subtitle">
+                                    {% if inst.app_key is not empty %}
+                                        <span class="font-mono">Key: {{ inst.app_key|slice(0,8) }}••••••••</span>
+                                        &nbsp;·&nbsp;
+                                        <span class="text-green">
+                                            <span class="material-symbols-outlined font-sm">check_circle</span>
+                                            Credentials configured
+                                        </span>
+                                    {% else %}
+                                        <span class="text-yellow">
+                                            <span class="material-symbols-outlined font-sm">warning</span>
+                                            No credentials set — configure in Setup Wizard
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if inst.type == 'schwab' or inst.type == 'etrade' %}
+                            <a href="/api/broker/{{ inst.id }}/login" target="_blank" class="hbtn hbtn-blue">
+                                <span class="material-symbols-outlined">link</span> OAuth
+                            </a>
                             {% endif %}
                         </div>
+                        {% else %}
+                        <div style="text-align:center; padding:28px; color:var(--muted);">
+                            <span class="material-symbols-outlined" style="font-size:36px; display:block; margin-bottom:10px; opacity:0.4;">account_balance</span>
+                            <p style="margin:0 0 14px; font-size:13px;">No broker connections configured yet.</p>
+                            <a href="/setup" class="hbtn hbtn-blue" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:13px;">
+                                <span class="material-symbols-outlined">bolt</span> Run Setup Wizard
+                            </a>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% if inst.type == 'schwab' or inst.type == 'etrade' %}
-                    <a href="/api/broker/{{ inst.id }}/login" target="_blank" class="hbtn hbtn-blue">
-                        <span class="material-symbols-outlined">link</span> OAuth
-                    </a>
-                    {% endif %}
+
+                    <!-- Market Data & AI API Keys — editable full-width rows -->
+                    <div class="cfg-rows" style="border-top:1px solid var(--border);">
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">Active AI Engine / LLM Provider</div>
+                                    <div class="cfg-desc">Choose between Gemini, OpenAI, Claude, or a self-hosted Local LLM.</div>
+                                    <div class="cfg-key">llm.provider</div>
+                                </div>
+                            </div>
+                            <select class="styled-select-input cfg-input" id="cfg_llm_provider" data-key="llm.provider" data-original="{{ config['llm.provider']|default('gemini') }}" onchange="onFieldChange(this)">
+                                <option value="gemini" {% if config['llm.provider']|default('gemini') == 'gemini' %}selected{% endif %}>Google Gemini API</option>
+                                <option value="openai" {% if config['llm.provider']|default('gemini') == 'openai' %}selected{% endif %}>OpenAI API</option>
+                                <option value="claude" {% if config['llm.provider']|default('gemini') == 'claude' %}selected{% endif %}>Anthropic Claude API</option>
+                                <option value="local" {% if config['llm.provider']|default('gemini') == 'local' %}selected{% endif %}>Self-Hosted Local LLM (OpenAI-compatible)</option>
+                            </select>
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">Google Gemini Model Selection</div>
+                                    <div class="cfg-desc">Choose target Google Gemini model.</div>
+                                    <div class="cfg-key">gemini.model</div>
+                                </div>
+                            </div>
+                            <select class="styled-select-input cfg-input" id="cfg_gemini_model" data-key="gemini.model" data-original="{{ config['gemini.model']|default('auto') }}" onchange="onFieldChange(this)">
+                                <option value="auto" {% if config['gemini.model']|default('auto') == 'auto' or config['gemini.model']|default('') == '' %}selected{% endif %}>Auto (Latest Pro/Flash & Rate-Limit Fallback)</option>
+                                <option value="gemini-2.5-flash" {% if config['gemini.model']|default('') == 'gemini-2.5-flash' %}selected{% endif %}>Gemini 2.5 Flash</option>
+                                <option value="gemini-2.5-pro" {% if config['gemini.model']|default('') == 'gemini-2.5-pro' %}selected{% endif %}>Gemini 2.5 Pro</option>
+                                <option value="gemini-2.0-flash" {% if config['gemini.model']|default('') == 'gemini-2.0-flash' %}selected{% endif %}>Gemini 2.0 Flash</option>
+                                <option value="gemini-1.5-pro" {% if config['gemini.model']|default('') == 'gemini-1.5-pro' %}selected{% endif %}>Gemini 1.5 Pro</option>
+                            </select>
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">Google Gemini AI Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
+                                    <div class="cfg-desc">AI strategy generation and options risk commentary. (<a href="https://aistudio.google.com/" target="_blank" style="color:var(--yellow);">Get key</a>)</div>
+                                    <div class="cfg-key">gemini.api_key</div>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="slick-pill-btn" id="btnToggleGemini" onclick="toggleKeyVisibility('cfg_gemini_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
+                                    <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_gemini_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                                    <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_gemini_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                                </div>
+                            </div>
+                            <input class="large-key-input cfg-input" type="password" id="cfg_gemini_api_key" data-key="gemini.api_key" data-original="{{ config['gemini.api_key']|default('') }}" value="{{ config['gemini.api_key']|default('') }}" placeholder="AIzaSy..." oninput="onFieldChange(this)">
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">OpenAI Model Selection</div>
+                                    <div class="cfg-desc">Choose target OpenAI model.</div>
+                                    <div class="cfg-key">openai.model</div>
+                                </div>
+                            </div>
+                            <select class="styled-select-input cfg-input" id="cfg_openai_model" data-key="openai.model" data-original="{{ config['openai.model']|default('gpt-4o-mini') }}" onchange="onFieldChange(this)">
+                                <option value="gpt-4o-mini" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o mini (Fast & Affordable)</option>
+                                <option value="gpt-4o" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4o' %}selected{% endif %}>GPT-4o (Omni High Performance)</option>
+                                <option value="gpt-4-turbo" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo</option>
+                                <option value="o1-mini" {% if config['openai.model']|default('gpt-4o-mini') == 'o1-mini' %}selected{% endif %}>o1-mini (Reasoning Model)</option>
+                            </select>
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">OpenAI API Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
+                                    <div class="cfg-desc">Required if using OpenAI engine. (<a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--blue);">Get key</a>)</div>
+                                    <div class="cfg-key">openai.api_key</div>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="slick-pill-btn" id="btnToggleOpenAi" onclick="toggleKeyVisibility('cfg_openai_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
+                                    <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_openai_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                                    <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_openai_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                                </div>
+                            </div>
+                            <input class="large-key-input cfg-input" type="password" id="cfg_openai_api_key" data-key="openai.api_key" data-original="{{ config['openai.api_key']|default('') }}" value="{{ config['openai.api_key']|default('') }}" placeholder="sk-proj-..." oninput="onFieldChange(this)">
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">Anthropic Claude Model Selection</div>
+                                    <div class="cfg-desc">Choose target Anthropic Claude model.</div>
+                                    <div class="cfg-key">claude.model</div>
+                                </div>
+                            </div>
+                            <select class="styled-select-input cfg-input" id="cfg_claude_model" data-key="claude.model" data-original="{{ config['claude.model']|default('claude-3-5-sonnet-latest') }}" onchange="onFieldChange(this)">
+                                <option value="claude-3-5-sonnet-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-5-sonnet-latest' %}selected{% endif %}>Claude 3.5 Sonnet (Recommended)</option>
+                                <option value="claude-3-5-haiku-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-5-haiku-latest' %}selected{% endif %}>Claude 3.5 Haiku</option>
+                                <option value="claude-3-opus-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-opus-latest' %}selected{% endif %}>Claude 3 Opus (High Intelligence)</option>
+                            </select>
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">Anthropic Claude API Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
+                                    <div class="cfg-desc">Required if using Claude engine. (<a href="https://console.anthropic.com/" target="_blank" style="color:var(--orange);">Get key</a>)</div>
+                                    <div class="cfg-key">claude.api_key</div>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="slick-pill-btn" id="btnToggleClaude" onclick="toggleKeyVisibility('cfg_claude_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
+                                    <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_claude_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                                    <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_claude_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                                </div>
+                            </div>
+                            <input class="large-key-input cfg-input" type="password" id="cfg_claude_api_key" data-key="claude.api_key" data-original="{{ config['claude.api_key']|default('') }}" value="{{ config['claude.api_key']|default('') }}" placeholder="sk-ant-..." oninput="onFieldChange(this)">
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">Self-Hosted Local LLM URL</div>
+                                    <div class="cfg-desc">API endpoint base URL for Ollama, LM Studio, vLLM, etc.</div>
+                                    <div class="cfg-key">local_llm.url</div>
+                                </div>
+                            </div>
+                            <input class="large-key-input cfg-input" type="text" id="cfg_local_llm_url" data-key="local_llm.url" data-original="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" value="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" placeholder="http://localhost:11434/v1" oninput="onFieldChange(this)">
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">Self-Hosted Local LLM API Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
+                                    <div class="cfg-desc">API key if required by local hosting gateway.</div>
+                                    <div class="cfg-key">local_llm.api_key</div>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="slick-pill-btn" id="btnToggleLocalLlmKey" onclick="toggleKeyVisibility('cfg_local_llm_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
+                                    <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_local_llm_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
+                                    <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_local_llm_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                                </div>
+                            </div>
+                            <input class="large-key-input cfg-input" type="password" id="cfg_local_llm_api_key" data-key="local_llm.api_key" data-original="{{ config['local_llm.api_key']|default('') }}" value="{{ config['local_llm.api_key']|default('') }}" placeholder="sk-local-..." oninput="onFieldChange(this)">
+                        </div>
+
+                        <div class="cfg-row-wide">
+                            <div class="cfg-row-wide-header">
+                                <div>
+                                    <div class="cfg-label">Self-Hosted Local LLM Model Name</div>
+                                    <div class="cfg-desc">Enter target model name configured locally (e.g. llama3).</div>
+                                    <div class="cfg-key">local_llm.model</div>
+                                </div>
+                            </div>
+                            <input class="large-key-input cfg-input" type="text" id="cfg_local_llm_model" data-key="local_llm.model" data-original="{{ config['local_llm.model']|default('llama3') }}" value="{{ config['local_llm.model']|default('llama3') }}" placeholder="llama3" oninput="onFieldChange(this)">
+                        </div>
+                    </div>
                 </div>
-                {% else %}
-                <div style="text-align:center; padding:28px; color:var(--muted);">
-                    <span class="material-symbols-outlined" style="font-size:36px; display:block; margin-bottom:10px; opacity:0.4;">account_balance</span>
-                    <p style="margin:0 0 14px; font-size:13px;">No broker connections configured yet.</p>
-                    <a href="/setup" class="hbtn hbtn-blue" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; font-size:13px;">
-                        <span class="material-symbols-outlined">bolt</span> Run Setup Wizard
-                    </a>
-                </div>
-                {% endfor %}
             </div>
 
-            <!-- Market Data & AI API Keys — editable full-width rows -->
-            <div class="cfg-rows" style="border-top:1px solid var(--border);">
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
+            <!-- ── TAB 2: Quantitative Trading & Allocation Rules ────────── -->
+            <div class="settings-tab-pane" id="tabTradingRules" style="display:none;">
+                <!-- Flywheel Signal Thresholds -->
+                <div class="cfg-section" id="cfgThresholds">
+                    <div class="cfg-section-header">
+                        <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">analytics</span>
                         <div>
-                            <div class="cfg-label">Active AI Engine / LLM Provider</div>
-                            <div class="cfg-desc">Choose between Gemini, OpenAI, Claude, or a self-hosted Local LLM.</div>
-                            <div class="cfg-key">llm.provider</div>
+                            <h2>Flywheel Signal Thresholds</h2>
+                            <p>Controls when stocks are classified as CALL / PUT / WHEEL signals</p>
                         </div>
                     </div>
-                    <select class="styled-select-input cfg-input" id="cfg_llm_provider" data-key="llm.provider" data-original="{{ config['llm.provider']|default('gemini') }}" onchange="onFieldChange(this)">
-                        <option value="gemini" {% if config['llm.provider']|default('gemini') == 'gemini' %}selected{% endif %}>Google Gemini API</option>
-                        <option value="openai" {% if config['llm.provider']|default('gemini') == 'openai' %}selected{% endif %}>OpenAI API</option>
-                        <option value="claude" {% if config['llm.provider']|default('gemini') == 'claude' %}selected{% endif %}>Anthropic Claude API</option>
-                        <option value="local" {% if config['llm.provider']|default('gemini') == 'local' %}selected{% endif %}>Self-Hosted Local LLM (OpenAI-compatible)</option>
-                    </select>
+                    <div class="cfg-rows">
+                        {{ _self.cfgSliderRow('flywheel.signal.call_score_threshold', 'CALL Score Threshold', 'Minimum screener score (0–100) required to generate a bullish CALL signal.', config['flywheel.signal.call_score_threshold']|default(70), 0, 100, 1, 'integer', '') }}
+                        {{ _self.cfgSliderRow('flywheel.signal.call_upside_threshold', 'CALL Upside Threshold (%)', 'Minimum % upside to target price required to trigger a CALL signal.', config['flywheel.signal.call_upside_threshold']|default(15.0), 0, 100, 0.5, 'float', '%') }}
+                        {{ _self.cfgSliderRow('flywheel.signal.put_score_threshold', 'PUT Score Threshold', 'Stocks scoring below this get a bearish PUT / protective hedge signal.', config['flywheel.signal.put_score_threshold']|default(45), 0, 100, 1, 'integer', '') }}
+                        {{ _self.cfgPercentRow('flywheel.signal.call_otm_pct', 'CALL OTM % (Long Call Strike)', 'Out-of-the-money % for the long call strike suggestion.', config['flywheel.signal.call_otm_pct']|default(0.05), 0, 50, 0.5) }}
+                        {{ _self.cfgPercentRow('flywheel.signal.put_hedge_otm_pct', 'PUT Hedge OTM %', 'OTM % for protective put hedge strike.', config['flywheel.signal.put_hedge_otm_pct']|default(0.05), 0, 50, 0.5) }}
+                        {{ _self.cfgPercentRow('flywheel.signal.csp_discount_pct', 'Cash-Secured Put Discount %', 'How far below current price to place the CSP strike.', config['flywheel.signal.csp_discount_pct']|default(0.08), 0, 50, 0.5) }}
+                    </div>
                 </div>
 
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
+                <!-- Capital Allocation Weights -->
+                <div class="cfg-section" id="cfgAllocation">
+                    <div class="cfg-section-header">
+                        <span class="material-symbols-outlined" style="font-size:22px; color:var(--purple);">balance</span>
                         <div>
-                            <div class="cfg-label">Google Gemini Model Selection</div>
-                            <div class="cfg-desc">Choose target Google Gemini model.</div>
-                            <div class="cfg-key">gemini.model</div>
+                            <h2>Capital Allocation Weights</h2>
+                            <p>How available risk capital is split between CALL / WHEEL / PUT strategies. Must sum to 1.0 (100%).</p>
                         </div>
                     </div>
-                    <select class="styled-select-input cfg-input" id="cfg_gemini_model" data-key="gemini.model" data-original="{{ config['gemini.model']|default('auto') }}" onchange="onFieldChange(this)">
-                        <option value="auto" {% if config['gemini.model']|default('auto') == 'auto' or config['gemini.model']|default('') == '' %}selected{% endif %}>Auto (Latest Pro/Flash & Rate-Limit Fallback)</option>
-                        <option value="gemini-2.5-flash" {% if config['gemini.model']|default('') == 'gemini-2.5-flash' %}selected{% endif %}>Gemini 2.5 Flash</option>
-                        <option value="gemini-2.5-pro" {% if config['gemini.model']|default('') == 'gemini-2.5-pro' %}selected{% endif %}>Gemini 2.5 Pro</option>
-                        <option value="gemini-2.0-flash" {% if config['gemini.model']|default('') == 'gemini-2.0-flash' %}selected{% endif %}>Gemini 2.0 Flash</option>
-                        <option value="gemini-1.5-pro" {% if config['gemini.model']|default('') == 'gemini-1.5-pro' %}selected{% endif %}>Gemini 1.5 Pro</option>
-                    </select>
+                    <div class="cfg-rows">
+                        {{ _self.cfgPercentRow('flywheel.allocation.call_weight', 'CALL Weight', 'Fraction of risk capital allocated to long call trades (default: 60%).', config['flywheel.allocation.call_weight']|default(0.60), 0, 100, 1) }}
+                        {{ _self.cfgPercentRow('flywheel.allocation.wheel_weight', 'WHEEL (Income) Weight', 'Fraction allocated to cash-secured puts / covered calls (default: 25%).', config['flywheel.allocation.wheel_weight']|default(0.25), 0, 100, 1) }}
+                        {{ _self.cfgPercentRow('flywheel.allocation.put_weight', 'PUT (Hedge) Weight', 'Fraction allocated to protective put hedges (default: 15%).', config['flywheel.allocation.put_weight']|default(0.15), 0, 100, 1) }}
+                        {{ _self.cfgSliderRow('flywheel.default_risk_cap', 'Default Risk Cap ($)', 'Default total capital to allocate in the flywheel allocator when none is specified.', config['flywheel.default_risk_cap']|default(10000.0), 1000, 200000, 1000, 'float', '$') }}
+                    </div>
                 </div>
+            </div>
 
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
+            <!-- ── TAB 3: Covered Calls & Exits ──────────────────────────── -->
+            <div class="settings-tab-pane" id="tabCoveredCalls" style="display:none;">
+                <!-- Covered Call Parameters -->
+                <div class="cfg-section" id="cfgCoveredCall">
+                    <div class="cfg-section-header">
+                        <span class="material-symbols-outlined" style="font-size:22px; color:var(--green);">call</span>
                         <div>
-                            <div class="cfg-label">Google Gemini AI Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
-                            <div class="cfg-desc">AI strategy generation and options risk commentary. (<a href="https://aistudio.google.com/" target="_blank" style="color:var(--yellow);">Get key</a>)</div>
-                            <div class="cfg-key">gemini.api_key</div>
-                        </div>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" class="slick-pill-btn" id="btnToggleGemini" onclick="toggleKeyVisibility('cfg_gemini_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
-                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_gemini_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
-                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_gemini_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                            <h2>Covered Call Parameters</h2>
+                            <p>Strike selection, premium estimation, and DTE target for covered call suggestions</p>
                         </div>
                     </div>
-                    <input class="large-key-input cfg-input" type="password" id="cfg_gemini_api_key" data-key="gemini.api_key" data-original="{{ config['gemini.api_key']|default('') }}" value="{{ config['gemini.api_key']|default('') }}" placeholder="AIzaSy..." oninput="onFieldChange(this)">
+                    <div class="cfg-rows">
+                        {{ _self.cfgSliderRow('flywheel.covered_call.min_shares', 'Minimum Unencumbered Shares', 'Minimum number of unencumbered shares required to be eligible for a covered call suggestion (usually 100 per contract).', config['flywheel.covered_call.min_shares']|default(100), 100, 1000, 100, 'integer', ' shares') }}
+                        {{ _self.cfgPercentRow('flywheel.covered_call.otm_pct', 'Strike OTM %', 'How far OTM the covered call strike is placed from current price.', config['flywheel.covered_call.otm_pct']|default(0.06), 0, 50, 0.5) }}
+                        {{ _self.cfgSliderRow('flywheel.covered_call.cost_basis_buffer', 'Cost Basis Safety Buffer (Multiplier)', 'Strike must be ≥ cost_basis × this multiplier to prevent capital loss on assignment (e.g. 1.02 = 2% above cost basis).', config['flywheel.covered_call.cost_basis_buffer']|default(1.02), 1.0, 1.5, 0.01, 'float', 'x') }}
+                        {{ _self.cfgSliderRow('flywheel.covered_call.dte_target', 'DTE Target (Days to Expiry)', 'Target days-to-expiry for covered call suggestions. 30–45 DTE captures optimal theta decay.', config['flywheel.covered_call.dte_target']|default(35), 7, 180, 1, 'integer', ' days') }}
+                        {{ _self.cfgPercentRow('flywheel.covered_call.est_premium_pct', 'Estimated Premium %', 'Estimated premium as a % of stock price for the DTE target (e.g. 2.8%).', config['flywheel.covered_call.est_premium_pct']|default(0.028), 0, 20, 0.1) }}
+                    </div>
                 </div>
 
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
+                <!-- Early Exit Parameters -->
+                <div class="cfg-section" id="cfgEarlyExit">
+                    <div class="cfg-section-header">
+                        <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">directions_run</span>
                         <div>
-                            <div class="cfg-label">OpenAI Model Selection</div>
-                            <div class="cfg-desc">Choose target OpenAI model.</div>
-                            <div class="cfg-key">openai.model</div>
+                            <h2>Early Exit / Buy-To-Close</h2>
+                            <p>When to suggest closing a position early to lock in premium decay profits</p>
                         </div>
                     </div>
-                    <select class="styled-select-input cfg-input" id="cfg_openai_model" data-key="openai.model" data-original="{{ config['openai.model']|default('gpt-4o-mini') }}" onchange="onFieldChange(this)">
-                        <option value="gpt-4o-mini" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o mini (Fast & Affordable)</option>
-                        <option value="gpt-4o" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4o' %}selected{% endif %}>GPT-4o (Omni High Performance)</option>
-                        <option value="gpt-4-turbo" {% if config['openai.model']|default('gpt-4o-mini') == 'gpt-4-turbo' %}selected{% endif %}>GPT-4 Turbo</option>
-                        <option value="o1-mini" {% if config['openai.model']|default('gpt-4o-mini') == 'o1-mini' %}selected{% endif %}>o1-mini (Reasoning Model)</option>
-                    </select>
+                    <div class="cfg-rows">
+                        {{ _self.cfgSliderRow('flywheel.early_exit.btc_profit_threshold', 'BTC Profit Threshold (%)', 'Minimum % of maximum profit achieved before an early Buy-To-Close suggestion is generated (e.g. 50% decay).', config['flywheel.early_exit.btc_profit_threshold']|default(50.0), 10, 95, 5, 'float', '%') }}
+                    </div>
                 </div>
+            </div>
 
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
+            <!-- ── TAB 4: Cache TTL & API Limits ─────────────────────────── -->
+            <div class="settings-tab-pane" id="tabCacheApi" style="display:none;">
+                <!-- Calendar Bounds -->
+                <div class="cfg-section" id="cfgCalendar">
+                    <div class="cfg-section-header">
+                        <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">calendar_month</span>
                         <div>
-                            <div class="cfg-label">OpenAI API Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
-                            <div class="cfg-desc">Required if using OpenAI engine. (<a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--blue);">Get key</a>)</div>
-                            <div class="cfg-key">openai.api_key</div>
-                        </div>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" class="slick-pill-btn" id="btnToggleOpenAi" onclick="toggleKeyVisibility('cfg_openai_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
-                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_openai_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
-                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_openai_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                            <h2>Calendar Navigation Bounds</h2>
+                            <p>How far back and forward the portfolio calendar can be browsed</p>
                         </div>
                     </div>
-                    <input class="large-key-input cfg-input" type="password" id="cfg_openai_api_key" data-key="openai.api_key" data-original="{{ config['openai.api_key']|default('') }}" value="{{ config['openai.api_key']|default('') }}" placeholder="sk-proj-..." oninput="onFieldChange(this)">
+                    <div class="cfg-rows">
+                        {{ _self.cfgSliderRow('calendar.months_back', 'Months Back', 'How many months back from today the calendar allows navigation.', config['calendar.months_back']|default(1), 0, 24, 1, 'integer', ' mos') }}
+                        {{ _self.cfgSliderRow('calendar.months_forward', 'Months Forward', 'How many months forward from today the calendar allows navigation.', config['calendar.months_forward']|default(6), 1, 36, 1, 'integer', ' mos') }}
+                    </div>
                 </div>
 
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
+                <!-- Cache TTL configurations with Human Friendly Duration Picker -->
+                <div class="cfg-section">
+                    <div class="cfg-section-header">
+                        <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">hourglass_top</span>
                         <div>
-                            <div class="cfg-label">Anthropic Claude Model Selection</div>
-                            <div class="cfg-desc">Choose target Anthropic Claude model.</div>
-                            <div class="cfg-key">claude.model</div>
+                            <h2>Cache Time-To-Live (TTL) Settings</h2>
+                            <p>Configure persistent cache duration in minutes, hours, or days. Saved to SQLite in seconds automatically.</p>
                         </div>
                     </div>
-                    <select class="styled-select-input" id="cfg_claude_model" data-key="claude.model" data-original="{{ config['claude.model']|default('claude-3-5-sonnet-latest') }}" onchange="onFieldChange(this)">
-                        <option value="claude-3-5-sonnet-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-5-sonnet-latest' %}selected{% endif %}>Claude 3.5 Sonnet (Recommended)</option>
-                        <option value="claude-3-5-haiku-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-5-haiku-latest' %}selected{% endif %}>Claude 3.5 Haiku</option>
-                        <option value="claude-3-opus-latest" {% if config['claude.model']|default('claude-3-5-sonnet-latest') == 'claude-3-opus-latest' %}selected{% endif %}>Claude 3 Opus (High Intelligence)</option>
-                    </select>
+                    <div class="cfg-rows">
+                        {{ _self.cfgDurationRow('cache.ttl.finnhub.quote', 'Finnhub Quote TTL', 'Cache lifespan for Finnhub real-time asset price quotes.', config['cache.ttl.finnhub.quote']|default(900)) }}
+                        {{ _self.cfgDurationRow('cache.ttl.finnhub.earnings', 'Finnhub Earnings TTL', 'Cache lifespan for Finnhub earnings calendar events.', config['cache.ttl.finnhub.earnings']|default(604800)) }}
+                        {{ _self.cfgDurationRow('cache.ttl.finnhub.dividends', 'Finnhub Dividends TTL', 'Cache lifespan for Finnhub stock dividend schedules.', config['cache.ttl.finnhub.dividends']|default(2592000)) }}
+                        {{ _self.cfgDurationRow('cache.ttl.broker.portfolio', 'Broker Portfolio TTL', 'Cache lifespan for aggregated broker account portfolios & balances.', config['cache.ttl.broker.portfolio']|default(60)) }}
+                        {{ _self.cfgDurationRow('cache.ttl.broker.history', 'Broker Account History TTL', 'Cache lifespan for broker account transaction activity log.', config['cache.ttl.broker.history']|default(604800)) }}
+                        {{ _self.cfgDurationRow('cache.ttl.broker.chain', 'Broker Option Chain TTL', 'Cache lifespan for broker option chains queries.', config['cache.ttl.broker.chain']|default(120)) }}
+                    </div>
                 </div>
 
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
+                <!-- API Connection Settings -->
+                <div class="cfg-section">
+                    <div class="cfg-section-header">
+                        <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">settings_ethernet</span>
                         <div>
-                            <div class="cfg-label">Anthropic Claude API Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
-                            <div class="cfg-desc">Required if using Claude engine. (<a href="https://console.anthropic.com/" target="_blank" style="color:var(--orange);">Get key</a>)</div>
-                            <div class="cfg-key">claude.api_key</div>
-                        </div>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" class="slick-pill-btn" id="btnToggleClaude" onclick="toggleKeyVisibility('cfg_claude_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
-                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_claude_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
-                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_claude_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                            <h2>API Connection Settings</h2>
+                            <p>Configure request timeouts and parameters for external brokerage and data APIs</p>
                         </div>
                     </div>
-                    <input class="large-key-input" type="password" id="cfg_claude_api_key" data-key="claude.api_key" data-original="{{ config['claude.api_key']|default('') }}" value="{{ config['claude.api_key']|default('') }}" placeholder="sk-ant-..." oninput="onFieldChange(this)">
+                    <div class="cfg-rows">
+                        {{ _self.cfgSliderRow('api.timeout.broker.default', 'Broker Default Timeout', 'Timeout in seconds for standard broker API connections (e.g. portfolio queries).', config['api.timeout.broker.default']|default(8.0), 1, 60, 0.5, 'float', 's') }}
+                        {{ _self.cfgSliderRow('api.timeout.broker.transactions', 'Broker History Timeout', 'Timeout in seconds for historical transaction log queries.', config['api.timeout.broker.transactions']|default(10.0), 2, 90, 0.5, 'float', 's') }}
+                        {{ _self.cfgSliderRow('api.timeout.finnhub.default', 'Finnhub Default Timeout', 'Timeout in seconds for Finnhub quote and dividend API connections.', config['api.timeout.finnhub.default']|default(3.0), 1, 30, 0.5, 'float', 's') }}
+                        {{ _self.cfgSliderRow('broker.option_chain.strike_count', 'Option Strike Count Limit', 'Number of option contract strike prices returned above/below the money.', config['broker.option_chain.strike_count']|default(12), 4, 50, 2, 'integer', ' strikes') }}
+                    </div>
                 </div>
+            </div>
 
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
+            <!-- ── TAB 5: Persistent Cache & Storage Management ──────────── -->
+            <div class="settings-tab-pane" id="tabStorage" style="display:none;">
+                <div class="cfg-section" id="cfgCacheSection">
+                    <div class="cfg-section-header">
+                        <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">bolt</span>
                         <div>
-                            <div class="cfg-label">Self-Hosted Local LLM URL</div>
-                            <div class="cfg-desc">API endpoint base URL for Ollama, LM Studio, vLLM, etc.</div>
-                            <div class="cfg-key">local_llm.url</div>
+                            <h2>Persistent Cache & Storage Management</h2>
+                            <p>Persists Finnhub market data and sanitized non-PII broker aggregates in SQLite (<code>var/data.db</code>)</p>
                         </div>
                     </div>
-                    <input class="large-key-input" type="text" id="cfg_local_llm_url" data-key="local_llm.url" data-original="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" value="{{ config['local_llm.url']|default('http://localhost:11434/v1') }}" placeholder="http://localhost:11434/v1" oninput="onFieldChange(this)">
-                </div>
 
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
-                        <div>
-                            <div class="cfg-label">Self-Hosted Local LLM API Key <span style="font-size:10px; color:var(--muted); font-weight:400;">(Optional)</span></div>
-                            <div class="cfg-desc">API key if required by local hosting gateway.</div>
-                            <div class="cfg-key">local_llm.api_key</div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin:20px 24px 18px;">
+                        <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+                            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Active Cache Entries</div>
+                            <div style="font-size:20px; font-weight:800; color:var(--blue);" id="cacheActiveCount">{{ cacheStats.activeEntries|default(0) }} Records</div>
                         </div>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" class="slick-pill-btn" id="btnToggleLocalLlmKey" onclick="toggleKeyVisibility('cfg_local_llm_api_key', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
-                            <button type="button" class="slick-pill-btn" onclick="pasteToField('cfg_local_llm_api_key')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
-                            <button type="button" class="slick-pill-btn" onclick="copyFromField('cfg_local_llm_api_key', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                        <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+                            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Finnhub Market Data</div>
+                            <div style="font-size:20px; font-weight:800; color:var(--green);" id="cacheFinnhubCount">{{ cacheStats.finnhubEntries|default(0) }} Items</div>
                         </div>
-                    </div>
-                    <input class="large-key-input" type="password" id="cfg_local_llm_api_key" data-key="local_llm.api_key" data-original="{{ config['local_llm.api_key']|default('') }}" value="{{ config['local_llm.api_key']|default('') }}" placeholder="sk-local-..." oninput="onFieldChange(this)">
-                </div>
-
-                <div class="cfg-row-wide">
-                    <div class="cfg-row-wide-header">
-                        <div>
-                            <div class="cfg-label">Self-Hosted Local LLM Model Name</div>
-                            <div class="cfg-desc">Enter target model name configured locally (e.g. llama3).</div>
-                            <div class="cfg-key">local_llm.model</div>
+                        <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+                            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Sanitized Broker Data</div>
+                            <div style="font-size:20px; font-weight:800; color:var(--purple);" id="cacheSchwabCount">{{ cacheStats.schwabEntries|default(0) }} Masked</div>
+                        </div>
+                        <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+                            <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Database Storage (data.db)</div>
+                            <div style="font-size:20px; font-weight:800; color:var(--yellow);" id="cacheDbSize">{{ cacheStats.databaseSizeKb|default(0) }} KB</div>
                         </div>
                     </div>
-                </div>
-                       <!-- ── Flywheel Signal Thresholds ────────────────────────── -->
-        <div class="cfg-section" id="cfgThresholds">
-            <div class="cfg-section-header">
-                <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">analytics</span>
-                <div>
-                    <h2>Flywheel Signal Thresholds</h2>
-                    <p>Controls when stocks are classified as CALL / PUT / WHEEL signals</p>
-                </div>
-            </div>
-            <div class="cfg-rows">
-                {{ _self.cfgRow('flywheel.signal.call_score_threshold', 'CALL Score Threshold', 'Minimum screener score (0-100) required to generate a bullish CALL signal.', config['flywheel.signal.call_score_threshold'], 'integer') }}
-                {{ _self.cfgRow('flywheel.signal.call_upside_threshold', 'CALL Upside Threshold (%)', 'Minimum % upside to target price required to trigger a CALL signal.', config['flywheel.signal.call_upside_threshold'], 'float') }}
-                {{ _self.cfgRow('flywheel.signal.put_score_threshold', 'PUT Score Threshold', 'Stocks scoring below this get a bearish PUT / protective hedge signal.', config['flywheel.signal.put_score_threshold'], 'integer') }}
-                {{ _self.cfgRow('flywheel.signal.call_otm_pct', 'CALL OTM % (Long Call Strike)', 'Out-of-the-money % for the long call strike suggestion (e.g. 0.05 = 5% OTM).', config['flywheel.signal.call_otm_pct'], 'percent') }}
-                {{ _self.cfgRow('flywheel.signal.put_hedge_otm_pct', 'PUT Hedge OTM %', 'OTM % for protective put hedge strike.', config['flywheel.signal.put_hedge_otm_pct'], 'percent') }}
-                {{ _self.cfgRow('flywheel.signal.csp_discount_pct', 'Cash-Secured Put Discount %', 'How far below current price to place the CSP strike (e.g. 0.08 = 8% discount).', config['flywheel.signal.csp_discount_pct'], 'percent') }}
-            </div>
-        </div>
 
-        <!-- ── Capital Allocation Weights ──────────────────────────── -->
-        <div class="cfg-section" id="cfgAllocation">
-            <div class="cfg-section-header">
-                <span class="material-symbols-outlined" style="font-size:22px; color:var(--purple);">balance</span>
-                <div>
-                    <h2>Capital Allocation Weights</h2>
-                    <p>How available risk capital is split between CALL / WHEEL / PUT strategies. Must sum to 1.0.</p>
-                </div>
-            </div>
-            <div class="cfg-rows">
-                {{ _self.cfgRow('flywheel.allocation.call_weight', 'CALL Weight', 'Fraction of risk capital allocated to long call trades (default: 60%).', config['flywheel.allocation.call_weight'], 'percent') }}
-                {{ _self.cfgRow('flywheel.allocation.wheel_weight', 'WHEEL (Income) Weight', 'Fraction allocated to cash-secured puts / covered calls (default: 25%).', config['flywheel.allocation.wheel_weight'], 'percent') }}
-                {{ _self.cfgRow('flywheel.allocation.put_weight', 'PUT (Hedge) Weight', 'Fraction allocated to protective put hedges (default: 15%).', config['flywheel.allocation.put_weight'], 'percent') }}
-                {{ _self.cfgRow('flywheel.default_risk_cap', 'Default Risk Cap ($)', 'Default total capital to allocate in the flywheel allocator when none is specified.', config['flywheel.default_risk_cap'], 'float') }}
-            </div>
-        </div>
+                    <div style="background:rgba(21,128,61,0.08); border:1px solid rgba(63,185,80,0.25); border-radius:10px; padding:12px 16px; margin:0 24px 16px; font-size:12px; color:var(--text); line-height:1.5;">
+                        <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; color:var(--green);">lock</span> <strong>Privacy & Security Enforcement:</strong> All broker account numbers are strictly masked to the last 4 digits (e.g. <code>***3261</code>). Personal names, tax IDs, routing numbers, and OAuth access tokens are never persisted in the cache table.
+                    </div>
 
-        <!-- ── Covered Call Parameters ─────────────────────────────── -->
-        <div class="cfg-section" id="cfgCoveredCall">
-            <div class="cfg-section-header">
-                <span class="material-symbols-outlined" style="font-size:22px; color:var(--green);">call</span>
-                <div>
-                    <h2>Covered Call Parameters</h2>
-                    <p>Strike selection, premium estimation, and DTE target for covered call suggestions</p>
-                </div>
-            </div>
-            <div class="cfg-rows">
-                {{ _self.cfgRow('flywheel.covered_call.min_shares', 'Minimum Unencumbered Shares', 'Minimum number of unencumbered shares required to be eligible for a covered call suggestion.', config['flywheel.covered_call.min_shares'], 'integer') }}
-                {{ _self.cfgRow('flywheel.covered_call.otm_pct', 'Strike OTM %', 'How far OTM the covered call strike is placed from current price.', config['flywheel.covered_call.otm_pct'], 'percent') }}
-                {{ _self.cfgRow('flywheel.covered_call.cost_basis_buffer', 'Cost Basis Safety Buffer', 'Strike must be ≥ cost_basis × this multiplier to prevent a capital loss on assignment. (e.g. 1.02 = 2% above cost basis).', config['flywheel.covered_call.cost_basis_buffer'], 'float') }}
-                {{ _self.cfgRow('flywheel.covered_call.dte_target', 'DTE Target (Days to Expiry)', 'Target days-to-expiry for covered call suggestions. 30-45 DTE captures optimal theta decay.', config['flywheel.covered_call.dte_target'], 'integer') }}
-                {{ _self.cfgRow('flywheel.covered_call.est_premium_pct', 'Estimated Premium %', 'Estimated premium as a % of stock price for the DTE target (e.g. 0.028 = 2.8%).', config['flywheel.covered_call.est_premium_pct'], 'percent') }}
-            </div>
-        </div>
-
-        <!-- ── Early Exit Parameters ───────────────────────────────── -->
-        <div class="cfg-section" id="cfgEarlyExit">
-            <div class="cfg-section-header">
-                <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">directions_run</span>
-                <div>
-                    <h2>Early Exit / Buy-To-Close</h2>
-                    <p>When to suggest closing a position early to lock in premium decay profits</p>
-                </div>
-            </div>
-            <div class="cfg-rows">
-                {{ _self.cfgRow('flywheel.early_exit.btc_profit_threshold', 'BTC Profit Threshold (%)', 'Minimum % of maximum profit achieved before an early Buy-To-Close suggestion is generated (e.g. 50 = 50% decay).', config['flywheel.early_exit.btc_profit_threshold'], 'float') }}
-            </div>
-        </div>
-
-        <!-- ── Calendar Bounds ─────────────────────────────────────── -->
-        <div class="cfg-section" id="cfgCalendar">
-            <div class="cfg-section-header">
-                <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">calendar_month</span>
-                <div>
-                    <h2>Calendar Navigation Bounds</h2>
-                    <p>How far back and forward the portfolio calendar can be browsed</p>
-                </div>
-            </div>
-            <div class="cfg-rows">
-                {{ _self.cfgRow('calendar.months_back', 'Months Back', 'How many months back from today the calendar allows navigation.', config['calendar.months_back'], 'integer') }}
-                {{ _self.cfgRow('calendar.months_forward', 'Months Forward', 'How many months forward from today the calendar allows navigation.', config['calendar.months_forward'], 'integer') }}
-            </div>
-        </div>
-
-        <!-- ── Cache TTL configurations ─────────────────────────────── -->
-        <div class="cfg-section">
-            <div class="cfg-section-header">
-                <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">hourglass_top</span>
-                <div>
-                    <h2>Cache Time-To-Live (TTL) Settings</h2>
-                    <p>Configure persistent cache intervals (seconds) for market, historical and account data</p>
-                </div>
-            </div>
-            <div class="cfg-rows">
-                {{ _self.cfgRow('cache.ttl.finnhub.quote', 'Finnhub Quote TTL', 'Time-To-Live in seconds for Finnhub real-time asset price quotes.', config['cache.ttl.finnhub.quote'], 'integer') }}
-                {{ _self.cfgRow('cache.ttl.finnhub.earnings', 'Finnhub Earnings TTL', 'Time-To-Live in seconds for Finnhub earnings calendar events.', config['cache.ttl.finnhub.earnings'], 'integer') }}
-                {{ _self.cfgRow('cache.ttl.finnhub.dividends', 'Finnhub Dividends TTL', 'Time-To-Live in seconds for Finnhub stock dividend schedules.', config['cache.ttl.finnhub.dividends'], 'integer') }}
-                {{ _self.cfgRow('cache.ttl.broker.portfolio', 'Broker Portfolio TTL', 'Time-To-Live in seconds for aggregated broker account portfolios & balances.', config['cache.ttl.broker.portfolio'], 'integer') }}
-                {{ _self.cfgRow('cache.ttl.broker.history', 'Broker Account History TTL', 'Time-To-Live in seconds for 30-day broker account transaction activity log.', config['cache.ttl.broker.history'], 'integer') }}
-                {{ _self.cfgRow('cache.ttl.broker.chain', 'Broker Option Chain TTL', 'Time-To-Live in seconds for broker option chains queries.', config['cache.ttl.broker.chain'], 'integer') }}
-        </div>
-
-        <!-- ── API Connection Settings ─────────────────────────────── -->
-        <div class="cfg-section">
-            <div class="cfg-section-header">
-                <span class="material-symbols-outlined" style="font-size:22px; color:var(--blue);">settings_ethernet</span>
-                <div>
-                    <h2>API Connection Settings</h2>
-                    <p>Configure request timeouts and parameters for external brokerage and data APIs</p>
-                </div>
-            </div>
-            <div class="cfg-rows">
-                {{ _self.cfgRow('api.timeout.broker.default', 'Broker Default Timeout', 'Timeout in seconds for standard broker API connections (e.g. portfolio queries).', config['api.timeout.broker.default'], 'float') }}
-                {{ _self.cfgRow('api.timeout.broker.transactions', 'Broker History Timeout', 'Timeout in seconds for historical transaction log queries.', config['api.timeout.broker.transactions'], 'float') }}
-                {{ _self.cfgRow('api.timeout.finnhub.default', 'Finnhub Default Timeout', 'Timeout in seconds for Finnhub quote and dividend API connections.', config['api.timeout.finnhub.default'], 'float') }}
-                {{ _self.cfgRow('broker.option_chain.strike_count', 'Option Strike Count Limit', 'Number of option contract strike prices returned above/below the money.', config['broker.option_chain.strike_count'], 'integer') }}
-            </div>
-        </div>
-
-        <!-- ── Persistent Cache & Storage Management ───────────────────── -->
-        <div class="cfg-section" id="cfgCacheSection">
-            <div class="cfg-section-header">
-                <span class="material-symbols-outlined" style="font-size:22px; color:var(--yellow);">bolt</span>
-                <div>
-                    <h2>Persistent Cache & Storage Management</h2>
-                    <p>Persists Finnhub market data and sanitized non-PII broker aggregates in SQLite (<code>var/data.db</code>)</p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; padding:0 24px 20px;">
+                        <button type="button" class="hbtn hbtn-green" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('finnhub')">
+                            <span class="material-symbols-outlined" style="font-size:14px;">bolt</span> Purge Finnhub Market Cache
+                        </button>
+                        <button type="button" class="hbtn hbtn-purple" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('schwab')">
+                            <span class="material-symbols-outlined" style="font-size:14px;">lock</span> Purge Sanitized Broker Cache
+                        </button>
+                        <button type="button" class="hbtn hbtn-red" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('all')">
+                            <span class="material-symbols-outlined" style="font-size:14px;">delete_forever</span> Flush All Persistent Cache
+                        </button>
+                        <span id="cachePurgeMsg" style="font-size:12px; align-self:center; margin-left:8px; font-weight:600; color:var(--green);"></span>
+                    </div>
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:18px;">
-                <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
-                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Active Cache Entries</div>
-                    <div style="font-size:20px; font-weight:800; color:var(--blue);" id="cacheActiveCount">{{ cacheStats.activeEntries|default(0) }} Records</div>
-                </div>
-                <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
-                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Finnhub Market Data</div>
-                    <div style="font-size:20px; font-weight:800; color:var(--green);" id="cacheFinnhubCount">{{ cacheStats.finnhubEntries|default(0) }} Items</div>
-                </div>
-                <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
-                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Sanitized Broker Data</div>
-                    <div style="font-size:20px; font-weight:800; color:var(--purple);" id="cacheSchwabCount">{{ cacheStats.schwabEntries|default(0) }} Masked</div>
-                </div>
-                <div style="background:var(--bg3); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
-                    <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Database Storage (data.db)</div>
-                    <div style="font-size:20px; font-weight:800; color:var(--yellow);" id="cacheDbSize">{{ cacheStats.databaseSizeKb|default(0) }} KB</div>
-                </div>
-            </div>
+        </div><!-- /settings-content -->
 
-            <div style="background:rgba(21,128,61,0.08); border:1px solid rgba(63,185,80,0.25); border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:12px; color:var(--text); line-height:1.5;">
-                <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; color:var(--green);">lock</span> <strong>Privacy & Security Enforcement:</strong> All broker account numbers are strictly masked to the last 4 digits (e.g. <code>***3261</code>). Personal names, tax IDs, routing numbers, and OAuth access tokens are never persisted in the cache table.
-            </div>
+    </div><!-- /settings-container -->
 
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button type="button" class="hbtn hbtn-green" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('finnhub')">
-                    <span class="material-symbols-outlined" style="font-size:14px;">bolt</span> Purge Finnhub Market Cache
-                </button>
-                <button type="button" class="hbtn hbtn-purple" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('schwab')">
-                    <span class="material-symbols-outlined" style="font-size:14px;">lock</span> Purge Sanitized Broker Cache
-                </button>
-                <button type="button" class="hbtn hbtn-red" style="font-size:11px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="purgeCache('all')">
-                    <span class="material-symbols-outlined" style="font-size:14px;">delete_forever</span> Flush All Persistent Cache
-                </button>
-                <span id="cachePurgeMsg" style="font-size:12px; align-self:center; margin-left:8px; font-weight:600; color:var(--green);"></span>
-            </div>
-        </div>
-
-    </div><!-- /settings-content -->
-
-    <!-- Save Bar -->
+    <!-- Sticky Save Bar across all settings -->
     <div class="save-bar">
         <span class="save-status" id="saveStatus">No unsaved changes.</span>
         <button class="btn-reset" onclick="resetToDefaults()" id="btnReset" style="display:inline-flex; align-items:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:14px;">undo</span> Reset to Defaults</button>
@@ -419,27 +470,150 @@
 </div><!-- /settings-wrap -->
 {% endblock %}
 
-{# ── Twig macro for a single config row ──────────────────────────────────── #}
-{% macro cfgRow(key, label, desc, value, inputType) %}
+{# ── Twig Macros for Interactive Validated Form Controls ────────────────── #}
+
+{# 1. Slider + Direct Input Macro #}
+{% macro cfgSliderRow(key, label, desc, value, min, max, step, inputType, unitSuffix) %}
 <div class="cfg-row">
     <div>
         <div class="cfg-label">{{ label }}</div>
         <div class="cfg-desc">{{ desc }}</div>
         <div class="cfg-key">{{ key }}</div>
-        {% if inputType == 'percent' %}<div class="pct-suffix">Stored as decimal — e.g. 0.06 = 6%</div>{% endif %}
     </div>
+    <div class="cfg-control-group">
+        <div class="cfg-control-row">
+            <input
+                type="range"
+                class="cfg-range-slider"
+                id="range_{{ key|replace({'.': '_'}) }}"
+                min="{{ min }}"
+                max="{{ max }}"
+                step="{{ step }}"
+                value="{{ value }}"
+                oninput="syncSliderToInput('cfg_{{ key|replace({'.': '_'}) }}', this.value)"
+            >
+            <div style="width:90px; flex-shrink:0;">
+                <input
+                    class="cfg-input"
+                    type="number"
+                    id="cfg_{{ key|replace({'.': '_'}) }}"
+                    data-key="{{ key }}"
+                    data-original="{{ value }}"
+                    data-min="{{ min }}"
+                    data-max="{{ max }}"
+                    value="{{ value }}"
+                    step="{{ step }}"
+                    min="{{ min }}"
+                    max="{{ max }}"
+                    oninput="syncInputToSlider('range_{{ key|replace({'.': '_'}) }}', this)"
+                >
+            </div>
+        </div>
+        <div class="cfg-val-hint">Range: {{ min }}{{ unitSuffix }} – {{ max }}{{ unitSuffix }}</div>
+    </div>
+</div>
+{% endmacro %}
+
+{# 2. Percentage Macro (e.g. 0.06 stored in DB, displayed and edited as 6%) #}
+{% macro cfgPercentRow(key, label, desc, value, minPct, maxPct, stepPct) %}
+{% set pctVal = (value * 100)|round(2) %}
+<div class="cfg-row">
     <div>
+        <div class="cfg-label">{{ label }}</div>
+        <div class="cfg-desc">{{ desc }}</div>
+        <div class="cfg-key">{{ key }}</div>
+    </div>
+    <div class="cfg-control-group">
+        <div class="cfg-control-row">
+            <input
+                type="range"
+                class="cfg-range-slider"
+                id="range_{{ key|replace({'.': '_'}) }}"
+                min="{{ minPct }}"
+                max="{{ maxPct }}"
+                step="{{ stepPct }}"
+                value="{{ pctVal }}"
+                oninput="syncPercentSlider('cfg_{{ key|replace({'.': '_'}) }}', this.value)"
+            >
+            <div style="width:90px; flex-shrink:0; position:relative;">
+                <input
+                    class="cfg-input"
+                    type="number"
+                    id="display_{{ key|replace({'.': '_'}) }}"
+                    data-raw-target="cfg_{{ key|replace({'.': '_'}) }}"
+                    min="{{ minPct }}"
+                    max="{{ maxPct }}"
+                    step="{{ stepPct }}"
+                    value="{{ pctVal }}"
+                    oninput="syncPercentInput('range_{{ key|replace({'.': '_'}) }}', 'cfg_{{ key|replace({'.': '_'}) }}', this)"
+                >
+            </div>
+            <span style="font-size:13px; font-weight:700; color:var(--blue);">%</span>
+        </div>
+        <!-- Hidden actual input holding raw decimal for backend API -->
         <input
+            type="hidden"
             class="cfg-input"
-            type="number"
             id="cfg_{{ key|replace({'.': '_'}) }}"
             data-key="{{ key }}"
             data-original="{{ value }}"
             value="{{ value }}"
-            step="{{ inputType == 'integer' ? 1 : 0.001 }}"
-            min="0"
-            oninput="onFieldChange(this)"
         >
+        <div class="cfg-val-hint">Stored as decimal: <strong id="hint_dec_{{ key|replace({'.': '_'}) }}" style="color:var(--text)">{{ value }}</strong></div>
+    </div>
+</div>
+{% endmacro %}
+
+{# 3. Duration Macro (converts seconds into seconds/minutes/hours/days for easy editing) #}
+{% macro cfgDurationRow(key, label, desc, secondsValue) %}
+<div class="cfg-row">
+    <div>
+        <div class="cfg-label">{{ label }}</div>
+        <div class="cfg-desc">{{ desc }}</div>
+        <div class="cfg-key">{{ key }}</div>
+    </div>
+    <div class="cfg-control-group">
+        <div class="cfg-duration-wrap">
+            <input
+                class="cfg-input"
+                type="number"
+                id="dur_val_{{ key|replace({'.': '_'}) }}"
+                min="1"
+                step="1"
+                value="1"
+                oninput="onDurationFieldChange('{{ key|replace({'.': '_'}) }}')"
+            >
+            <select
+                class="cfg-unit-select"
+                id="dur_unit_{{ key|replace({'.': '_'}) }}"
+                onchange="onDurationFieldChange('{{ key|replace({'.': '_'}) }}')"
+            >
+                <option value="60">Minutes</option>
+                <option value="3600">Hours</option>
+                <option value="86400">Days</option>
+                <option value="1">Seconds</option>
+            </select>
+        </div>
+        <!-- Hidden input tracking the actual total seconds for backend persistence -->
+        <input
+            type="hidden"
+            class="cfg-input"
+            id="cfg_{{ key|replace({'.': '_'}) }}"
+            data-key="{{ key }}"
+            data-original="{{ secondsValue }}"
+            data-type="duration"
+            value="{{ secondsValue }}"
+        >
+        <!-- Quick Preset Chips -->
+        <div class="cfg-quick-chips">
+            <span class="cfg-chip" onclick="setDurationPreset('{{ key|replace({'.': '_'}) }}', 60)">1m</span>
+            <span class="cfg-chip" onclick="setDurationPreset('{{ key|replace({'.': '_'}) }}', 900)">15m</span>
+            <span class="cfg-chip" onclick="setDurationPreset('{{ key|replace({'.': '_'}) }}', 3600)">1h</span>
+            <span class="cfg-chip" onclick="setDurationPreset('{{ key|replace({'.': '_'}) }}', 86400)">1d</span>
+            <span class="cfg-chip" onclick="setDurationPreset('{{ key|replace({'.': '_'}) }}', 604800)">7d</span>
+            <span class="cfg-chip" onclick="setDurationPreset('{{ key|replace({'.': '_'}) }}', 2592000)">30d</span>
+        </div>
+        <div class="cfg-val-hint">Total: <strong id="dur_hint_{{ key|replace({'.': '_'}) }}" style="color:var(--text)">{{ secondsValue }}s</strong></div>
     </div>
 </div>
 {% endmacro %}
@@ -448,18 +622,142 @@
 <script>
 let pendingChanges = {};
 
+// On Page Load: Initialize all duration widgets from their raw seconds values
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('input[data-type="duration"]').forEach(input => {
+        const fieldKey = input.id.replace('cfg_', '');
+        initDurationWidget(fieldKey, parseInt(input.value) || 0);
+    });
+});
+
+function initDurationWidget(fieldKey, totalSec) {
+    const valInput = document.getElementById('dur_val_' + fieldKey);
+    const unitSelect = document.getElementById('dur_unit_' + fieldKey);
+    const hint = document.getElementById('dur_hint_' + fieldKey);
+    if (!valInput || !unitSelect) return;
+
+    if (totalSec >= 86400 && totalSec % 86400 === 0) {
+        valInput.value = totalSec / 86400;
+        unitSelect.value = "86400";
+    } else if (totalSec >= 3600 && totalSec % 3600 === 0) {
+        valInput.value = totalSec / 3600;
+        unitSelect.value = "3600";
+    } else if (totalSec >= 60 && totalSec % 60 === 0) {
+        valInput.value = totalSec / 60;
+        unitSelect.value = "60";
+    } else {
+        valInput.value = totalSec;
+        unitSelect.value = "1";
+    }
+    if (hint) hint.textContent = `${totalSec.toLocaleString()}s`;
+}
+
+function onDurationFieldChange(fieldKey) {
+    const valInput = document.getElementById('dur_val_' + fieldKey);
+    const unitSelect = document.getElementById('dur_unit_' + fieldKey);
+    const rawInput = document.getElementById('cfg_' + fieldKey);
+    const hint = document.getElementById('dur_hint_' + fieldKey);
+    if (!valInput || !unitSelect || !rawInput) return;
+
+    const qty = Math.max(1, parseFloat(valInput.value) || 1);
+    const multiplier = parseInt(unitSelect.value) || 1;
+    const totalSeconds = Math.round(qty * multiplier);
+
+    rawInput.value = totalSeconds;
+    if (hint) hint.textContent = `${totalSeconds.toLocaleString()}s`;
+    onFieldChange(rawInput);
+}
+
+function setDurationPreset(fieldKey, seconds) {
+    const rawInput = document.getElementById('cfg_' + fieldKey);
+    if (!rawInput) return;
+    rawInput.value = seconds;
+    initDurationWidget(fieldKey, seconds);
+    onFieldChange(rawInput);
+}
+
+function syncSliderToInput(inputId, val) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.value = val;
+    onFieldChange(input);
+}
+
+function syncInputToSlider(sliderId, input) {
+    const slider = document.getElementById(sliderId);
+    if (slider) slider.value = input.value;
+    onFieldChange(input);
+}
+
+function syncPercentSlider(rawInputId, pctVal) {
+    const rawInput = document.getElementById(rawInputId);
+    const displayInput = document.getElementById('display_' + rawInputId.replace('cfg_', ''));
+    const hintDec = document.getElementById('hint_dec_' + rawInputId.replace('cfg_', ''));
+
+    const decimalVal = parseFloat((pctVal / 100).toFixed(4));
+    if (displayInput) displayInput.value = pctVal;
+    if (hintDec) hintDec.textContent = decimalVal;
+    if (rawInput) {
+        rawInput.value = decimalVal;
+        onFieldChange(rawInput);
+    }
+}
+
+function syncPercentInput(sliderId, rawInputId, displayInput) {
+    const slider = document.getElementById(sliderId);
+    const rawInput = document.getElementById(rawInputId);
+    const hintDec = document.getElementById('hint_dec_' + rawInputId.replace('cfg_', ''));
+
+    const pctVal = parseFloat(displayInput.value) || 0;
+    if (slider) slider.value = pctVal;
+    const decimalVal = parseFloat((pctVal / 100).toFixed(4));
+    if (hintDec) hintDec.textContent = decimalVal;
+    if (rawInput) {
+        rawInput.value = decimalVal;
+        onFieldChange(rawInput);
+    }
+}
+
+function switchSettingsTab(tabId, btn) {
+    // Update active tab button
+    document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    // Show selected pane, hide others
+    document.querySelectorAll('.settings-tab-pane').forEach(pane => {
+        pane.style.display = (pane.id === tabId) ? 'flex' : 'none';
+    });
+}
+
 function onFieldChange(input) {
     const key = input.dataset.key;
     const originalRaw = input.dataset.original;
     const currentRaw  = input.value;
 
-    // Numeric inputs (type=number) — compare as floats; password/text inputs as strings
-    const isNumeric = (input.type === 'number');
+    // Validate min/max if present
+    const min = input.dataset.min ? parseFloat(input.dataset.min) : null;
+    const max = input.dataset.max ? parseFloat(input.dataset.max) : null;
+    const isNumeric = (input.type === 'number' || input.dataset.type === 'duration');
+    
+    let isInvalid = false;
+    if (isNumeric) {
+        const numVal = parseFloat(currentRaw);
+        if (isNaN(numVal) || (min !== null && numVal < min) || (max !== null && numVal > max)) {
+            isInvalid = true;
+        }
+    }
+
+    if (isInvalid) {
+        input.classList.add('invalid');
+    } else {
+        input.classList.remove('invalid');
+    }
+
     const isDirty = isNumeric
         ? (parseFloat(currentRaw) !== parseFloat(originalRaw))
         : (currentRaw.trim() !== originalRaw.trim());
 
-    if (isDirty) {
+    if (isDirty && !isInvalid) {
         pendingChanges[key] = isNumeric ? parseFloat(currentRaw) : currentRaw;
         input.classList.add('modified');
         input.classList.remove('saved');
@@ -468,12 +766,23 @@ function onFieldChange(input) {
         input.classList.remove('modified');
     }
 
+    const hasInvalidFields = document.querySelectorAll('.cfg-input.invalid').length > 0;
     const hasChanges = Object.keys(pendingChanges).length > 0;
-    document.getElementById('btnSave').disabled = !hasChanges;
-    document.getElementById('saveStatus').textContent = hasChanges
-        ? `${Object.keys(pendingChanges).length} unsaved change(s).`
-        : 'No unsaved changes.';
-    document.getElementById('saveStatus').className = 'save-status';
+    
+    const saveBtn = document.getElementById('btnSave');
+    saveBtn.disabled = !hasChanges || hasInvalidFields;
+    
+    const statusEl = document.getElementById('saveStatus');
+    if (hasInvalidFields) {
+        statusEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;color:var(--red);margin-right:4px;">error</span> Please correct values out of allowed range.';
+        statusEl.className = 'save-status error';
+    } else if (hasChanges) {
+        statusEl.textContent = `${Object.keys(pendingChanges).length} unsaved change(s).`;
+        statusEl.className = 'save-status';
+    } else {
+        statusEl.textContent = 'No unsaved changes.';
+        statusEl.className = 'save-status';
+    }
 }
 
 function toggleKeyVisibility(fieldId, btn) {
@@ -583,18 +892,7 @@ async function saveSettings() {
 async function resetToDefaults() {
     if (!confirm('Reset ALL settings to factory defaults? This will overwrite any customisations.')) return;
 
-    // Reload defaults from GET /api/config with a flag could work,
-    // but simplest is to just reload the page after clearing
-    // For true reset: we need a dedicated endpoint or just reload to get fresh defaults
-    const inputs = document.querySelectorAll('.cfg-input');
-    inputs.forEach(input => {
-        input.value = input.dataset.original;
-        input.classList.remove('modified', 'saved');
-    });
-    pendingChanges = {};
-    document.getElementById('btnSave').disabled = true;
-    document.getElementById('saveStatus').textContent = 'Changes reverted to last saved values.';
-    document.getElementById('saveStatus').className = 'save-status';
+    location.reload();
 }
 
 async function purgeCache(type = 'all') {

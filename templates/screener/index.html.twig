@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Stock Screener & Options Flywheel — KHAPRE MoonShot Portfolio{% endblock %}
+{% block title %}Stock Screener & Options Flywheel — MoonShot Portfolio{% endblock %}
 
 {% block stylesheets %}
     <link rel="stylesheet" href="{{ asset('css/screener_index.css') }}">
@@ -210,17 +210,17 @@
     </div>
     <div class="rpb">
         <!-- FLYWHEEL OPTIONS MATRIX CARD -->
-        <div class="tb" style="background: linear-gradient(135deg, rgba(31,38,55,0.95), rgba(22,27,38,0.98)); border-color: rgba(88,166,255,0.4); margin-bottom: 18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                <h4 style="color:var(--blue); font-size: 12px; display:flex; align-items:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:16px;">settings</span> Capital Flywheel Options Recommendation</h4>
+        <div class="fw-rec-card">
+            <div class="fw-rec-header">
+                <h4 class="fw-rec-title"><span class="material-symbols-outlined" style="font-size:16px;">settings</span> Capital Flywheel Options Recommendation</h4>
                 <span id="rpSignalBadge" class="badge-sig badge-CALL">CALL</span>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; font-size: 12px;">
-                <div><span class="m">Strategy: </span><strong id="rpStrategy" style="color:#e6edf3;">-</strong></div>
+            <div class="fw-rec-grid">
+                <div><span class="m">Strategy: </span><strong id="rpStrategy">-</strong></div>
                 <div><span class="m">Target Strike: </span><strong id="rpStrike" class="g">-</strong></div>
                 <div><span class="m">Horizon (DTE): </span><strong id="rpHorizon" style="color:var(--purple);">-</strong></div>
                 <div><span class="m">Risk / Reward Ratio: </span><strong id="rpRiskReward" class="y">-</strong></div>
-                <div style="grid-column: 1 / -1;"><span class="m">Flywheel Role: </span><strong id="rpFlywheelRole" style="color:var(--blue);">-</strong></div>
+                <div class="fw-rec-full"><span class="m">Flywheel Role: </span><strong id="rpFlywheelRole" style="color:var(--blue);">-</strong></div>
             </div>
         </div>
 

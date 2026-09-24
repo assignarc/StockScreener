@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Tax Center & Realizations — KHAPRE MoonShot Portfolio{% endblock %}
+{% block title %}Tax Center & Realizations — MoonShot Portfolio{% endblock %}
 
 {% block stylesheets %}
     <link rel="stylesheet" href="{{ asset('css/tax_center.css') }}">
@@ -16,7 +16,7 @@
     } %}
     {% include 'screener/partials/_nav.html.twig' %}
 
-    <div class="port-container" style="width: 100%; max-width: 1560px; margin: 0 auto; padding: 20px 24px; box-sizing: border-box;">
+    <div class="port-container">
         
         <!-- EXPLANATORY HERO BANNER -->
         <div style="background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(168, 85, 247, 0.03)); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 16px;">
@@ -151,10 +151,24 @@
                     <select id="filterAccount" onchange="applyTaxFilters()" class="tax-filter-select">
                         <option value="ALL">All Accounts</option>
                         {% set uniqueAccounts = [] %}
+                        {% for acc in portfolio.accounts|default([]) %}
+                            {% set accName = acc.nickname|default(acc.accountNumber|default(acc.id|default(''))) %}
+                            {% if accName and accName not in uniqueAccounts %}
+                                {% set uniqueAccounts = uniqueAccounts|merge([accName]) %}
+                                {% set isRetire = (accName ~ ' ' ~ acc.type|default(''))|upper matches '/(IRA|ROTH|SEP|PCRA|401K)/' %}
+                                <option value="{{ accName }}" data-number="{{ acc.accountNumber|default('') }}" data-id="{{ acc.id|default('') }}">{{ accName }} ({{ isRetire ? 'Retirement' : 'Taxable' }})</option>
+                            {% endif %}
+                        {% endfor %}
                         {% for r in realizations %}
-                            {% if r.account not in uniqueAccounts %}
+                            {% if r.account and r.account not in uniqueAccounts %}
                                 {% set uniqueAccounts = uniqueAccounts|merge([r.account]) %}
                                 <option value="{{ r.account }}">{{ r.account }} ({{ r.taxStatus == 'RETIREMENT_IRA' ? 'Retirement' : 'Taxable' }})</option>
+                            {% endif %}
+                        {% endfor %}
+                        {% for inc in incomeRecords|default([]) %}
+                            {% if inc.account and inc.account not in uniqueAccounts %}
+                                {% set uniqueAccounts = uniqueAccounts|merge([inc.account]) %}
+                                <option value="{{ inc.account }}">{{ inc.account }} ({{ inc.taxStatus == 'RETIREMENT_IRA' ? 'Retirement' : 'Taxable' }})</option>
                             {% endif %}
                         {% endfor %}
                     </select>
@@ -388,6 +402,7 @@
         </div>
 
     </div>
+    {% include 'screener/partials/_footer.html.twig' %}
 </div>
 
 <script>
@@ -407,6 +422,11 @@ let currentSortCol = 'sellDate';
 let currentSortDir = 'desc';
 let currentTxSortCol = 'date';
 let currentTxSortDir = 'desc';
+
+function formatCurrency(v) {
+    const num = Number(v) || 0;
+    return (num < 0 ? '-' : '') + '$' + Math.abs(num).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
 
 function sortTableBy(col) {
     if (currentSortCol === col) {
@@ -594,7 +614,38 @@ function applyTaxFilters() {
     const d90 = new Date(); d90.setDate(now.getDate() - 90);
 
     const expandCollapseActions = document.getElementById('expandCollapseAllActions');
-    expandCollapseActions.style.display = (groupBy === 'NONE') ? 'none' : 'flex';
+    if (expandCollapseActions) {
+        expandCollapseActions.style.display = (groupBy === 'NONE') ? 'none' : 'flex';
+    }
+
+    // Helper to check account matching accurately across nickname, raw number, masked number, or ID
+    function matchesAccount(recordAcc, recordAccNum, targetFilter) {
+        if (!targetFilter || targetFilter === 'ALL') return true;
+        const target = targetFilter.trim().toUpperCase();
+        const rAcc = (recordAcc || '').trim().toUpperCase();
+        const rNum = (recordAccNum || '').trim().toUpperCase();
+
+        // Direct exact match on account nickname or number
+        if (rAcc === target || rNum === target) return true;
+
+        // Check if target is a masked number or contains account digits
+        const targetDigits = target.replace(/\D/g, '');
+        const rNumDigits = rNum.replace(/\D/g, '');
+        const rAccDigits = rAcc.replace(/\D/g, '');
+
+        if (targetDigits.length >= 4) {
+            const targetLast4 = targetDigits.slice(-4);
+            if (rNumDigits.length >= 4 && rNumDigits.slice(-4) === targetLast4) return true;
+            if (rAccDigits.length >= 4 && rAccDigits.slice(-4) === targetLast4) return true;
+        }
+
+        // Exact match with parentheses stripped, e.g. "V-Brokerage (Taxable)" -> "V-Brokerage"
+        const cleanTarget = target.split('(')[0].trim();
+        const cleanAcc = rAcc.split('(')[0].trim();
+        if (cleanTarget === cleanAcc) return true;
+
+        return false;
+    }
 
     // 1. FILTER REALIZATIONS
     const filteredRealizations = realizationsRaw.filter(r => {
@@ -611,7 +662,7 @@ function applyTaxFilters() {
         if (categoryFilter === 'TAXABLE') matchesCategory = !isRetirement;
         else if (categoryFilter === 'RETIREMENT') matchesCategory = isRetirement;
 
-        const matchesAcc = (accountFilter === 'ALL' || r.account === accountFilter);
+        const matchesAcc = matchesAccount(r.account, r.accountNumber || r.account_number, accountFilter);
         const matchesType = (typeFilter === 'ALL' || r.assetType === typeFilter);
         const matchesSearch = (searchVal === '' || r.symbol.toUpperCase().includes(searchVal) || (r.rawSymbol || '').toUpperCase().includes(searchVal));
 
@@ -633,7 +684,7 @@ function applyTaxFilters() {
         if (categoryFilter === 'TAXABLE') matchesCategory = !isRetirement;
         else if (categoryFilter === 'RETIREMENT') matchesCategory = isRetirement;
 
-        const matchesAcc = (accountFilter === 'ALL' || inc.account === accountFilter);
+        const matchesAcc = matchesAccount(inc.account, inc.accountNumber || inc.account_number, accountFilter);
         const matchesSearch = (searchVal === '' || inc.symbol.toUpperCase().includes(searchVal));
 
         return matchesTime && matchesCategory && matchesAcc && matchesSearch;
@@ -917,7 +968,7 @@ function applyTaxFilters() {
         else if (currentFilterTimeframe === 'last_year') matchesTime = (rowDate.getFullYear() === now.getFullYear() - 1);
 
         const acc = tx.account_nickname || tx.account_number || '';
-        const matchesAcc = (accountFilter === 'ALL' || acc === accountFilter);
+        const matchesAcc = matchesAccount(acc, tx.account_number, accountFilter);
         const matchesType = (typeFilter === 'ALL' || (typeFilter === 'OPTION' && (tx.symbol || '').includes(' ')) || (typeFilter === 'EQUITY' && !(tx.symbol || '').includes(' ')));
         const matchesSearch = (searchVal === '' || (tx.symbol || '').toUpperCase().includes(searchVal) || (tx.description || '').toUpperCase().includes(searchVal));
 
@@ -1156,13 +1207,61 @@ function createTransactionRow(tx) {
     return row;
 }
 
-function formatCurrency(v) {
-    const num = Number(v) || 0;
-    return (num < 0 ? '-' : '') + '$' + Math.abs(num).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-}
-
-// Initial filter execution on DOM load
+// Initial filter execution on DOM load with deep linking support
 document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const accountParam = urlParams.get('account');
+    const tabParam = urlParams.get('tab');
+    const searchParam = urlParams.get('search') || urlParams.get('symbol') || urlParams.get('q');
+    const timeframeParam = urlParams.get('timeframe') || urlParams.get('period');
+
+    if (tabParam) {
+        switchTaxView(tabParam);
+    }
+
+    if (accountParam) {
+        const accSelect = document.getElementById('filterAccount');
+        const target = accountParam.trim().toUpperCase();
+        let matched = false;
+        if (accSelect) {
+            // Find option matching account nickname, value, data-number, data-id, or text
+            for (let opt of accSelect.options) {
+                const optVal = opt.value.toUpperCase();
+                const optText = opt.text.toUpperCase();
+                const optNum = (opt.getAttribute('data-number') || '').toUpperCase();
+                const optId = (opt.getAttribute('data-id') || '').toUpperCase();
+
+                if (optVal === target || optNum === target || optId === target || optText.includes(target) || target.includes(optVal)) {
+                    accSelect.value = opt.value;
+                    matched = true;
+                    break;
+                }
+            }
+
+            // If not found directly in options, add it dynamically and select it
+            if (!matched) {
+                const newOpt = document.createElement('option');
+                newOpt.value = accountParam;
+                newOpt.text = `${accountParam}`;
+                newOpt.selected = true;
+                accSelect.appendChild(newOpt);
+                accSelect.value = accountParam;
+            }
+        }
+    }
+
+    if (searchParam) {
+        const sInput = document.getElementById('filterSearch');
+        if (sInput) sInput.value = searchParam;
+    }
+
+    if (timeframeParam) {
+        const fBtn = document.querySelector(`.tax-seg-track .fbtn[onclick*="${timeframeParam}"]`);
+        if (fBtn) {
+            setFilterTimeframe(timeframeParam, fBtn);
+        }
+    }
+
     applyTaxFilters();
 });
 </script>

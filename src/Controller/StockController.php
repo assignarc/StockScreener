@@ -6,6 +6,8 @@ use App\Entity\Stock;
 use App\Repository\StockRepository;
 use App\Repository\WatchlistRepository;
 use App\Service\AppConfigService;
+use App\Service\BrokerManagerService;
+use App\Service\DynamicSignalService;
 use App\Service\FinnhubService;
 use App\Service\FlywheelService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,18 +28,22 @@ class StockController extends AbstractController
     /**
      * Initializes the stock controller.
      *
-     * @param StockRepository        $stockRepository     Stock repository.
-     * @param WatchlistRepository    $watchlistRepository Watchlist repository.
-     * @param FinnhubService         $finnhubService      Finnhub market data service.
-     * @param FlywheelService        $flywheelService     Capital flywheel signal service.
-     * @param AppConfigService       $appConfig           Application configuration service.
-     * @param EntityManagerInterface $entityManager       Doctrine entity manager.
+     * @param StockRepository        $stockRepository      Stock repository.
+     * @param WatchlistRepository    $watchlistRepository  Watchlist repository.
+     * @param FinnhubService         $finnhubService       Finnhub market data service.
+     * @param FlywheelService        $flywheelService      Capital flywheel signal service.
+     * @param DynamicSignalService   $dynamicSignalService Dynamic API-driven signal synthesizer.
+     * @param BrokerManagerService   $brokerManager        Broker portfolio manager.
+     * @param AppConfigService       $appConfig            Application configuration service.
+     * @param EntityManagerInterface $entityManager        Doctrine entity manager.
      */
     public function __construct(
         private StockRepository $stockRepository,
         private WatchlistRepository $watchlistRepository,
         private FinnhubService $finnhubService,
         private FlywheelService $flywheelService,
+        private DynamicSignalService $dynamicSignalService,
+        private BrokerManagerService $brokerManager,
         private AppConfigService $appConfig,
         private EntityManagerInterface $entityManager,
     ) {}
@@ -58,11 +64,13 @@ class StockController extends AbstractController
 
         $stocks        = $this->stockRepository->findByFilters($sector, $risk, $query, $assetType);
         $watchlistItems = array_map(fn($w) => $w->getSymbol(), $this->watchlistRepository->findAll());
+        $portfolioData = $this->brokerManager->getAggregatedPortfolio();
 
-        $data = array_map(function (Stock $stock) use ($watchlistItems) {
+        $data = array_map(function (Stock $stock) use ($watchlistItems, $portfolioData) {
             $arr = $stock->toArray();
-            $arr['isWatchlisted'] = in_array($stock->getSymbol(), $watchlistItems, true);
-            $arr['flywheel']      = $this->flywheelService->evaluateSignal($stock);
+            $arr['isWatchlisted']   = in_array($stock->getSymbol(), $watchlistItems, true);
+            $arr['flywheel']        = $this->flywheelService->evaluateSignal($stock);
+            $arr['dynamicSignal']   = $this->dynamicSignalService->generateDynamicSignal($stock, $portfolioData);
             return $arr;
         }, $stocks);
 

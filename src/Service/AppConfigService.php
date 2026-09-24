@@ -21,6 +21,8 @@ class AppConfigService
      * Default system configurations and options thresholds.
      */
     public const DEFAULTS = [
+        'app.name'                               => 'MoonShot Portfolio',
+        'app.version'                            => '3.0',
         'app.setup_completed'                    => false,
         'finnhub.api_key'                        => null,
         'gemini.api_key'                         => null,
@@ -75,10 +77,12 @@ class AppConfigService
         // Cache TTL configurations (seconds)
         'cache.ttl.finnhub.quote'                => 900,     // 15 minutes
         'cache.ttl.finnhub.earnings'             => 604800,  // 7 days
-        'cache.ttl.finnhub.dividends'            => 604800,  // 7 days
+        'cache.ttl.finnhub.dividends'            => 2592000, // 30 days
         'cache.ttl.finnhub.search'               => 1209600, // 14 days
         'cache.ttl.finnhub.profile'              => 2592000, // 30 days
         'cache.ttl.finnhub.splits'               => 2592000, // 30 days
+        'cache.ttl.finnhub.price_target'         => 604800,  // 7 days
+        'cache.ttl.finnhub.recommendations'      => 604800,  // 7 days
         'cache.ttl.broker.portfolio'             => 60,      // 1 minute
         'cache.ttl.broker.history'               => 604800,  // 7 days
         'cache.ttl.broker.chain'                 => 120,     // 2 minutes
@@ -317,5 +321,15 @@ class AppConfigService
     public function markSetupCompleted(bool $completed = true): void
     {
         $this->set('app.setup_completed', $completed);
+    }
+
+    /**
+     * Retrieve the configured application branding name.
+     *
+     * @return string Application name string.
+     */
+    public function getAppName(): string
+    {
+        return (string) $this->get('app.name', 'MoonShot Portfolio');
     }
 }

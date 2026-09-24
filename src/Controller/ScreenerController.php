@@ -134,9 +134,19 @@ class ScreenerController extends AbstractController
         $stocks = $this->stockRepository->findByFilters();
         $portfolioData = $this->brokerManager->getAggregatedPortfolio();
 
+        // Calculate current tax year liability for executive summary tile
+        $history = $this->brokerManager->getAggregatedHistory(3650);
+        $realizations = $this->taxEngine->calculateTaxRealizations($history, $portfolioData);
+        $incomeRecords = $this->taxEngine->calculateIncomeRealizations($history, $portfolioData);
+        $currentYear = (int) date('Y');
+        $carryforwards = $this->taxEngine->calculateHistoricalLossCarryforwards($realizations, $currentYear);
+        $taxLiability = $this->taxEngine->calculateTaxLiability($realizations, $incomeRecords, $carryforwards, null, (string)$currentYear);
+
         return $this->render('screener/dashboard.html.twig', [
             'totalStocks' => count($stocks),
             'portfolio' => $portfolioData,
+            'taxLiability' => $taxLiability,
+            'currentTaxYear' => $currentYear,
             'activePage' => 'dashboard',
         ]);
     }

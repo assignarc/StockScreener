@@ -1,7 +1,139 @@
 /* ==========================================================================
    SETUP WIZARD STYLESHEET
-   (Inherits inputs, key fields, and pill buttons from screener.css)
    ========================================================================== */
+
+.setup-wrap {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+}
+
+.setup-hero {
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+}
+
+.setup-hero-inner {
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 24px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.setup-hero h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 0 8px 0;
+    color: var(--text);
+}
+
+.setup-hero p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 auto;
+    max-width: 720px;
+    line-height: 1.6;
+}
+
+.setup-container {
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.setup-stepper-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 24px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    box-shadow: var(--card-shadow);
+}
+
+.wiz-step-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0;
+    position: relative;
+    z-index: 2;
+    transition: all 0.2s;
+}
+
+.wiz-step-btn .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg3);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--muted);
+    transition: all 0.2s;
+}
+
+.wiz-step-btn .step-lbl {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    transition: all 0.2s;
+}
+
+.wiz-step-btn.active .step-num {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(2, 132, 199, 0.4);
+}
+
+.wiz-step-btn.active .step-lbl {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.wiz-step-btn.completed .step-num {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+}
+
+.step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--border);
+    margin: 0 12px 18px;
+}
+
+.wiz-panel {
+    display: none;
+}
+
+.wiz-panel.active {
+    display: block;
+    animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 .broker-card {
     background: var(--bg3);
@@ -11,8 +143,15 @@
     cursor: pointer;
     transition: all 0.2s;
 }
+
+.broker-card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg2);
+}
+
 .broker-card.active {
     border-color: var(--blue);
-    background: rgba(2,132,199,0.08);
-    box-shadow: 0 0 12px rgba(2,132,199,0.25);
+    background: rgba(2, 132, 199, 0.08);
+    box-shadow: 0 0 12px rgba(2, 132, 199, 0.25);
 }
+

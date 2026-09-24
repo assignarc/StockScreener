@@ -38,19 +38,19 @@ The tax calculation and performance tracking subsystem is built across three pri
 
 ### Component Roles
 
-1. **[TaxEngine](file:///Users/vishalkhapre/Documents/Code/StockScreener/src/Service/TaxEngine.php):**
+1. **[TaxEngine](../src/Service/TaxEngine.php):**
    - Ingests raw transaction feeds and portfolio holdings.
    - Maintains account-specific and global FIFO buy queues.
    - Computes realized gains/losses on equity sales and option transactions.
    - Classifies holding terms (Short-Term: `< 365 days`, Long-Term: `≥ 365 days`).
    - Applies tax rate rules based on account tax status.
 
-2. **[PerformanceHistoryService](file:///Users/vishalkhapre/Documents/Code/StockScreener/src/Service/PerformanceHistoryService.php):**
+2. **[PerformanceHistoryService](../src/Service/PerformanceHistoryService.php):**
    - Captures daily portfolio snapshots (`total_value`, `cash_balance`, `equity_value`, `option_value`, `unrealized_pl`, `est_tax_owed`, `benchmark_spy_price`).
    - Synchronizes trade and dividend events into `portfolio_events`.
    - Generates pre-tax and after-tax growth curves normalized against starting equity and the SPY benchmark.
 
-3. **[FinnhubCleanupService](file:///Users/vishalkhapre/Documents/Code/StockScreener/src/Service/FinnhubCleanupService.php) & [SchwabCsvImporterService](file:///Users/vishalkhapre/Documents/Code/StockScreener/src/Service/SchwabCsvImporterService.php):**
+3. **[FinnhubCleanupService](../src/Service/FinnhubCleanupService.php) & [SchwabCsvImporterService](../src/Service/SchwabCsvImporterService.php):**
    - Enriches transactions, normalizes CUSIPs, canonicalizes OCC option symbols, and imports historical transaction CSVs.
 
 ---
@@ -141,7 +141,7 @@ To ensure financial accuracy when ingesting real-world broker exports, the tax e
 
 ## 5. Performance Growth Curves and Benchmark Indexing
 
-The [PerformanceHistoryService](file:///Users/vishalkhapre/Documents/Code/StockScreener/src/Service/PerformanceHistoryService.php) generates time-series metrics consumed by frontend charting components:
+The [PerformanceHistoryService](../src/Service/PerformanceHistoryService.php) generates time-series metrics consumed by frontend charting components:
 
 ```
                Portfolio Growth vs Benchmark (SPY)

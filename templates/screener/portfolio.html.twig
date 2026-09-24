@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Brokerage Portfolio & Accounts — KHAPRE MoonShot Portfolio{% endblock %}
+{% block title %}Brokerage Portfolio & Accounts — MoonShot Portfolio{% endblock %}
 
 {% block body %}
 <div id="app">
@@ -13,43 +13,6 @@
 
     <!-- PAGE 2 CONTENT: PORTFOLIO DETAILS -->
     <div class="port-container">
-        <!-- DATA SOURCE PROVENANCE WIDGET -->
-        <div class="data-source-widget" style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:10px 16px; margin-bottom:18px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; font-size:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <span style="font-weight:700; color:var(--text); display:flex; align-items:center; gap:6px; font-family:'Outfit',sans-serif;">
-                    <span class="material-symbols-outlined" style="font-size:16px;">sensors</span> Data Origin & Compliance:
-                </span>
-                <span class="hbadge" style="background:rgba(56,189,248,0.15); color:var(--blue); border-color:rgba(56,189,248,0.3); font-weight:700;">
-                    <span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">account_balance</span> {{ portfolio.dataSource.provider|default('Connected Brokerage API') }}
-                </span>
-                <span style="font-family:'SFMono-Regular',Consolas,monospace; font-size:11px; color:var(--purple); background:var(--bg3); padding:3px 8px; border-radius:6px; border:1px solid rgba(188,140,255,0.2);">
-                    {{ portfolio.dataSource.endpoint|default('/trader/v1/accounts?fields=positions') }}
-                </span>
-            </div>
-
-            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; font-size:11px;">
-                {% if portfolio.dataSource.mode|default('LIVE_API') == 'LIVE_API' %}
-                    <span style="color:var(--green); font-weight:700; display:flex; align-items:center; gap:5px;">
-                        <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 6px rgba(34,197,94,0.6);"></span>
-                        LIVE API (OAuth 2.0)
-                    </span>
-                {% else %}
-                    <span style="color:var(--yellow); font-weight:700; display:flex; align-items:center; gap:5px;">
-                        <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--yellow);"></span>
-                        SIMULATED / DEMO MODE
-                    </span>
-                {% endif %}
-
-                <span style="color:var(--muted); border-left:1px solid var(--border); padding-left:10px;">
-                    Last Synced: <strong style="color:var(--text);">{{ portfolio.dataSource.timestamp|default("now"|date("H:i T")) }}</strong>
-                </span>
-
-                <span style="color:var(--muted); border-left:1px solid var(--border); padding-left:10px;" title="Strict PII Sanitization Enforced">
-                    <span class="material-symbols-outlined" style="font-size:14px; margin-right:2px; color:var(--green);">lock</span> <span style="color:var(--green); font-weight:600;">Non-PII Encrypted</span>
-                </span>
-            </div>
-        </div>
-
         <!-- EXECUTIVE ADVISOR INTELLIGENCE NUGGETS BANNER -->
         <div class="advisor-nuggets-container" id="advisorNuggetsSection">
             <div class="advisor-nuggets-header">
@@ -404,7 +367,8 @@
                 {% if portfolio.accounts is defined and portfolio.accounts|length > 0 %}
                     {% for acc in portfolio.accounts %}
                         {% set cardId = 'accCard_' ~ loop.index %}
-                        <div class="acc-layout-card" style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between;">
+                        {% set accIdStr = acc.id|default(acc.accountNumber|default(loop.index)) %}
+                        <div class="acc-layout-card" id="account_card_{{ accIdStr }}" data-account-id="{{ acc.id|default('') }}" data-account-number="{{ acc.accountNumber|default('') }}" data-account-name="{{ acc.nickname|default('') }}" style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between;">
                             <div>
                                 <!-- CARD HEADER SUMMARY BAR -->
                                 <div onclick="toggleAccCard('{{ cardId }}')" style="display:flex; justify-content:space-between; align-items:flex-start; padding:16px 18px; cursor:pointer; background:var(--bg2); user-select:none; border-bottom:1px solid var(--border);">
@@ -441,7 +405,7 @@
                                     <div class="cache-stat-label">Top Holdings (Sorted by Value)</div>
                                     <div class="positions-list">
                                         {% for p in acc.positions|default([]) %}
-                                            <div class="position-item">
+                                            <div class="position-item" id="pos_{{ accIdStr }}_{{ p.symbol }}" data-symbol="{{ p.symbol }}">
                                                 <div>
                                                     <strong style="color:var(--text);">{{ p.symbol }}</strong>
                                                     <span style="font-size:10px; color:var(--muted);">({{ p.quantity }})</span>
@@ -582,7 +546,7 @@
                             {% for e in portfolio.aggregatedEquities %}
                                 {% set subId = 'opt-sub-' ~ loop.index %}
                                 <!-- MAIN LEVEL 1: AGGREGATED STOCK TICKER ROW -->
-                                <tr onclick="toggleOptionSubItem('{{ subId }}', this)" style="cursor:pointer; background: var(--bg2);">
+                                <tr id="sec_row_{{ e.symbol }}" data-symbol="{{ e.symbol }}" onclick="toggleOptionSubItem('{{ subId }}', this)" style="cursor:pointer; background: var(--bg2);">
                                     <td>
                                         <div style="display:flex; align-items:center; gap:8px;">
                                             <span class="material-symbols-outlined sub-toggle-icon" style="color:var(--blue); font-size:16px; vertical-align:middle; transition:transform 0.2s;">expand_more</span>
@@ -1614,6 +1578,56 @@ function renderCalendarForSelectedMonth() {
         const dayEvents = eventsByDate[dateKey] || [];
         const dayProj = projByDate[dateKey];
         const isToday = (day === now.getDate() && month === now.getMonth() && year === now.getFullYear());
+        const visibleDayEvents = dayEvents.slice(0, 5);
+        const extraDayEvents = dayEvents.slice(5);
+        const hasMoreEvents = extraDayEvents.length > 0;
+        const dayCellId = `cal_day_events_${year}_${mStr}_${dayStr}`;
+
+        const renderEventBubble = (e) => {
+            const encData = encodeURIComponent(JSON.stringify(e));
+            const isHist  = e.category === 'HISTORY';
+            const isEarn  = e.category && e.category.startsWith('EARNINGS');
+            const isDiv   = e.category && e.category.startsWith('DIVIDEND');
+            const isPast  = !!e.isPast;
+
+            let bg, fg, border, label;
+            if (isHist) {
+                bg     = 'rgba(56,189,248,0.15)';
+                fg     = 'var(--blue)';
+                border = 'rgba(56,189,248,0.4)';
+                label  = `${e.isCredit !== false ? '+' : ''}$${Math.abs(e.amount || 0)} ${e.symbol || ''}`;
+            } else if (isDiv) {
+                bg     = isPast ? 'rgba(34,197,94,0.12)' : 'rgba(34,197,94,0.22)';
+                fg     = 'var(--green)';
+                border = isPast ? 'rgba(34,197,94,0.25)' : 'rgba(34,197,94,0.5)';
+                label  = `${e.symbol} Div +$${e.totalPayout || ''}`;
+            } else if (isEarn) {
+                bg     = isPast ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.22)';
+                fg     = 'var(--purple)';
+                border = isPast ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.5)';
+                label  = isPast ? `${e.symbol} Q Report` : `${e.symbol} Earnings`;
+            } else {
+                bg     = isPast ? 'rgba(210,153,34,0.12)' : 'rgba(210,153,34,0.22)';
+                fg     = 'var(--yellow)';
+                border = isPast ? 'rgba(210,153,34,0.25)' : 'rgba(210,153,34,0.5)';
+                label  = `${e.symbol} $${e.strike}`;
+            }
+            
+            const catStr = isHist ? 'HISTORY' : (isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION'));
+            return `
+                <div class="tip cal-event-bubble" data-category="${catStr}" data-is-past="${isPast ? '1' : '0'}" style="width:100%; border-bottom:none;">
+                    <div onclick="openCalEventCard('${encData}')" style="font-size:10px; font-weight:700; padding:3px 6px; border-radius:4px; background:${bg}; color:${fg}; border:1px solid ${border}; cursor:pointer; display:flex; justify-content:space-between; align-items:center; opacity:${isPast ? '0.85' : '1'};">
+                        <span>${label}</span>
+                    </div>
+                    <div class="tip-box">
+                        <strong>${e.title}</strong><br/>
+                        Date: ${e.date}<br/>
+                        ${e.details || ''}
+                        ${e.accountBreakdown && e.accountBreakdown.length > 0 ? `<br/><span style="color:var(--blue); font-weight:600;">Account: ${e.accountBreakdown.map(a => a.nickname).join(', ')}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        };
 
         html += `
             <div style="background:var(--bg2); border:1px solid ${isToday ? 'var(--blue)' : (dayProj ? 'rgba(63,185,80,0.4)' : 'var(--border)')}; border-radius:8px; padding:8px; min-height:110px; display:flex; flex-direction:column; justify-content:space-between; box-shadow:${isToday ? '0 0 10px rgba(2,132,199,0.3)' : 'none'};">
@@ -1623,51 +1637,16 @@ function renderCalendarForSelectedMonth() {
                         ${isToday ? '<span class="hbadge" style="font-size:8px; background:var(--blue); color:#fff;">TODAY</span>' : ''}
                     </div>
                     <div style="display:flex; flex-direction:column; gap:4px;">
-                        ${dayEvents.map(e => {
-                            const encData = encodeURIComponent(JSON.stringify(e));
-                            const isHist  = e.category === 'HISTORY';
-                            const isEarn  = e.category && e.category.startsWith('EARNINGS');
-                            const isDiv   = e.category && e.category.startsWith('DIVIDEND');
-                            const isPast  = !!e.isPast;
-
-                            let bg, fg, border, label;
-                            if (isHist) {
-                                bg     = 'rgba(56,189,248,0.15)';
-                                fg     = 'var(--blue)';
-                                border = 'rgba(56,189,248,0.4)';
-                                label  = `${e.isCredit !== false ? '+' : ''}$${Math.abs(e.amount || 0)} ${e.symbol || ''}`;
-                            } else if (isDiv) {
-                                bg     = isPast ? 'rgba(34,197,94,0.12)' : 'rgba(34,197,94,0.22)';
-                                fg     = 'var(--green)';
-                                border = isPast ? 'rgba(34,197,94,0.25)' : 'rgba(34,197,94,0.5)';
-                                label  = isPast ? `${e.symbol} Div +$${e.totalPayout || ''}` : `${e.symbol} Div +$${e.totalPayout || ''}`;
-                            } else if (isEarn) {
-                                bg     = isPast ? 'rgba(168,85,247,0.12)' : 'rgba(168,85,247,0.22)';
-                                fg     = 'var(--purple)';
-                                border = isPast ? 'rgba(168,85,247,0.25)' : 'rgba(168,85,247,0.5)';
-                                label  = isPast ? `${e.symbol} Q Report` : `${e.symbol} Earnings`;
-                            } else {
-                                bg     = isPast ? 'rgba(210,153,34,0.12)' : 'rgba(210,153,34,0.22)';
-                                fg     = 'var(--yellow)';
-                                border = isPast ? 'rgba(210,153,34,0.25)' : 'rgba(210,153,34,0.5)';
-                                label  = isPast ? `${e.symbol} $${e.strike}` : `${e.symbol} $${e.strike}`;
-                            }
-                            
-                            const catStr = isHist ? 'HISTORY' : (isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION'));
-                            return `
-                                <div class="tip cal-event-bubble" data-category="${catStr}" data-is-past="${isPast ? '1' : '0'}" style="width:100%; border-bottom:none;">
-                                    <div onclick="openCalEventCard('${encData}')" style="font-size:10px; font-weight:700; padding:3px 6px; border-radius:4px; background:${bg}; color:${fg}; border:1px solid ${border}; cursor:pointer; display:flex; justify-content:space-between; align-items:center; opacity:${isPast ? '0.85' : '1'};">
-                                        <span>${label}</span>
-                                    </div>
-                                    <div class="tip-box">
-                                        <strong>${e.title}</strong><br/>
-                                        Date: ${e.date}<br/>
-                                        ${e.details || ''}
-                                        ${e.accountBreakdown && e.accountBreakdown.length > 0 ? `<br/><span style="color:var(--blue); font-weight:600;">Account: ${e.accountBreakdown.map(a => a.nickname).join(', ')}</span>` : ''}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
+                        ${visibleDayEvents.map(renderEventBubble).join('')}
+                        ${hasMoreEvents ? `
+                            <div id="${dayCellId}_extra" style="display:none; flex-direction:column; gap:4px;">
+                                ${extraDayEvents.map(renderEventBubble).join('')}
+                            </div>
+                            <button type="button" id="${dayCellId}_btn" onclick="toggleDayTileEvents('${dayCellId}', ${extraDayEvents.length})" class="cal-day-more-btn" style="background:var(--bg3); border:1px solid var(--border); color:var(--blue); font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:2px; margin-top:2px; width:100%; transition:all 0.15s ease;">
+                                <span class="material-symbols-outlined" style="font-size:12px;">expand_more</span>
+                                <span id="${dayCellId}_btn_txt">View ${extraDayEvents.length} more</span>
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
 
@@ -1889,6 +1868,25 @@ function renderCalendarForSelectedMonth() {
             `;
             list.appendChild(expandWrap);
         }
+    }
+}
+
+function toggleDayTileEvents(dayCellId, extraCount) {
+    const extraContainer = document.getElementById(`${dayCellId}_extra`);
+    const btn = document.getElementById(`${dayCellId}_btn`);
+    const txt = document.getElementById(`${dayCellId}_btn_txt`);
+    const icon = btn ? btn.querySelector('.material-symbols-outlined') : null;
+
+    if (!extraContainer || !btn) return;
+
+    if (extraContainer.style.display === 'none' || !extraContainer.style.display) {
+        extraContainer.style.display = 'flex';
+        if (txt) txt.textContent = 'Show less';
+        if (icon) icon.textContent = 'expand_less';
+    } else {
+        extraContainer.style.display = 'none';
+        if (txt) txt.textContent = `View ${extraCount} more`;
+        if (icon) icon.textContent = 'expand_more';
     }
 }
 
@@ -2274,33 +2272,137 @@ function setAccountViewLayout(mode) {
 
 
 
-document.addEventListener('DOMContentLoaded', () => {
+function handlePortfolioDeepLinks() {
+    const urlParams = new URLSearchParams(window.location.search);
     const hash = window.location.hash;
-    let defaultTab = 'holdings';
-    if (hash === '#subViewCalendar') {
-        defaultTab = 'calendar';
-    } else if (hash === '#subViewHoldings') {
-        defaultTab = 'holdings';
-    } else if (hash === '#subViewHistory') {
-        defaultTab = 'history';
-    } else if (hash === '#subViewOrders') {
-        defaultTab = 'orders';
+
+    // 1. Determine Tab/SubView
+    let targetTab = urlParams.get('tab') || 'holdings';
+    if (hash === '#subViewCalendar' || hash === '#calendar') {
+        targetTab = 'calendar';
+    } else if (hash === '#subViewHoldings' || hash === '#holdings') {
+        targetTab = 'holdings';
+    } else if (hash === '#subViewHistory' || hash === '#history') {
+        targetTab = 'history';
+    } else if (hash === '#subViewOrders' || hash === '#orders') {
+        targetTab = 'orders';
     }
-    switchPortSubView(defaultTab);
-    setAccountViewLayout('grid');
+
+    switchPortSubView(targetTab);
+
+    // 2. View Mode (grid, list, security)
+    const viewMode = urlParams.get('view') || 'grid';
+    if (viewMode === 'security') {
+        setAccountViewLayout('security');
+    } else if (viewMode === 'list') {
+        setAccountViewLayout('list');
+    } else {
+        setAccountViewLayout('grid');
+    }
+
+    // 3. Handle Account Deep Linking
+    const accountParam = urlParams.get('account') || (hash.startsWith('#account_') ? hash.replace('#account_', '') : null);
+    const symbolParam = urlParams.get('symbol') || urlParams.get('q') || (hash.startsWith('#symbol_') ? hash.replace('#symbol_', '') : null);
+    const typeParam = urlParams.get('type');
+    const searchParam = urlParams.get('search');
+
+    if (targetTab === 'history') {
+        // Deep-link into history filters
+        if (accountParam) {
+            const accSelect = document.getElementById('histAccountSelect');
+            if (accSelect) {
+                // Check if options match account number or nickname
+                currentHistAccountFilter = accountParam;
+                accSelect.value = accountParam;
+            }
+        }
+        if (typeParam) {
+            setHistTypeFilter(typeParam.toUpperCase());
+        }
+        if (symbolParam || searchParam) {
+            const searchVal = symbolParam || searchParam;
+            const searchInput = document.getElementById('histSearchInput');
+            if (searchInput) {
+                searchInput.value = searchVal;
+                currentHistSearchTerm = searchVal;
+            }
+        }
+        loadPortfolioHistory(currentHistDays || 'THIS_YEAR', true);
+    } else if (targetTab === 'holdings') {
+        // If symbol specified and layout is security, focus the security row
+        if (symbolParam && viewMode === 'security') {
+            setTimeout(() => {
+                const secRow = document.getElementById(`sec_row_${symbolParam.toUpperCase()}`) || document.querySelector(`tr[data-symbol="${symbolParam.toUpperCase()}"]`);
+                if (secRow) {
+                    secRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    secRow.classList.add('target-highlight');
+                    setTimeout(() => secRow.classList.remove('target-highlight'), 6000);
+                }
+            }, 300);
+        } else if (accountParam) {
+            // Find account card
+            setTimeout(() => {
+                const targetCard = document.getElementById(`account_card_${accountParam}`) || 
+                                   document.querySelector(`[data-account-id="${accountParam}"]`) || 
+                                   document.querySelector(`[data-account-number="${accountParam}"]`) ||
+                                   document.querySelector(`[data-account-name*="${accountParam}" i]`);
+                if (targetCard) {
+                    // Open the card body if closed
+                    const cardBody = targetCard.querySelector('[id$="_body"]');
+                    const chevron = targetCard.querySelector('[id$="_chevron"]');
+                    if (cardBody && (cardBody.style.display === 'none' || !cardBody.style.display)) {
+                        cardBody.style.display = 'block';
+                        if (chevron) chevron.style.transform = 'rotate(180deg)';
+                    }
+
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetCard.classList.add('target-highlight');
+                    setTimeout(() => targetCard.classList.remove('target-highlight'), 6000);
+
+                    // If symbol also specified, highlight that specific position inside the card
+                    if (symbolParam) {
+                        const posItem = targetCard.querySelector(`[data-symbol="${symbolParam.toUpperCase()}"]`);
+                        if (posItem) {
+                            posItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            posItem.classList.add('target-highlight');
+                            setTimeout(() => posItem.classList.remove('target-highlight'), 6000);
+                        }
+                    }
+                }
+            }, 300);
+        } else if (symbolParam) {
+            // Highlight all position items with this symbol across cards
+            setTimeout(() => {
+                const matchingPositions = document.querySelectorAll(`[data-symbol="${symbolParam.toUpperCase()}"]`);
+                if (matchingPositions.length > 0) {
+                    const firstPos = matchingPositions[0];
+                    // Expand parent card if closed
+                    const parentCard = firstPos.closest('.acc-layout-card');
+                    if (parentCard) {
+                        const cardBody = parentCard.querySelector('[id$="_body"]');
+                        const chevron = parentCard.querySelector('[id$="_chevron"]');
+                        if (cardBody) {
+                            cardBody.style.display = 'block';
+                            if (chevron) chevron.style.transform = 'rotate(180deg)';
+                        }
+                    }
+                    firstPos.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    matchingPositions.forEach(p => {
+                        p.classList.add('target-highlight');
+                        setTimeout(() => p.classList.remove('target-highlight'), 6000);
+                    });
+                }
+            }, 300);
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    handlePortfolioDeepLinks();
 });
 
 window.addEventListener('hashchange', () => {
-    const hash = window.location.hash;
-    if (hash === '#subViewHoldings') {
-        switchPortSubView('holdings');
-    } else if (hash === '#subViewHistory') {
-        switchPortSubView('history');
-    } else if (hash === '#subViewOrders') {
-        switchPortSubView('orders');
-    } else if (hash === '#subViewCalendar') {
-        switchPortSubView('calendar');
-    }
+    handlePortfolioDeepLinks();
 });
 
 async function triggerAiReview(symbol, strike) {

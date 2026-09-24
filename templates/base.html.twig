@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light">
-    <title>{% block title %}KHAPRE MoonShot Portfolio — Level 1 Options & Screener{% endblock %}</title>
+    <title>{% block title %}MoonShot Portfolio — Level 1 Options & Screener{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="apple-touch-icon" href="{{ asset('favicon.svg') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,6 +26,8 @@
 <body>
     {% block body %}{% endblock %}
 
+    {% include 'screener/partials/_disclaimer_modal.html.twig' %}
+
     <script>
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -42,9 +44,70 @@
             });
         }
 
+        // ── MANDATORY DISCLAIMER VERIFICATION & ACCEPTANCE ───────────────────
+        async function checkDisclaimerStatus() {
+            try {
+                const res = await fetch('/api/disclaimer/status');
+                const data = await res.json();
+                const modal = document.getElementById('disclaimer-modal-overlay');
+                const checkbox = document.getElementById('disclaimer-agree-checkbox');
+                const acceptBtn = document.getElementById('disclaimer-accept-btn');
+                const acceptBtnText = document.getElementById('disclaimer-accept-btn-text');
+
+                if (!data.accepted) {
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        modal.setAttribute('aria-hidden', 'false');
+                        document.body.style.overflow = 'hidden'; // Lock background scrolling
+                    }
+
+                    if (checkbox && acceptBtn) {
+                        checkbox.checked = false;
+                        acceptBtn.disabled = true;
+
+                        checkbox.addEventListener('change', () => {
+                            acceptBtn.disabled = !checkbox.checked;
+                        });
+
+                        acceptBtn.onclick = async () => {
+                            if (!checkbox.checked) return;
+                            acceptBtn.disabled = true;
+                            if (acceptBtnText) acceptBtnText.innerText = 'Persisting Authorization...';
+
+                            try {
+                                const postRes = await fetch('/api/disclaimer/accept', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' }
+                                });
+                                const postData = await postRes.json();
+                                if (postData.status === 'success') {
+                                    if (modal) {
+                                        modal.style.display = 'none';
+                                        modal.setAttribute('aria-hidden', 'true');
+                                    }
+                                    document.body.style.overflow = '';
+                                } else {
+                                    alert('Unable to persist acceptance. Please try again.');
+                                    acceptBtn.disabled = false;
+                                    if (acceptBtnText) acceptBtnText.innerText = 'I Understand & Accept Terms';
+                                }
+                            } catch (err) {
+                                console.error('Disclaimer accept error:', err);
+                                acceptBtn.disabled = false;
+                                if (acceptBtnText) acceptBtnText.innerText = 'I Understand & Accept Terms';
+                            }
+                        };
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to verify legal disclaimer status:', err);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
             updateThemeToggleButtons(currentTheme);
+            checkDisclaimerStatus();
         });
     </script>
     {% block javascripts %}{% endblock %}

@@ -352,7 +352,7 @@ class FinnhubService
             }
 
             return [];
-        }, (int) $this->appConfig->get('cache.ttl.finnhub.dividends', 86400)) ?? [];
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.dividends', 2592000)) ?? [];
     }
 
     /**
@@ -539,7 +539,97 @@ class FinnhubService
             } catch (\Throwable $e) {
                 $this->logger->warning("Finnhub Stock Splits API error for {$symbol}: " . $e->getMessage());
             }
-            return [];
         }, (int) $this->appConfig->get('cache.ttl.finnhub.splits', 2592000)) ?? [];
+    }
+
+    /**
+     * Fetch analyst consensus 12-month price targets (high, low, mean, median).
+     * Cached for 7 days.
+     *
+     * @param string $symbol Equity ticker symbol.
+     * @param bool $forceRefresh When true, bypasses cache.
+     * @return array Price target metrics.
+     */
+    public function getPriceTarget(string $symbol, bool $forceRefresh = false): array
+    {
+        $symbol = strtoupper(trim($symbol));
+        $key = $this->getEffectiveApiKey();
+        if (!$key || empty($symbol)) {
+            return [];
+        }
+
+        $cacheKey = "finnhub.target.{$symbol}";
+        if ($forceRefresh) {
+            $this->cache->delete($cacheKey);
+        }
+
+        return $this->cache->get($cacheKey, function() use ($symbol, $key) {
+            try {
+                $response = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/stock/price-target', [
+                    'query' => [
+                        'symbol' => $symbol,
+                        'token'  => $key,
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $data = $response->toArray();
+                    return [
+                        'symbol'       => $data['symbol'] ?? $symbol,
+                        'targetHigh'   => $data['targetHigh'] ?? null,
+                        'targetLow'    => $data['targetLow'] ?? null,
+                        'targetMean'   => $data['targetMean'] ?? null,
+                        'targetMedian' => $data['targetMedian'] ?? null,
+                        'lastUpdated'  => $data['lastUpdated'] ?? null,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning("Finnhub Price Target API error for {$symbol}: " . $e->getMessage());
+            }
+            return [];
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.price_target', 604800)) ?? [];
+    }
+
+    /**
+     * Fetch latest analyst recommendation trends (strong buy, buy, hold, sell, strong sell).
+     * Cached for 7 days.
+     *
+     * @param string $symbol Equity ticker symbol.
+     * @param bool $forceRefresh When true, bypasses cache.
+     * @return array List of monthly analyst recommendation distributions.
+     */
+    public function getRecommendationTrends(string $symbol, bool $forceRefresh = false): array
+    {
+        $symbol = strtoupper(trim($symbol));
+        $key = $this->getEffectiveApiKey();
+        if (!$key || empty($symbol)) {
+            return [];
+        }
+
+        $cacheKey = "finnhub.recs.{$symbol}";
+        if ($forceRefresh) {
+            $this->cache->delete($cacheKey);
+        }
+
+        return $this->cache->get($cacheKey, function() use ($symbol, $key) {
+            try {
+                $response = $this->httpClient->request('GET', 'https://finnhub.io/api/v1/stock/recommendation', [
+                    'query' => [
+                        'symbol' => $symbol,
+                        'token'  => $key,
+                    ],
+                    'timeout' => (float) $this->appConfig->get('api.timeout.finnhub.default', 3.0),
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $data = $response->toArray();
+                    return is_array($data) ? $data : [];
+                }
+            } catch (\Throwable $e) {
+                $this->logger->warning("Finnhub Recommendation Trends API error for {$symbol}: " . $e->getMessage());
+            }
+            return [];
+        }, (int) $this->appConfig->get('cache.ttl.finnhub.recommendations', 604800)) ?? [];
     }
 }
