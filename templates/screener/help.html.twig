@@ -265,28 +265,8 @@
         {% include 'screener/partials/_footer.html.twig' %}
     </div>
 </div>
+{% endblock %}
 
-<script>
-function filterHelpCategory(category) {
-    // Update active pill button
-    const buttons = document.querySelectorAll('.help-pill-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    event.currentTarget.classList.add('active');
-
-    // Filter cards
-    const cards = document.querySelectorAll('.help-card');
-    cards.forEach(card => {
-        if (category === 'all') {
-            card.style.display = 'flex';
-        } else {
-            const cardCat = card.getAttribute('data-category') || '';
-            if (cardCat.includes(category)) {
-                card.style.display = 'flex';
-            } else {
-                card.style.display = 'none';
-            }
-        }
-    });
-}
-</script>
+{% block javascripts %}
+<script src="{{ asset('js/help.js') }}"></script>
 {% endblock %}

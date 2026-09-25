@@ -241,6 +241,7 @@ class BrokerManagerService
                             'broker_id'      => $id,
                             'broker_nickname'=> $broker->getNickname(),
                             'symbol'         => $symbol,
+                            'description'    => $posItem['description'] ?? null,
                             'asset_type'     => $assetType,
                             'quantity'       => $qty,
                             'cost_basis'     => $costBasis,
@@ -253,6 +254,7 @@ class BrokerManagerService
                         if (!isset($equityMap[$symbol])) {
                             $equityMap[$symbol] = [
                                 'symbol' => $symbol,
+                                'description' => $posItem['description'] ?? null,
                                 'assetType' => $assetType,
                                 'totalQuantity' => 0.0,
                                 'totalCostBasis' => 0.0,
@@ -261,6 +263,8 @@ class BrokerManagerService
                                 'accountCount' => 0,
                                 'accounts' => [],
                             ];
+                        } elseif (empty($equityMap[$symbol]['description']) && !empty($posItem['description'])) {
+                            $equityMap[$symbol]['description'] = $posItem['description'];
                         }
 
                         $equityMap[$symbol]['totalQuantity'] += $qty;
@@ -272,6 +276,7 @@ class BrokerManagerService
                             'accountNumber' => $accNum,
                             'nickname' => $accNickname,
                             'type' => $accType,
+                            'description' => $posItem['description'] ?? null,
                             'quantity' => $qty,
                             'marketValue' => $mktVal,
                             'averagePrice' => $costBasis,
@@ -288,10 +293,15 @@ class BrokerManagerService
                     $accCash = max(0.0, $accCash - $accTotalRequiredCash);
                     $totalAvailableCash += $accCash;
 
+                    $isRetire = TaxEngine::isRetirementAccount($accNickname, $accType) || TaxEngine::isRetirementAccount($accNum, $accType);
+                    $taxCategory = $isRetire ? 'RETIREMENT' : 'TAXABLE';
+
                     $accountsSummary[] = [
                         'id'                 => $id . '_' . $accIndex,
                         'nickname'           => $accNickname,
                         'type'               => $accType,
+                        'taxCategory'        => $taxCategory,
+                        'isRetirement'       => $isRetire,
                         'authorized'         => true,
                         'accountNumber'      => $accNum,
                         'account_num'        => $accNum,
@@ -553,10 +563,15 @@ class BrokerManagerService
                         $badgeClass = "g";
                     }
 
+                    $isAccRetire = TaxEngine::isRetirementAccount($accInfo['nickname'] ?? '', $accInfo['type']) || TaxEngine::isRetirementAccount($accNum, $accInfo['type']);
+                    $accTaxCategory = $isAccRetire ? 'RETIREMENT' : 'TAXABLE';
+
                     $accountBreakdown[] = [
                         'accountNumber' => $accNum,
                         'nickname' => $accInfo['nickname'] ?? '',
                         'type' => $accInfo['type'],
+                        'taxCategory' => $accTaxCategory,
+                        'isRetirement' => $isAccRetire,
                         'quantity' => $accQty,
                         'marketValue' => $accInfo['marketValue'],
                         'pledgedShares' => $accPledged,
@@ -591,6 +606,7 @@ class BrokerManagerService
 
                 $aggregatedEquities[] = [
                     'symbol' => $symbol,
+                    'description' => $e['description'] ?? null,
                     'assetType' => $e['assetType'],
                     'quantity' => round($qty, 4),
                     'averagePrice' => $qty > 0 ? round($cost / $qty, 2) : 0.0,

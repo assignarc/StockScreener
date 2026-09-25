@@ -1,0 +1,369 @@
+{# templates/screener/partials/_portfolio_holdings.html.twig #}
+<!-- SUBVIEW 2: PORTFOLIO HOLDINGS & ACCOUNTS COMBINED VIEW (DEFAULT TAB) -->
+<div id="subViewAccounts">
+
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; background:var(--bg2); padding:12px 18px; border-radius:12px; border:1px solid var(--border);">
+        <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="material-symbols-outlined" style="font-size:20px; color:var(--purple);">account_balance_wallet</span>
+                <strong style="font-size:14px; color:var(--text);">Portfolio Holdings & Accounts</strong>
+                <span class="hbadge" style="font-size:11px;">{% if portfolio.accounts is defined %}{{ portfolio.accounts|length }}{% else %}0{% endif %} Accounts / {% if portfolio.aggregatedEquities is defined %}{{ portfolio.aggregatedEquities|length }}{% else %}0{% endif %} Equities</span>
+            </div>
+            <div style="font-size:11px; color:var(--muted); margin-top:3px;">
+                Live snapshot of current open positions, unencumbered cash balances, and active option contracts held today.
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">View Mode:</span>
+            <div style="display:flex; background:var(--bg3); padding:3px; border-radius:8px; border:1px solid var(--border);">
+                <button id="accViewModeGrid" onclick="setAccountViewLayout('grid')" style="border:none; background:var(--bg2); color:var(--text); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">grid_view</span> Cards (1-6 / Row)</button>
+                <button id="accViewModeList" onclick="setAccountViewLayout('list')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">view_list</span> Compact List</button>
+                <button id="accViewModeSec" onclick="setAccountViewLayout('security')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">layers</span> Security Aggregated</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LAYOUT CONTAINER 1: CARDS / COMPACT LIST MODE -->
+    <div id="accountCardsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+
+        {% if portfolio.accounts is defined and portfolio.accounts|length > 0 %}
+            {% for acc in portfolio.accounts %}
+                {% set cardId = 'accCard_' ~ loop.index %}
+                {% set accIdStr = acc.id|default(acc.accountNumber|default(loop.index)) %}
+                <div class="acc-layout-card" id="account_card_{{ accIdStr }}" data-account-id="{{ acc.id|default('') }}" data-account-number="{{ acc.accountNumber|default('') }}" data-account-name="{{ acc.nickname|default('') }}" style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <!-- CARD HEADER SUMMARY BAR -->
+                        <div onclick="toggleAccCard('{{ cardId }}')" style="display:flex; justify-content:space-between; align-items:flex-start; padding:16px 18px; cursor:pointer; background:var(--bg2); user-select:none; border-bottom:1px solid var(--border);">
+                            <div>
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                    <h3 style="font-family:'Outfit',sans-serif; font-size:16px; margin:0; color:var(--text); display:flex; align-items:center; gap:6px;">
+                                        <span class="material-symbols-outlined" style="font-size:18px; color:var(--purple);">account_balance</span> {% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}
+                                    </h3>
+                                    <span class="material-symbols-outlined" id="{{ cardId }}_chevron" style="font-size:16px; color:var(--muted); transition:transform 0.2s ease; transform:rotate(0deg);">expand_more</span>
+                                </div>
+                                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                                    {% if acc.isPrimary is defined and acc.isPrimary %}<span class="hbadge" style="background:rgba(63,185,80,0.15); color:var(--green); border-color:rgba(63,185,80,0.3); font-size:9px; display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:12px;">star</span> PRIMARY</span>{% endif %}
+                                    {% set isRetire = acc.isRetirement|default(acc.taxCategory|default('') == 'RETIREMENT') %}
+                                    <span class="acc-dual-badge {{ isRetire ? 'retirement' : 'taxable' }}">
+                                        <span class="material-symbols-outlined" style="font-size:11px;">{{ isRetire ? 'savings' : 'account_balance_wallet' }}</span>
+                                        <span>{{ isRetire ? 'Retirement' : 'Taxable' }}</span>
+                                        <span class="badge-sep">•</span>
+                                        <span>{{ acc.type|default('MARGIN') }}</span>
+                                    </span>
+                                    <span class="rb rLOW" style="font-size:9px;">{{ acc.positionsCount|default(0) }} Positions</span>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                 <div style="font-size:16px; font-weight:800; color:var(--text);">${{ acc.value|default(acc.liquidationValue|default(0))|number_format(0) }}</div>
+                                 <div style="font-size:11px; color:var(--green); font-weight:600;">${{ acc.cash|default(acc.cashAvailable|default(0))|number_format(0) }} Cash</div>
+                            </div>
+                        </div>
+
+                        <!-- CARD QUICK SUMMARY STATS -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:12px 18px; font-size:11px; color:var(--muted); background:var(--bg3); border-bottom:1px solid var(--border);">
+                            <div>Buying Power: <strong style="color:var(--blue);">${{ acc.buyingPower|default(0)|number_format(0) }}</strong></div>
+                            <div>Day Trade BP: <strong style="color:var(--purple);">${{ acc.dayTradingBuyingPower|default(0)|number_format(0) }}</strong></div>
+                            <div>Margin Maint: <strong style="color:var(--yellow);">${{ acc.maintenanceRequirement|default(0)|number_format(0) }}</strong></div>
+                            <div>Lot Strategy: <strong style="color:var(--text);">{{ acc.lotSelectionMethod|default('FIFO') }}</strong></div>
+                        </div>
+
+                        <!-- COLLAPSIBLE DETAILS BODY -->
+                        <div id="{{ cardId }}_body" style="display:none; padding:14px 18px; background:var(--bg2); border-top:1px solid var(--border);">
+                            <!-- POSITIONS LIST -->
+                            <div class="cache-stat-label">Top Holdings (Sorted by Value)</div>
+                            <div class="positions-list">
+                                {% set posList = acc.positions|default([]) %}
+                                {% for p in posList %}
+                                    {% if loop.index == 11 %}
+                                        <div id="more_pos_{{ accIdStr }}" class="pos-view-more-container" style="display:none; flex-direction:column; gap:6px; margin-top:6px;">
+                                    {% endif %}
+                                    <div class="position-item" id="pos_{{ accIdStr }}_{{ p.symbol }}" data-symbol="{{ p.symbol }}">
+                                        <div style="flex:1; min-width:0; padding-right:8px;">
+                                            <div>
+                                                <strong style="color:var(--text); font-size:13px;">{{ p.symbol }}</strong>
+                                                <span style="font-size:10px; color:var(--muted);">({{ p.quantity }})</span>
+                                            </div>
+                                            {% if p.description is defined and p.description %}
+                                                <div class="pos-desc">{{ p.description }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div style="text-align:right; flex-shrink:0;">
+                                            <strong>${{ p.marketValue|number_format(2) }}</strong>
+                                            <small class="{% if p.unrealizedPL >= 0 %}g{% else %}r{% endif %}" style="display:block; font-size:10px;">
+                                                {% if p.unrealizedPL >= 0 %}+{% endif %}${{ p.unrealizedPL|number_format(0) }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    {% if loop.last and loop.index > 10 %}
+                                        </div>
+                                        <button type="button" class="pos-view-more-btn" onclick="toggleMorePositions('more_pos_{{ accIdStr }}', this, {{ loop.length - 10 }})">
+                                            <span class="material-symbols-outlined" style="font-size:16px;">expand_more</span>
+                                            <span>View More ({{ loop.length - 10 }} more equities)</span>
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="orders-table-loader">No positions</div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- ACTIVE OPEN ORDERS -->
+                            <div class="cache-stat-label">Working & Pending Orders</div>
+                            <div class="order-legs-list">
+                                {% for o in acc.openOrders|default([]) %}
+                                    <div class="order-leg-item">
+                                        <div class="order-leg-header">
+                                            <span class="order-leg-id">#{{ o.order_id }}</span>
+                                            <span class="order-leg-badge">{{ o.status }}</span>
+                                        </div>
+                                        <div class="order-leg-desc">
+                                            {% for l in o.legs|default([]) %}
+                                                {{ l.instruction }} <strong>{{ l.symbol }}</strong> x{{ l.quantity }}<br>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="order-leg-meta">
+                                            <span>Price: <strong>${{ o.price|number_format(2) }}</strong></span>
+                                            <span>Filled: <strong>{{ o.filled_quantity }}/{{ o.quantity }}</strong></span>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="orders-table-loader">No working orders</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="padding:12px 18px; background:var(--bg2); border-top:1px solid var(--border);">
+                        <a href="/screener" class="btn btn-pri" style="width:100%; text-align:center; text-decoration:none; display:block; box-sizing:border-box; font-size:12px; padding:8px;">
+                            <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:2px;">bolt</span> Load ${{ acc.cash|default(acc.cashAvailable|default(0))|number_format(0) }} Cash
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="m" style="grid-column:1/-1; text-align:center; padding:30px; background:var(--bg2); border-radius:12px; border:1px solid var(--border);">
+                No brokerage account details available. Please configure your brokerage connection in Setup or Settings.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- LAYOUT CONTAINER 2: SECURITY AGGREGATED BREAKDOWN (REVAMPED RESPONSIVE FIT-TO-CONTAINER) -->
+    <div id="securityBreakdownContainer" class="sec-agg-container" style="display:none;">
+        <div class="sec-agg-header-bar">
+            <div>
+                <h3 class="sec-agg-title">
+                    <span class="material-symbols-outlined" style="font-size:18px; color:var(--purple);">pie_chart</span>
+                    <span>Consolidated Security Aggregation</span>
+                </h3>
+                <div class="sec-agg-subtitle">
+                    Cross-account position netting, option cover ratios, and cost basis breakdown.
+                </div>
+            </div>
+            <div class="sec-agg-meta-badge">
+                {% if portfolio.aggregatedEquities is defined %}
+                    <span>{{ portfolio.aggregatedEquities|length }} Securities Held</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="sec-agg-table-wrap">
+            <table class="sec-agg-table">
+                <thead>
+                    <tr>
+                        <th style="width: 260px;">Security & Strategy</th>
+                        <th style="width: 140px; text-align:right;">Shares & Weight</th>
+                        <th style="width: 140px; text-align:right;">Cost & Market Price</th>
+                        <th style="width: 160px; text-align:right;">Total Value & P/L</th>
+                        <th style="width: 230px; text-align:left; padding-left:16px;">Option Coverage Status</th>
+                        <th style="width: 110px; text-align:center;">Accounts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if portfolio.aggregatedEquities is defined and portfolio.aggregatedEquities|length > 0 %}
+                        {% for e in portfolio.aggregatedEquities %}
+                            {% set subId = 'opt-sub-' ~ loop.index %}
+                            <!-- MAIN LEVEL 1: AGGREGATED STOCK TICKER ROW -->
+                            <tr id="sec_row_{{ e.symbol }}" data-symbol="{{ e.symbol }}" class="sec-main-row" onclick="toggleOptionSubItem('{{ subId }}', this)">
+                                <!-- 1. Security & Strategy -->
+                                <td>
+                                    <div class="sec-cell-primary">
+                                        <span class="material-symbols-outlined sub-toggle-icon">expand_more</span>
+                                        <div class="sec-ticker-box">
+                                            <div class="sec-ticker-row">
+                                                <strong class="sec-ticker-symbol">{{ e.symbol }}</strong>
+                                                <span class="sec-asset-badge">{{ e.assetType|default('EQUITY') }}</span>
+                                            </div>
+                                            {% if e.description is defined and e.description %}
+                                                <div class="sec-ticker-desc" title="{{ e.description }}">{{ e.description }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- 2. Shares & Weight -->
+                                <td style="text-align:right;">
+                                    <div class="sec-val-bold">{{ e.quantity }} <span class="sec-val-unit">shs</span></div>
+                                    <div class="sec-val-sub" style="color:var(--purple); font-weight:700;">
+                                        {{ e.allocationPct }}% <span class="sec-val-unit" style="font-weight:400; color:var(--muted);">weight</span>
+                                    </div>
+                                </td>
+
+                                <!-- 3. Cost & Market Price -->
+                                <td style="text-align:right;">
+                                    <div class="sec-val-bold">${{ e.averagePrice|number_format(2) }} <span class="sec-val-unit">avg</span></div>
+                                    <div class="sec-val-sub">
+                                        {% if e.quantity > 0 %}
+                                            ${{ (e.marketValue / e.quantity)|number_format(2) }} <span class="sec-val-unit">mark</span>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <!-- 4. Total Value & P/L -->
+                                <td style="text-align:right;">
+                                    <div class="sec-val-bold">${{ e.marketValue|number_format(2) }}</div>
+                                    <div class="sec-val-sub {% if e.unrealizedPL >= 0 %}g{% else %}r{% endif %}" style="font-weight:700;">
+                                        {% if e.unrealizedPL >= 0 %}+{% endif %}${{ e.unrealizedPL|number_format(0) }}
+                                        <span style="font-size:10px; font-weight:600; opacity:0.85;">({% if e.unrealizedPL >= 0 %}+{% endif %}{{ e.unrealizedPLPct }}%)</span>
+                                    </div>
+                                </td>
+
+                                <!-- 5. Option Coverage Status -->
+                                <td style="padding-left:16px;">
+                                    <div class="sec-coverage-cell">
+                                        {% if e.pledgedShares > 0 %}
+                                            <div class="sec-shares-meter">
+                                                <span class="sec-meter-pill avail" title="Available unhedged shares for covered calls">{{ e.availableShares }} Avail</span>
+                                                <span class="sec-meter-pill pledged" title="Pledged to active option orders">{{ e.pledgedShares }} Pledged</span>
+                                            </div>
+                                        {% endif %}
+                                        <div class="sec-badge-row">
+                                            {% if e.putCount is defined and e.putCount > 0 and e.callCount is defined and e.callCount > 0 %}
+                                                <span class="rb" style="background:rgba(147,51,234,0.18); color:var(--purple); border:1px solid rgba(147,51,234,0.4); font-size:10px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">shield</span> {{ e.putCount }} CSP &bull; <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ e.callCount }} CC
+                                                </span>
+                                            {% elseif e.putCount is defined and e.putCount > 0 %}
+                                                <span class="rb" style="background:rgba(88,166,255,0.18); color:var(--blue); border:1px solid rgba(88,166,255,0.4); font-size:10px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">shield</span> {{ e.putCount }} CSP Active
+                                                </span>
+                                            {% elseif e.linkedOptions is defined and e.linkedOptions|length > 0 %}
+                                                <span class="rb" style="background:rgba(210,153,34,0.18); color:var(--yellow); border:1px solid rgba(210,153,34,0.4); font-size:10px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ e.linkedOptions|length }} CC Active
+                                                </span>
+                                            {% elseif e.availableShares >= 100 %}
+                                                <span class="rb" style="background:rgba(34,197,94,0.14); color:var(--green); border:1px solid rgba(34,197,94,0.3); font-size:10px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">check_circle</span> {{ (e.availableShares / 100)|round(0, 'floor') }} Call Lots Avail
+                                                </span>
+                                            {% elseif e.availableShares > 0 %}
+                                                <span class="rb" style="background:rgba(234,179,8,0.14); color:var(--yellow); border:1px solid rgba(234,179,8,0.3); font-size:10px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">pie_chart</span> Fractional Lot
+                                                </span>
+                                            {% else %}
+                                                <span class="rb" style="background:rgba(239,68,68,0.14); color:var(--red); border:1px solid rgba(239,68,68,0.3); font-size:10px;">
+                                                    <span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> 100% Pledged
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- 6. Accounts & Action -->
+                                <td style="text-align:center;">
+                                    <div class="sec-acc-count-pill">{{ e.accountCount }} Acc</div>
+                                </td>
+                            </tr>
+
+                            <!-- LEVEL 2: SECOND-LEVEL ACCOUNT BREAKDOWN SUB-ROWS -->
+                            {% if e.accountBreakdown is defined %}
+                                {% for acc in e.accountBreakdown %}
+                                    <tr class="{{ subId }} sec-sub-acc-row" style="display: none;">
+                                        <td colspan="2" style="padding-left: 36px;">
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <span class="material-symbols-outlined" style="font-size:15px; color:var(--purple);">account_balance</span>
+                                                <strong style="font-size:12px; color:var(--text);">{% if acc.nickname is defined and acc.nickname %}{{ acc.nickname }}{% else %}Account {{ acc.accountNumber }}{% endif %}</strong>
+                                                {% set isAccRetire = acc.isRetirement|default(acc.taxCategory|default('') == 'RETIREMENT') %}
+                                                <span class="acc-dual-badge {{ isAccRetire ? 'retirement' : 'taxable' }}">
+                                                    <span>{{ isAccRetire ? 'Retirement' : 'Taxable' }}</span>
+                                                    <span class="badge-sep">•</span>
+                                                    <span>{{ acc.type|default('MARGIN') }}</span>
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td style="text-align:right;">
+                                            <div style="font-size:12px; font-weight:700; color:var(--text);">${{ acc.marketValue|number_format(2) }}</div>
+                                        </td>
+                                        <td style="text-align:right;">
+                                            <div style="font-size:11px; color:var(--text);">
+                                                {% if acc.quantity == 0 and acc.linkedOptions is defined and acc.linkedOptions|length > 0 %}
+                                                    <span style="color:var(--blue); font-weight:600;">Option Held</span>
+                                                {% else %}
+                                                    <strong>{{ acc.availableShares }}</strong> <span style="color:var(--muted); font-size:10px;">/ {{ acc.quantity }} shs</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td colspan="2" style="padding-left:16px;">
+                                            <div style="font-size:11px;">
+                                                {% if acc.quantity == 0 and acc.linkedOptions is defined and acc.linkedOptions|length > 0 %}
+                                                    <span style="color:var(--blue); font-weight:600;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">shield</span> Cash-Secured Put Collateral</span>
+                                                {% elseif acc.canUseForCalls %}
+                                                    <span class="g" style="font-weight:600;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">check_circle</span> {{ acc.eligibleContracts }} Call Option Lot(s) Available</span>
+                                                {% elseif acc.availableShares > 0 %}
+                                                    <span class="y" style="font-weight:600;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">warning</span> &lt; 100 shares</span>
+                                                {% else %}
+                                                    <span class="r" style="font-weight:600;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> 100% Pledged</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- LEVEL 3: LINKED OPTION ORDER SUB-ITEMS FOR THIS SPECIFIC ACCOUNT -->
+                                    {% if acc.linkedOptions is defined and acc.linkedOptions|length > 0 %}
+                                        {% for opt in acc.linkedOptions %}
+                                            <tr class="{{ subId }} sec-sub-opt-row" style="display: none;">
+                                                <td colspan="3" style="padding-left: 54px;">
+                                                    <div style="display:flex; align-items:center; gap:8px;">
+                                                        <span style="color:{% if opt.type == 'Call' %}var(--yellow){% else %}var(--blue){% endif %}; font-size:13px; font-weight:700;">↳</span>
+                                                        <strong style="color:var(--text); font-size:12px;">{{ opt.readableSymbol }}</strong>
+                                                        <span class="rb" style="background:{% if opt.type == 'Call' %}rgba(180,83,9,0.18){% else %}rgba(88,166,255,0.18){% endif %}; color:{% if opt.type == 'Call' %}var(--yellow){% else %}var(--blue){% endif %}; font-size:10px;">
+                                                            {{ opt.status|raw }}
+                                                        </span>
+                                                    </div>
+                                                    <div style="font-size:10.5px; color:var(--muted); margin-left:20px; margin-top:2px;">
+                                                        {% if opt.type == 'Call' %}
+                                                            Pledged: <strong style="color:var(--yellow);">{{ opt.pledgedShares }} shs</strong> ({{ opt.contracts }}x) | Strike: <strong>${{ opt.strike|number_format(2) }}</strong> | Exp: <strong>{{ opt.expiration }}</strong>
+                                                        {% else %}
+                                                            Pledged: <strong style="color:var(--blue);">${{ opt.cashCollateral|number_format(2) }} Cash</strong> ({{ opt.contracts }}x) | Strike: <strong>${{ opt.strike|number_format(2) }}</strong> | Exp: <strong>{{ opt.expiration }}</strong>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                                <td style="text-align:right;">
+                                                    <div style="font-size:12px; font-weight:700; color:{% if opt.type == 'Call' %}var(--yellow){% else %}var(--blue){% endif %};">
+                                                        ${{ opt.marketValue|number_format(2) }}
+                                                    </div>
+                                                    <div class="{% if opt.unrealizedPL >= 0 %}g{% else %}r{% endif %}" style="font-size:10px; font-weight:700;">
+                                                        {% if opt.unrealizedPL >= 0 %}+{% endif %}${{ opt.unrealizedPL|number_format(2) }}
+                                                    </div>
+                                                </td>
+                                                <td colspan="2" style="padding-left:16px;">
+                                                    {% if opt.type == 'Call' %}
+                                                        <span style="font-size:11px; color:var(--yellow); font-weight:700;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">lock</span> {{ opt.pledgedShares }} Shares Tied Up</span>
+                                                    {% else %}
+                                                        <span style="font-size:11px; color:var(--blue); font-weight:700;"><span class="material-symbols-outlined" style="font-size:12px;vertical-align:middle;">shield</span> ${{ opt.cashCollateral|number_format(2) }} Cash Reserved</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="6" style="text-align:center; padding:30px;" class="m">No aggregated positions found.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+

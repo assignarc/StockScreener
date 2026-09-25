@@ -1,0 +1,191 @@
+{# templates/screener/partials/_portfolio_history.html.twig #}
+<!-- SUBVIEW: 30-DAY ACCOUNT ACTIVITY & REALIZED CASH HISTORY -->
+<div id="subViewHistory" style="display:none; margin-bottom:24px;">
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+            <div>
+                <h3 style="font-family:'Outfit',sans-serif; font-size:18px; margin:0 0 4px 0; color:var(--text); display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size:20px; color:var(--purple);">history</span>
+                    <span>Brokerage Account Activity & Cash Flow Log</span>
+                    <span class="hbadge" style="background:rgba(188,140,255,0.15); color:var(--purple); border-color:rgba(188,140,255,0.3);">Live History</span>
+                </h3>
+                <div style="font-size:12px; color:var(--muted);">
+                    Historical log of executed trades, option fills, dividends, and cash movements across your accounts.
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <div class="seg-track">
+                    <button class="seg-btn" id="btnHist30" onclick="loadPortfolioHistory(30)">30 Days</button>
+                    <button class="seg-btn" id="btnHist60" onclick="loadPortfolioHistory(60)">60 Days</button>
+                    <button class="seg-btn" id="btnHist90" onclick="loadPortfolioHistory(90)">90 Days</button>
+                    <button class="seg-btn active" id="btnHistTHIS_YEAR" onclick="loadPortfolioHistory('THIS_YEAR')">This Year</button>
+                    <button class="seg-btn" id="btnHistLAST_YEAR" onclick="loadPortfolioHistory('LAST_YEAR')">Last Year</button>
+                    <button class="seg-btn" id="btnHistALL" onclick="loadPortfolioHistory('ALL')">All</button>
+                </div>
+                <button class="hbtn hbtn-green" style="padding:5px 10px; font-size:11px; font-weight:700;" onclick="loadPortfolioHistory(currentHistDays || 'THIS_YEAR', true)" title="Bypass cache and force-refresh latest transactions from broker">
+                    <span class="material-symbols-outlined" style="font-size:14px; margin-right:2px; vertical-align:middle;">sync</span> Force Pull
+                </button>
+            </div>
+        </div>
+
+        <!-- 30-DAY STAT CARDS -->
+        <div class="hist-grid" id="histStatCards" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:20px;">
+            <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
+                <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Realized Cash Dividends</div>
+                <div class="val g" id="histTotalDivs" style="font-size:20px; font-weight:800;">$0.00</div>
+            </div>
+            <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
+                <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Option Premiums Harvested</div>
+                <div class="val" style="color:var(--yellow); font-size:20px; font-weight:800;" id="histTotalPremiums">$0.00</div>
+            </div>
+            <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
+                <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between;">
+                    <span>Net Settled Cash Flow</span>
+                    <span class="material-symbols-outlined" style="font-size:14px; color:var(--muted); cursor:help;" title="Total net cash deposited or withdrawn from executed trades. For written options, cash premium is credited on execution day, while tax realization occurs at contract expiration or closure.">info</span>
+                </div>
+                <div class="val" style="color:var(--blue); font-size:20px; font-weight:800;" id="histNetCash">$0.00</div>
+                <div id="histNetCashSubtext" style="font-size:10px; color:var(--muted); margin-top:4px;">Settled cash impact</div>
+            </div>
+            <div class="hist-card" style="background:var(--bg3); padding:16px; border-radius:10px; border:1px solid var(--border);">
+                <div class="lbl" style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Completed Activities</div>
+                <div class="val" style="color:var(--purple); font-size:20px; font-weight:800;" id="histTxCount">0 Transactions</div>
+            </div>
+        </div>
+
+        <!-- TRANSACTION ACTIVITY TABLE WITH FILTER & SORT CONTROLS -->
+        <div class="hist-table-wrap" style="background:var(--bg3); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+            <!-- TOOLBAR ROW 1: TITLE & QUICK TYPE CHIPS -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:14px 20px; border-bottom:1px solid var(--border); background:var(--bg2);">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size:20px; color:var(--purple);">receipt_long</span>
+                    <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:14px; color:var(--text); text-transform:uppercase; letter-spacing:.5px;">Brokerage Activity Log</span>
+                    <span id="histMatchCountBadge" class="hbadge" style="background:rgba(88,166,255,0.15); color:var(--blue); font-size:10px; padding:2px 8px; border-radius:12px;">0 items</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <span style="font-size:11px; color:var(--muted); margin-right:4px;">Quick Type:</span>
+                    <button class="hbtn active" id="histChipAll" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('ALL')">All</button>
+                    <button class="hbtn" id="histChipTrades" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('TRADE')"><span class="material-symbols-outlined" style="font-size:13px;">trending_up</span> Trades</button>
+                    <button class="hbtn" id="histChipOptions" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('OPTION')"><span class="material-symbols-outlined" style="font-size:13px;">tune</span> Options</button>
+                    <button class="hbtn" id="histChipDividends" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('DIVIDEND')"><span class="material-symbols-outlined" style="font-size:13px;">payments</span> Dividends</button>
+                    <button class="hbtn" id="histChipInterest" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('INTEREST')"><span class="material-symbols-outlined" style="font-size:13px;">account_balance</span> Interest</button>
+                    <button class="hbtn" id="histChipJournals" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('JOURNAL')"><span class="material-symbols-outlined" style="font-size:13px;">swap_horiz</span> Transfers</button>
+                </div>
+            </div>
+
+            <!-- TOOLBAR ROW 2: FILTERS & SEARCH CONTROLS -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 20px; background:var(--bg3); border-bottom:1px solid var(--border);">
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1;">
+                    <!-- ACCOUNT FILTER SELECT -->
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <label for="histAccountSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Account:</label>
+                        <select id="histAccountSelect" onchange="onHistFilterChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; min-width:180px;">
+                            <option value="ALL">All Accounts (All)</option>
+                            <optgroup label="Account Category">
+                                <option value="TAXABLE">Taxable Accounts Only</option>
+                                <option value="RETIREMENT">Retirement Accounts (IRA / PCRA)</option>
+                            </optgroup>
+                            <optgroup id="histAccountOptGroup" label="Individual Accounts">
+                                <!-- Dynamically populated -->
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- ACTIVITY TYPE SELECT -->
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <label for="histTypeSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Type:</label>
+                        <select id="histTypeSelect" onchange="onHistTypeSelectChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+                            <option value="ALL">All Activity Types</option>
+                            <option value="TRADE">Stock & ETF Trades</option>
+                            <option value="OPTION">Options (Calls, Puts, Premia)</option>
+                            <option value="DIVIDEND">Dividends & Distributions</option>
+                            <option value="INTEREST">Interest Income</option>
+                            <option value="JOURNAL">Transfers & Journals</option>
+                            <option value="FEE">Fees & Adjustments</option>
+                        </select>
+                    </div>
+
+                    <!-- CASH FLOW IMPACT SELECT -->
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <label for="histCashFlowSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Cash Flow:</label>
+                        <select id="histCashFlowSelect" onchange="onHistFilterChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+                            <option value="ALL">All Amounts</option>
+                            <option value="INFLOW">Inflows / Credits (+)</option>
+                            <option value="OUTFLOW">Outflows / Debits (-)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- SEARCH & RESET -->
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="position:relative; display:flex; align-items:center;">
+                        <span class="material-symbols-outlined" style="position:absolute; left:8px; font-size:16px; color:var(--muted); pointer-events:none;">search</span>
+                        <input type="text" id="histSearchInput" oninput="onHistFilterChange()" placeholder="Search ticker, desc..." style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 10px 6px 30px; border-radius:8px; font-size:12px; width:190px;">
+                    </div>
+                    <button class="hbtn" onclick="resetHistFilters()" style="padding:6px 10px; font-size:11px;" title="Reset all filters">
+                        <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">restart_alt</span> Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABLE WITH SORTABLE HEADERS -->
+            <div style="overflow-x:auto;">
+                <table class="hist-table" id="histTable" style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border); background:var(--bg2); color:var(--muted); user-select:none;">
+                            <th onclick="sortHistBy('date')" style="padding:12px 16px; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Date">
+                                Date <span id="sort_hist_date" style="color:var(--blue); font-size:11px;">▼</span>
+                            </th>
+                            <th onclick="sortHistBy('account')" style="padding:12px 16px; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Account">
+                                Account <span id="sort_hist_account" style="color:var(--muted); font-size:11px;">↕</span>
+                            </th>
+                            <th onclick="sortHistBy('type')" style="padding:12px 16px; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Activity Type">
+                                Activity Type <span id="sort_hist_type" style="color:var(--muted); font-size:11px;">↕</span>
+                            </th>
+                            <th onclick="sortHistBy('symbol')" style="padding:12px 16px; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Symbol">
+                                Symbol <span id="sort_hist_symbol" style="color:var(--muted); font-size:11px;">↕</span>
+                            </th>
+                            <th onclick="sortHistBy('description')" style="padding:12px 16px; cursor:pointer; transition:background 0.15s;" title="Sort by Description">
+                                Description / Rationale <span id="sort_hist_description" style="color:var(--muted); font-size:11px;">↕</span>
+                            </th>
+                            <th onclick="sortHistBy('amount')" style="padding:12px 16px; text-align:right; cursor:pointer; white-space:nowrap; transition:background 0.15s;" title="Sort by Cash Flow Amount">
+                                Cash Flow Impact <span id="sort_hist_amount" style="color:var(--muted); font-size:11px;">↕</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="histTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align:center; padding:32px 16px;">
+                                <div class="ui-loading-box">
+                                    <span class="material-symbols-outlined spinner-icon">progress_activity</span>
+                                    <span>Loading account transaction history...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PAGINATION FOOTER -->
+            <div id="histPaginationFooter" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 20px; background:var(--bg2); border-top:1px solid var(--border); font-size:12px; color:var(--muted);">
+                <div id="histPageInfo">Showing 0 of 0 transactions</div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span>Show:</span>
+                        <select id="histPageSizeSelect" onchange="changeHistPageSize(this.value)" style="background:var(--bg3); color:var(--text); border:1px solid var(--border); padding:3px 8px; border-radius:6px; font-size:11px; cursor:pointer;">
+                            <option value="25">25</option>
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="250">250</option>
+                            <option value="ALL">All</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                        <button class="hbtn" id="histPrevBtn" onclick="changeHistPage(-1)" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center;"><span class="material-symbols-outlined" style="font-size:13px;">chevron_left</span> Prev</button>
+                        <span id="histPageNumber" style="padding:4px 8px; font-weight:700; color:var(--text);">Page 1</span>
+                        <button class="hbtn" id="histNextBtn" onclick="changeHistPage(1)" style="padding:4px 8px; font-size:11px; display:inline-flex; align-items:center;">Next <span class="material-symbols-outlined" style="font-size:13px;">chevron_right</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

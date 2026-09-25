@@ -1,0 +1,47 @@
+{# templates/screener/partials/_portfolio_orders.html.twig #}
+<!-- SUBVIEW: WORKING & OPEN ORDERS -->
+<div id="subViewOrders" class="orders-view-container" style="display:none;">
+    <div class="orders-view-card">
+        <div class="orders-header-wrap">
+            <div class="orders-title-block">
+                <h3 class="orders-title">
+                    <span class="material-symbols-outlined">pending_actions</span>
+                    <span>Working & Pending Orders</span>
+                    <span class="orders-badge-count">Open Orders</span>
+                </h3>
+                <div class="orders-desc">
+                    Active, working, and pending options/equity orders retrieved across your brokerage accounts.
+                </div>
+            </div>
+            <button class="hbtn hbtn-blue" onclick="loadOpenOrders(true)">
+                <span class="material-symbols-outlined">sync</span> Refresh Orders
+            </button>
+        </div>
+
+        <div class="orders-table-wrap">
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Account</th>
+                        <th>Details</th>
+                        <th>Instruction</th>
+                        <th>Limit Price</th>
+                        <th>Quantity (Filled/Total)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr>
+                        <td colspan="7" class="orders-table-loader" style="text-align: center; padding: 32px 16px;">
+                            <div class="ui-loading-box">
+                                <span class="material-symbols-outlined spinner-icon">progress_activity</span>
+                                <span>Loading open orders...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

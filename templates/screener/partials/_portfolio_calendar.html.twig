@@ -1,0 +1,49 @@
+{# templates/screener/partials/_portfolio_calendar.html.twig #}
+<!-- SUBVIEW 1: OPTIONS & EQUITIES CALENDAR VIEW -->
+<div id="subViewCalendar" style="display:none;">
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div>
+                <h3 style="font-family:'Outfit',sans-serif; font-size:18px; color:var(--text); margin:0 0 4px 0; display:flex; align-items:center; gap:8px;">
+                    <span class="material-symbols-outlined" style="font-size:20px; color:var(--blue);">calendar_month</span>
+                    <span>Options & Equities Forward Calendar</span>
+                </h3>
+                <div style="font-size:12px; color:var(--muted);">
+                    Browse forward up to 6 months to view future option expirations, projected cash releases, and earnings announcements.
+                </div>
+            </div>
+
+            <!-- 6-MONTH FORWARD BROWSABLE MONTH CONTROLS -->
+            <div style="display:flex; align-items:center; gap:8px; background:var(--bg3); padding:4px 10px; border-radius:10px; border:1px solid var(--border);">
+                <button onclick="changeCalMonth(-1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2); display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span> Prev Month</button>
+                <select id="calMonthSelect" onchange="selectCalMonth(this.value)" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer;">
+                    <!-- Populated dynamically via JS -->
+                </select>
+                <button onclick="changeCalMonth(1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2); display:inline-flex; align-items:center; gap:2px;">Next Month <span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
+            </div>
+
+            <div id="calCashProjectionHeader" style="display:flex; gap:12px; flex-wrap:wrap; width:100%; margin-top:8px;">
+                <!-- Dynamically populated cash projections badge -->
+            </div>
+        </div>
+
+        <div id="calendarFilterBar" style="margin-top:16px; margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap;"></div>
+
+        <div id="calendarMonthGrid" style="display:grid; grid-template-columns: repeat(7, 1fr); gap:10px; margin-bottom:20px;">
+            <div style="grid-column:1/-1;">
+                <div class="ui-loading-box">
+                    <span class="material-symbols-outlined spinner-icon">progress_activity</span>
+                    <span>Loading Monthly Options Calendar...</span>
+                </div>
+            </div>
+        </div>
+
+        <h4 style="font-size:14px; font-weight:700; color:var(--text); margin-bottom:12px; display:flex; align-items:center; gap:6px;"><span class="material-symbols-outlined" style="font-size:18px; color:var(--blue);">schedule</span> Chronological Expiration & Cash Availability Timeline</h4>
+        <div id="calendarEventsList" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="ui-loading-box">
+                <span class="material-symbols-outlined spinner-icon">progress_activity</span>
+                <span>Loading Expiration & Event Timeline...</span>
+            </div>
+        </div>
+    </div>
+</div>

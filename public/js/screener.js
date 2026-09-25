@@ -105,7 +105,31 @@ function useCashInFlywheel(amount) {
     document.getElementById('statusBar').innerHTML = `<span class="material-symbols-outlined" style="font-size:15px; vertical-align:middle; margin-right:4px;">bolt</span> Loaded $${Math.round(cashToUse).toLocaleString()} cash into Capital Flywheel Options Allocator!`;
 }
 
+let searchDebounceTimer = null;
+let isFetchingStocks = false;
+
 async function fetchStocks() {
+    if (isFetchingStocks) return;
+    isFetchingStocks = true;
+
+    if (typeof showGlobalProgress === 'function') showGlobalProgress();
+
+    const tbody = document.getElementById('stockTableBody');
+    const tableContainer = document.getElementById('tw');
+    const statusBar = document.getElementById('statusBar');
+
+    if (statusBar) {
+        statusBar.innerHTML = `<span class="ui-loading-inline"><span class="material-symbols-outlined spinner-icon">progress_activity</span> Filtering and loading data...</span>`;
+    }
+
+    // If table already has items, show subtle opacity indicator, otherwise spinner
+    if (tbody && tbody.children.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:32px 16px;"><div class="ui-loading-box"><span class="material-symbols-outlined spinner-icon">progress_activity</span><span>Scanning market data & options chains...</span></div></td></tr>`;
+    } else if (tableContainer) {
+        tableContainer.style.opacity = '0.6';
+        tableContainer.style.pointerEvents = 'none';
+    }
+
     try {
         const url = new URL('/api/stocks', window.location.origin);
         if (activeSector !== 'ALL') url.searchParams.append('sector', activeSector);
@@ -120,10 +144,24 @@ async function fetchStocks() {
             allStocks = res.data;
             render();
             updateFlywheelAllocation();
+            if (statusBar) {
+                statusBar.innerHTML = `<span class="material-symbols-outlined" style="font-size:15px; vertical-align:middle; margin-right:4px;">check_circle</span> Loaded ${allStocks.length} stocks successfully.`;
+            }
+        } else {
+            throw new Error(res.message || 'API returned failure status');
         }
     } catch (err) {
         console.error('Failed to load stocks:', err);
-        document.getElementById('statusBar').innerText = 'Error loading stocks from backend API.';
+        if (statusBar) {
+            statusBar.innerHTML = `<span class="material-symbols-outlined" style="font-size:15px; vertical-align:middle; margin-right:4px; color:var(--red);">error</span> Error loading stocks from backend API.`;
+        }
+    } finally {
+        isFetchingStocks = false;
+        if (typeof hideGlobalProgress === 'function') hideGlobalProgress();
+        if (tableContainer) {
+            tableContainer.style.opacity = '1';
+            tableContainer.style.pointerEvents = 'auto';
+        }
     }
 }
 
@@ -170,7 +208,10 @@ function filterAssetType(type) {
 
 function onSearchInput() {
     searchQuery = document.getElementById('srch').value.trim();
-    fetchStocks();
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+        fetchStocks();
+    }, 250);
 }
 
 function updateFlywheelAllocation() {
@@ -600,7 +641,7 @@ async function fetchSchwabOptionChain(symbol) {
     const aiGrid = document.getElementById('geminiOptionTargetsGrid');
     const aiVerdict = document.getElementById('geminiOptionVerdict');
 
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;" class="m"><span class="material-symbols-outlined spin" style="font-size:16px; vertical-align:middle; margin-right:4px;">sync</span> Connecting to Schwab API & Gemini AI Engine...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 24px 16px;"><div class="ui-loading-box"><span class="material-symbols-outlined spinner-icon">progress_activity</span><span>Connecting to Schwab API & Gemini AI Engine...</span></div></td></tr>';
     if (aiBox) aiBox.style.display = 'none';
 
     try {
@@ -1013,7 +1054,7 @@ async function scanStockTab3() {
 }
 
 /* ==========================================================================
-   CAPITAL FLYWHEEL SYSTEM JS ENGINE
+c   CAPITAL FLYWHEEL SYSTEM JS ENGINE
    ========================================================================== */
 let userRiskCap = 10000.0;
 

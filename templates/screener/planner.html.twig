@@ -46,8 +46,11 @@
         </div>
 
         <div id="plannerPageContent" style="display: flex; flex-direction: column; gap: 20px;">
-            <div class="lm" style="text-align:center; padding:40px; background:var(--bg2); border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:8px;">
-                <span class="material-symbols-outlined spin" style="font-size:20px; color:var(--blue);">sync</span> Loading your personalized Daily Morning Trade Package...
+            <div style="background:var(--bg2); border-radius:12px; border:1px solid var(--border);">
+                <div class="ui-loading-box">
+                    <span class="material-symbols-outlined spinner-icon">progress_activity</span>
+                    <span>Loading your personalized Daily Morning Trade Package...</span>
+                </div>
             </div>
         </div>
     </div>
@@ -69,30 +72,5 @@
 
 {% block javascripts %}
 <script src="{{ asset('js/screener.js') }}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        loadPlannerPageData();
-    });
-
-    async function loadPlannerPageData() {
-        const cnt = document.getElementById('plannerPageContent');
-        if (!cnt) return;
-
-        cnt.innerHTML = '<div class="lm" style="text-align:center; padding:40px; background:var(--bg2); border-radius:12px; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:8px;"><span class="material-symbols-outlined spin" style="font-size:20px; color:var(--blue);">sync</span> Fetching Daily Morning Trade Package & Market Risk Intelligence...</div>';
-
-        try {
-            const res = await fetch(`/api/flywheel/daily-planner?riskCap=${userRiskCap}`);
-            if (res.ok) {
-                const json = await res.json();
-                const data = json.data;
-                updateRiskBannerDisplay(data.riskSummary);
-                renderFlywheelPlannerContent(data, cnt);
-            } else {
-                renderFlywheelPlannerFallback(cnt);
-            }
-        } catch(e) {
-            renderFlywheelPlannerFallback(cnt);
-        }
-    }
-</script>
+<script src="{{ asset('js/planner.js') }}"></script>
 {% endblock %}
