@@ -23,11 +23,13 @@ function switchPortSubView(mode) {
     const subCal = document.getElementById('subViewCalendar');
     const subHis = document.getElementById('subViewHistory');
     const subOrd = document.getElementById('subViewOrders');
+    const subOpt = document.getElementById('subViewOptions');
 
     const btnAcc = document.getElementById('vtabAccounts');
     const btnCal = document.getElementById('vtabCalendar');
     const btnHis = document.getElementById('vtabHistory');
     const btnOrd = document.getElementById('vtabOrders');
+    const btnOpt = document.getElementById('vtabOptions');
 
     const isHoldings = mode === 'holdings' || mode === 'accounts';
 
@@ -35,11 +37,13 @@ function switchPortSubView(mode) {
     if (subCal) subCal.style.display = mode === 'calendar' ? 'block' : 'none';
     if (subHis) subHis.style.display = mode === 'history' ? 'block' : 'none';
     if (subOrd) subOrd.style.display = mode === 'orders' ? 'block' : 'none';
+    if (subOpt) subOpt.style.display = mode === 'options' ? 'block' : 'none';
 
     if (btnAcc) btnAcc.classList.toggle('active', isHoldings);
     if (btnCal) btnCal.classList.toggle('active', mode === 'calendar');
     if (btnHis) btnHis.classList.toggle('active', mode === 'history');
     if (btnOrd) btnOrd.classList.toggle('active', mode === 'orders');
+    if (btnOpt) btnOpt.classList.toggle('active', mode === 'options');
 
     if (mode === 'calendar') {
         loadPortfolioCalendarEvents();
@@ -48,6 +52,71 @@ function switchPortSubView(mode) {
     } else if (mode === 'orders') {
         loadOpenOrders();
     }
+}
+
+let currentOptionsStatusFilter = 'ALL';
+
+function setOptionsFilter(filterType) {
+    currentOptionsStatusFilter = filterType;
+    document.querySelectorAll('.opt-pill-filter').forEach(btn => btn.classList.remove('active'));
+    
+    if (filterType === 'ALL') {
+        const b = document.getElementById('filterOptAll');
+        if (b) b.classList.add('active');
+    } else if (filterType === 'PROFIT_ROUTE') {
+        const b = document.getElementById('filterOptProfit');
+        if (b) b.classList.add('active');
+    } else if (filterType === 'AT_RISK') {
+        const b = document.getElementById('filterOptRisk');
+        if (b) b.classList.add('active');
+    } else if (filterType === 'CALL') {
+        const b = document.getElementById('filterOptCalls');
+        if (b) b.classList.add('active');
+    } else if (filterType === 'PUT') {
+        const b = document.getElementById('filterOptPuts');
+        if (b) b.classList.add('active');
+    }
+    filterOpenOptions();
+}
+
+function filterOpenOptions() {
+    const searchInput = document.getElementById('optSearchInput');
+    const term = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const cards = document.querySelectorAll('.opt-card');
+
+    cards.forEach(card => {
+        const sym = (card.getAttribute('data-symbol') || '').toLowerCase();
+        const strat = (card.getAttribute('data-strategy') || '').toUpperCase();
+        const stat = (card.getAttribute('data-status') || '').toUpperCase();
+        const acc = (card.getAttribute('data-account') || '').toLowerCase();
+        const text = card.textContent.toLowerCase();
+
+        // 1. Check status/strategy filter
+        let passesFilter = true;
+        if (currentOptionsStatusFilter === 'PROFIT_ROUTE') {
+            passesFilter = (stat === 'PROFIT_ROUTE' || stat === 'PROFITABLE');
+        } else if (currentOptionsStatusFilter === 'AT_RISK') {
+            passesFilter = (stat === 'AT_RISK');
+        } else if (currentOptionsStatusFilter === 'CALL') {
+            passesFilter = (strat === 'CALL');
+        } else if (currentOptionsStatusFilter === 'PUT') {
+            passesFilter = (strat === 'PUT');
+        }
+
+        // 2. Check search term
+        let passesSearch = true;
+        if (term !== '') {
+            const termNorm = term.replace(/[\.\/\s]/g, '');
+            const symNorm = sym.replace(/[\.\/\s]/g, '');
+            passesSearch = sym.includes(term) || (termNorm !== '' && symNorm.includes(termNorm)) || acc.includes(term) || text.includes(term);
+        }
+
+        if (passesFilter && passesSearch) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
 }
 
 async function forceRefreshPortfolioData() {
@@ -532,7 +601,9 @@ function applyHistoryFiltersAndSort() {
 
         // Search term filter
         if (term) {
+            const termNorm = term.replace(/[\.\/\s]/g, '');
             const sym = (tx.symbol || tx.raw_symbol || '').toLowerCase();
+            const symNorm = sym.replace(/[\.\/\s]/g, '');
             const desc = (tx.description || '').toLowerCase();
             const action = (tx.action || '').toLowerCase();
             const accLower = accName.toLowerCase();
@@ -541,13 +612,16 @@ function applyHistoryFiltersAndSort() {
 
             let matchesTransfer = false;
             if (tx.transfer_items && Array.isArray(tx.transfer_items)) {
-                matchesTransfer = tx.transfer_items.some(i => 
-                    (i.symbol || '').toLowerCase().includes(term) ||
-                    (i.description || '').toLowerCase().includes(term)
-                );
+                matchesTransfer = tx.transfer_items.some(i => {
+                    const iSym = (i.symbol || '').toLowerCase();
+                    const iSymNorm = iSym.replace(/[\.\/\s]/g, '');
+                    const iDesc = (i.description || '').toLowerCase();
+                    return iSym.includes(term) || (termNorm !== '' && iSymNorm.includes(termNorm)) || iDesc.includes(term);
+                });
             }
 
             if (!sym.includes(term) &&
+                !(termNorm !== '' && symNorm.includes(termNorm)) &&
                 !desc.includes(term) &&
                 !action.includes(term) &&
                 !accLower.includes(term) &&
@@ -615,7 +689,16 @@ function applyHistoryFiltersAndSort() {
             const timeB = b.time || (b.date ? b.date + 'T00:00:00' : '');
             cmp = timeA.localeCompare(timeB);
             if (cmp === 0) {
-                cmp = (Number(a.id) || 0) - (Number(b.id) || 0);
+                // If sharing the same order_id, order fills chronologically so Fill 1 precedes Fill 2
+                const oidA = a.order_id || a.orderId;
+                const oidB = b.order_id || b.orderId;
+                if (oidA && oidB && oidA === oidB) {
+                    const idA = Number(a.id) || 0;
+                    const idB = Number(b.id) || 0;
+                    cmp = currentHistSortDir === 'desc' ? (idB - idA) : (idA - idB);
+                } else {
+                    cmp = (Number(a.id) || 0) - (Number(b.id) || 0);
+                }
             }
         } else if (currentHistSortCol === 'amount') {
             cmp = (Number(a.amount) || 0) - (Number(b.amount) || 0);
@@ -702,7 +785,48 @@ function renderHistoryRows(txList) {
         return;
     }
 
-    tbody.innerHTML = txList.map(tx => {
+    // Build comprehensive order fills index across all loaded transactions (historyRawTransactions)
+    // so that fill numbering (e.g. 1 of 2) and total fills count are 100% accurate regardless of paging or sorting.
+    const orderFillsMap = {};
+    const orderSummaryMap = {};
+    const allTxs = (Array.isArray(historyRawTransactions) && historyRawTransactions.length > 0) ? historyRawTransactions : txList;
+
+    allTxs.forEach(t => {
+        const oid = t.order_id || t.orderId;
+        if (oid) {
+            if (!orderFillsMap[oid]) orderFillsMap[oid] = [];
+            orderFillsMap[oid].push(t);
+        }
+    });
+
+    Object.keys(orderFillsMap).forEach(oid => {
+        // Sort fills chronologically ascending: earliest execution is Fill 1
+        orderFillsMap[oid].sort((a, b) => {
+            const timeA = a.time || (a.date ? a.date + 'T00:00:00' : '');
+            const timeB = b.time || (b.date ? b.date + 'T00:00:00' : '');
+            const cmp = timeA.localeCompare(timeB);
+            if (cmp !== 0) return cmp;
+            return (Number(a.id) || 0) - (Number(b.id) || 0);
+        });
+
+        let totalAmt = 0;
+        let totalQty = 0;
+        orderFillsMap[oid].forEach(item => {
+            totalAmt += (Number(item.amount) || 0);
+            if (item.transfer_items && Array.isArray(item.transfer_items)) {
+                item.transfer_items.forEach(ti => {
+                    totalQty += Math.abs(Number(ti.amount) || 0);
+                });
+            }
+        });
+        orderSummaryMap[oid] = {
+            totalFills: orderFillsMap[oid].length,
+            totalAmount: totalAmt,
+            totalQuantity: totalQty,
+        };
+    });
+
+    tbody.innerHTML = txList.map((tx, idx) => {
         const amt = Number(tx.amount) || 0;
         const isCredit = amt > 0;
         const isZero = amt === 0;
@@ -715,7 +839,9 @@ function renderHistoryRows(txList) {
         const descInfo = getTxDisplayDescription(tx);
         const accName = getTxAccountName(tx);
         const accCategory = getAccountCategory(accName);
-        const accIcon = accCategory === 'TAXABLE' ? '<span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:3px; color:var(--blue);">account_balance</span>' : '<span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:3px; color:var(--purple);">verified_user</span>';
+        const accIcon = accCategory === 'TAXABLE' 
+            ? '<span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:3px; color:var(--blue);">account_balance</span>' 
+            : '<span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle; margin-right:3px; color:var(--purple);">verified_user</span>';
 
         let dateDisplay = tx.date || '';
         let timeDisplay = '';
@@ -730,11 +856,44 @@ function renderHistoryRows(txList) {
 
         const symbolDisplay = tx.symbol || tx.raw_symbol || '—';
 
+        // Order ID and Partial Fill Segment Calculation
+        const oid = tx.order_id || tx.orderId;
+        const fills = oid && orderFillsMap[oid] ? orderFillsMap[oid] : [];
+        const totalFills = fills.length;
+        let fillIndex = 1;
+        if (totalFills > 1) {
+            const foundIdx = fills.findIndex(f => (f.id && tx.id && f.id === tx.id) || f === tx);
+            fillIndex = foundIdx >= 0 ? (foundIdx + 1) : 1;
+        }
+        const isMultiFill = totalFills > 1;
+
+        // Check adjacency in current visible page to render connected segment view
+        const prevTx = idx > 0 ? txList[idx - 1] : null;
+        const nextTx = idx < txList.length - 1 ? txList[idx + 1] : null;
+        const prevOid = prevTx ? (prevTx.order_id || prevTx.orderId) : null;
+        const nextOid = nextTx ? (nextTx.order_id || nextTx.orderId) : null;
+
+        const isPrevSame = Boolean(oid && prevOid && (oid === prevOid));
+        const isNextSame = Boolean(oid && nextOid && (oid === nextOid));
+
+        let rowClasses = 'hist-row';
+        if (isMultiFill) {
+            rowClasses += ' hist-segment-row segment-active';
+            if (isNextSame) rowClasses += ' segment-mid';
+            else rowClasses += ' segment-last';
+        }
+
+        const summary = oid && orderSummaryMap[oid] ? orderSummaryMap[oid] : null;
+        const summaryTooltip = summary 
+            ? `Order #${oid}: ${summary.totalFills} partial fills totaling ${summary.totalQuantity ? summary.totalQuantity + ' units, ' : ''}${summary.totalAmount >= 0 ? '+' : ''}$${Math.abs(summary.totalAmount).toFixed(2)}`
+            : `Broker Order #${oid}`;
+
         return `
-            <tr class="hist-row" data-type="${cat}" style="border-bottom:1px solid rgba(255,255,255,0.04); transition:background 0.15s;">
+            <tr class="${rowClasses}" data-type="${cat}" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.15s;">
                 <td style="padding:10px 16px; white-space:nowrap;">
                     <div style="font-weight:700; color:var(--text); font-size:12px;">${dateDisplay}</div>
                     ${timeDisplay ? `<div style="font-size:10px; color:var(--muted);">${timeDisplay}</div>` : ''}
+                    ${isPrevSame ? `<div style="font-size:9.5px; color:var(--blue); font-weight:700; margin-top:2px; display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:12px;">subdirectory_arrow_right</span> Fill ${fillIndex}</div>` : ''}
                 </td>
                 <td style="padding:10px 16px; white-space:nowrap;">
                     <div style="font-weight:700; color:var(--text); font-size:12px; display:flex; align-items:center; gap:5px;">
@@ -756,6 +915,20 @@ function renderHistoryRows(txList) {
                         ${descInfo.main}
                     </div>
                     ${descInfo.detail ? `<div style="color:var(--muted); font-size:11px; margin-top:2px; line-height:1.2;">${descInfo.detail}</div>` : ''}
+                    ${oid ? `
+                        <div style="display:inline-flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap;">
+                            ${isMultiFill ? `
+                                <span class="hist-fill-badge" title="${summaryTooltip}">
+                                    <span class="material-symbols-outlined" style="font-size:12px;">hub</span>
+                                    Fill ${fillIndex} of ${totalFills}
+                                </span>
+                            ` : ''}
+                            <span class="hist-order-id-tag" title="Broker Order ID: ${oid}">
+                                <span class="material-symbols-outlined" style="font-size:11px; opacity:0.7;">tag</span>
+                                Order #${oid}
+                            </span>
+                        </div>
+                    ` : ''}
                 </td>
                 <td style="padding:10px 16px; text-align:right; white-space:nowrap;">
                     <strong style="color:${amtColor}; font-size:13px; font-family:'Roboto Mono',monospace,sans-serif; font-weight:700;">${formattedAmt}</strong>
@@ -1660,6 +1833,8 @@ function handlePortfolioDeepLinks() {
         targetTab = 'history';
     } else if (hash === '#subViewOrders' || hash === '#orders') {
         targetTab = 'orders';
+    } else if (hash === '#subViewOptions' || hash === '#options' || targetTab === 'options') {
+        targetTab = 'options';
     }
 
     switchPortSubView(targetTab);

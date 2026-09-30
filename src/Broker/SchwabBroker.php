@@ -320,19 +320,43 @@ class SchwabBroker implements BrokerInterface
     public function getAccountPortfolio(): array
     {
         $cacheKey = 'b' . $this->id . '.' . str_replace(' ', '_', strtolower($this->getNickname())) . '.portfolio';
-        $cached = $this->cache->get($cacheKey, isSensitive: true);
-        if ($cached !== null) {
-            return $cached;
-        }
-
+        
         $token = $this->getAccessToken();
         if (!$token) {
+            // Broker is disconnected or unauthorized; retrieve last known snapshot from persistent cache
+            $staleData = $this->cache->getStaleWithMetadata($cacheKey, isSensitive: true);
+            if ($staleData !== null && !empty($staleData['value'])) {
+                $portfolio = $staleData['value'];
+                $portfolio['is_stale'] = true;
+                $portfolio['is_connected'] = false;
+                $portfolio['last_refreshed'] = $this->formatCentralTime($staleData['createdAt'] ?? null);
+                $portfolio['last_refreshed_short'] = $this->formatCentralTime($staleData['createdAt'] ?? null, 'g:i A T');
+                $portfolio['status'] = 'Disconnected (Cached Snapshot)';
+                return $portfolio;
+            }
+
             return [
                 'error'          => 'Broker (' . $this->getNickname() . ') not authorized or token expired.',
                 'account_number' => 'UNAUTHORIZED',
                 'balances'       => ['cash' => 0.0, 'portfolio_value' => 0.0],
                 'positions'      => [],
+                'is_stale'       => true,
+                'is_connected'   => false,
+                'last_refreshed' => 'Never',
+                'status'         => 'Disconnected',
             ];
+        }
+
+        // Check active cache if token is valid
+        $cached = $this->cache->get($cacheKey, isSensitive: true);
+        if ($cached !== null) {
+            if (!isset($cached['last_refreshed'])) {
+                $cached['last_refreshed'] = $this->formatCentralTime();
+                $cached['last_refreshed_short'] = $this->formatCentralTime(null, 'g:i A T');
+            }
+            $cached['is_stale'] = false;
+            $cached['is_connected'] = true;
+            return $cached;
         }
 
         try {
@@ -368,15 +392,39 @@ class SchwabBroker implements BrokerInterface
             ]);
 
             if ($response->getStatusCode() !== 200) {
+                $staleData = $this->cache->getStaleWithMetadata($cacheKey, isSensitive: true);
+                if ($staleData !== null && !empty($staleData['value'])) {
+                    $portfolio = $staleData['value'];
+                    $portfolio['is_stale'] = true;
+                    $portfolio['is_connected'] = false;
+                    $portfolio['last_refreshed'] = $this->formatCentralTime($staleData['createdAt'] ?? null);
+                    $portfolio['last_refreshed_short'] = $this->formatCentralTime($staleData['createdAt'] ?? null, 'g:i A T');
+                    $portfolio['status'] = 'Disconnected (API HTTP ' . $response->getStatusCode() . ')';
+                    return $portfolio;
+                }
                 return ['error' => 'API returned HTTP ' . $response->getStatusCode()];
             }
 
             $accounts = $response->toArray();
             $portfolio = $this->sanitizePortfolioData($accounts, $nicknameMap);
+            $portfolio['is_stale'] = false;
+            $portfolio['is_connected'] = true;
+            $portfolio['last_refreshed'] = $this->formatCentralTime();
+            $portfolio['last_refreshed_short'] = $this->formatCentralTime(null, 'g:i A T');
             $this->cache->set($cacheKey, $portfolio, (int) $this->appConfig->get('cache.ttl.broker.portfolio', 60), true);
             return $portfolio;
         } catch (\Throwable $e) {
             $this->logger->error('Schwab Portfolio Fetch Error (' . $this->id . '): ' . $e->getMessage());
+            $staleData = $this->cache->getStaleWithMetadata($cacheKey, isSensitive: true);
+            if ($staleData !== null && !empty($staleData['value'])) {
+                $portfolio = $staleData['value'];
+                $portfolio['is_stale'] = true;
+                $portfolio['is_connected'] = false;
+                $portfolio['last_refreshed'] = $this->formatCentralTime($staleData['createdAt'] ?? null);
+                $portfolio['last_refreshed_short'] = $this->formatCentralTime($staleData['createdAt'] ?? null, 'g:i A T');
+                $portfolio['status'] = 'Network Disconnected (Using Cached Snapshot)';
+                return $portfolio;
+            }
             return ['error' => 'Failed fetching portfolio: ' . $e->getMessage()];
         }
     }
@@ -390,7 +438,7 @@ class SchwabBroker implements BrokerInterface
      */
     public function getAccountHistory(int $days = 30, bool $forceRefresh = false): array
     {
-        $cacheTtl = (int) $this->appConfig->get('cache.ttl.broker.history', 604800);
+        $cacheTtl = (int) $this->appConfig->get('cache.ttl.broker.history', 300);
         $overallCacheKey = 'b' . $this->id . '.history.' . $days;
         
         if (!$forceRefresh) {
@@ -402,13 +450,40 @@ class SchwabBroker implements BrokerInterface
 
         $token = $this->getAccessToken();
         if (!$token) {
-            return [];
+            // Return stale history from cache if disconnected or unauthorized
+            $staleHistory = $this->cache->getStale($overallCacheKey, isSensitive: true);
+            if (!empty($staleHistory)) {
+                return $staleHistory;
+            }
+
+            // Also check if any master transaction accounts exist in cache
+            $limitDate = (new \DateTimeImmutable("-{$days} days"))->format('Y-m-d');
+            $fallbackHistory = [];
+            try {
+                // If we have cached portfolio, check account numbers
+                $cacheKey = 'b' . $this->id . '.' . str_replace(' ', '_', strtolower($this->getNickname())) . '.portfolio';
+                $cachedPort = $this->cache->getStale($cacheKey, isSensitive: true);
+                if (!empty($cachedPort['accounts'])) {
+                    foreach ($cachedPort['accounts'] as $acc) {
+                        $accNo = $acc['accountNumber'] ?? '';
+                        if ($accNo) {
+                            $masterList = $this->cache->getStale('b' . $this->id . '.tx_master.' . $accNo, isSensitive: true) ?: [];
+                            foreach ($masterList as $tx) {
+                                if (($tx['date'] ?? '') >= $limitDate) {
+                                    $fallbackHistory[] = $tx;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable) {}
+
+            return $fallbackHistory;
         }
 
         $lastFetchKey = 'b' . $this->id . '.tx_last_fetched.' . $days;
-        $lastFetchDate = $this->cache->get($lastFetchKey);
-        $todayStr = date('Y-m-d');
-        $shouldFetchFromApi = $forceRefresh || ($lastFetchDate !== $todayStr);
+        $lastFetchTime = (int) ($this->cache->get($lastFetchKey) ?: 0);
+        $shouldFetchFromApi = $forceRefresh || (time() - $lastFetchTime > 300);
 
         // Fetch user preferences for nickname mapping (only if querying API)
         $nicknameMap = [];
@@ -471,8 +546,6 @@ class SchwabBroker implements BrokerInterface
                 return [];
             }
 
-            $startDate = (new \DateTimeImmutable("-{$days} days"))->format('Y-m-d\TH:i:s.000\Z');
-            $endDate   = (new \DateTimeImmutable())->format('Y-m-d\TH:i:s.000\Z');
             $timeout   = (float) $this->appConfig->get('api.timeout.broker.transactions', 10.0);
             $txTypes   = 'TRADE,DIVIDEND_OR_INTEREST,JOURNAL';
 
@@ -497,13 +570,15 @@ class SchwabBroker implements BrokerInterface
                     }
                 }
 
-                // Query Schwab only if we have not fetched today, or it is a force pull
+                // Query Schwab only if we have not fetched in the last 5 minutes, or it is a force pull
                 if ($shouldFetchFromApi) {
                     try {
                         // Chunk queries in maximum 365-day intervals to satisfy Schwab API range limits
                         $chunks = [];
                         $totalDays = $days;
-                        $currentEnd = new \DateTimeImmutable();
+                        // Use UTC timezone and pad to end of next day UTC so same-day trades are never excluded
+                        $utc = new \DateTimeZone('UTC');
+                        $currentEnd = (new \DateTimeImmutable('+1 day', $utc));
                         while ($totalDays > 0) {
                             $daysToSub = min($totalDays, 365);
                             $currentStart = $currentEnd->sub(new \DateInterval("P{$daysToSub}D"));
@@ -560,9 +635,9 @@ class SchwabBroker implements BrokerInterface
                 }
             }
 
-            // Update last fetched date mark if we queried Schwab
+            // Update last fetched timestamp if we queried Schwab
             if ($shouldFetchFromApi) {
-                $this->cache->set($lastFetchKey, $todayStr, 86400);
+                $this->cache->set($lastFetchKey, time(), 300);
             }
 
             // Sort all transactions descending by date
@@ -1175,5 +1250,24 @@ class SchwabBroker implements BrokerInterface
             'daysToExpiration'  => (int) ($c['daysToExpiration'] ?? 0),
             'inTheMoney'        => (bool) ($c['inTheMoney'] ?? false),
         ];
+    }
+
+    /**
+     * Format a timestamp explicitly in US Central Time (America/Chicago).
+     */
+    private function formatCentralTime(?\DateTimeInterface $dt = null, string $format = 'M j, Y g:i A T'): string
+    {
+        $tz = new \DateTimeZone('America/Chicago');
+        if ($dt === null) {
+            return (new \DateTimeImmutable('now', $tz))->format($format);
+        }
+        if ($dt instanceof \DateTimeImmutable) {
+            return $dt->setTimezone($tz)->format($format);
+        }
+        if ($dt instanceof \DateTime) {
+            $clone = clone $dt;
+            return $clone->setTimezone($tz)->format($format);
+        }
+        return (new \DateTimeImmutable($dt->format('c')))->setTimezone($tz)->format($format);
     }
 }

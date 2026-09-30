@@ -77,22 +77,20 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, var(--blue), var(--purple));
+    background: var(--blue);
     color: #ffffff;
-    border: none;
-    border-radius: 10px;
-    padding: 10px 20px;
+    border: 1px solid var(--blue);
+    border-radius: 8px;
+    padding: 9px 18px;
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(88, 166, 255, 0.25);
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .engine-trigger-btn:hover {
+    opacity: 0.92;
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(88, 166, 255, 0.35);
-    opacity: 0.95;
 }
 
 .engine-trigger-btn:disabled {

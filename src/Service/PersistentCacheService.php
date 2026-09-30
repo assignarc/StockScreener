@@ -162,10 +162,19 @@ class PersistentCacheService
      */
     public function getStale(string $key, bool $isSensitive = false): mixed
     {
-        if (array_key_exists($key, $this->memoryCache)) {
-            return $this->memoryCache[$key];
-        }
+        $meta = $this->getStaleWithMetadata($key, $isSensitive);
+        return $meta !== null ? $meta['value'] : null;
+    }
 
+    /**
+     * Retrieve cached value with metadata (createdAt, expiresAt, isStale) even if expired.
+     *
+     * @param string $key Cache key string.
+     * @param bool $isSensitive When true, decrypts payload.
+     * @return array{value: mixed, createdAt: \DateTimeImmutable|null, expiresAt: \DateTimeImmutable|null, isStale: bool}|null
+     */
+    public function getStaleWithMetadata(string $key, bool $isSensitive = false): ?array
+    {
         try {
             $cached = $this->cacheRepo->findOneBy(['cacheKey' => $key]);
             if ($cached !== null) {
@@ -175,12 +184,27 @@ class PersistentCacheService
                     : $rawVal;
 
                 if ($val !== null) {
-                    $this->memoryCache[$key] = $val;
-                    return $val;
+                    return [
+                        'value' => $val,
+                        'createdAt' => $cached->getCreatedAt(),
+                        'expiresAt' => $cached->getExpiresAt(),
+                        'isStale' => $cached->isExpired(),
+                    ];
                 }
             }
         } catch (\Throwable $e) {
-            $this->logger->warning("Persistent cache getStale read error for {$key}: " . $e->getMessage());
+            $this->logger->warning("Persistent cache getStaleWithMetadata read error for {$key}: " . $e->getMessage());
+        }
+
+        if (array_key_exists($key, $this->memoryCache)) {
+            $tz = new \DateTimeZone('America/Chicago');
+            $now = new \DateTimeImmutable('now', $tz);
+            return [
+                'value' => $this->memoryCache[$key],
+                'createdAt' => $now,
+                'expiresAt' => $now->modify('+3600 seconds'),
+                'isStale' => false,
+            ];
         }
 
         return null;

@@ -25,6 +25,15 @@
 
     <!-- HEADER RIGHT CONTROLS & STATUS -->
     <div class="hright">
+        <!-- BROKER CONNECTION & REFRESH STATUS -->
+        <a href="/settings" class="header-broker-status-pill" id="headerBrokerStatusPill" title="Brokerage API Status & Last Refreshed Time">
+            <span class="header-status-indicator" id="headerBrokerStatusDot"></span>
+            <span class="material-symbols-outlined header-broker-icon" id="headerBrokerStatusIcon">cloud_sync</span>
+            <span class="header-broker-text" id="headerBrokerStatusText">Broker: Checking...</span>
+            <span class="header-refresh-sep">•</span>
+            <span class="header-refresh-time" id="headerBrokerRefreshTime">--:--</span>
+        </a>
+
         {% if showLiveLoadBtn is defined and showLiveLoadBtn %}
             <button class="hbtn hbtn-load"><span class="material-symbols-outlined">play_arrow</span> Load Live Quotes</button>
         {% endif %}

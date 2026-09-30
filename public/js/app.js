@@ -123,11 +123,95 @@ window.fetch = async function(...args) {
     }
 };
 
+// Global Broker Status & Last Refreshed Telemetry Hydration
+async function updateGlobalBrokerTelemetry() {
+    const headerPill = document.getElementById('headerBrokerStatusPill');
+    const headerDot = document.getElementById('headerBrokerStatusDot');
+    const headerIcon = document.getElementById('headerBrokerStatusIcon');
+    const headerText = document.getElementById('headerBrokerStatusText');
+    const headerTime = document.getElementById('headerBrokerRefreshTime');
+
+    const footerPill = document.getElementById('footerBrokerStatusPill');
+    const footerDot = document.getElementById('footerBrokerStatusDot');
+    const footerText = document.getElementById('footerBrokerStatusText');
+    const footerTime = document.getElementById('footerBrokerRefreshTime');
+
+    if (!headerPill && !footerPill) return;
+
+    try {
+        const res = await originalFetch('/api/broker/status');
+        if (!res.ok) throw new Error('Status query failed');
+        const json = await res.json();
+        const data = json.data || json;
+
+        const isConnected = data.is_connected === true;
+        const isStale = data.is_stale === true;
+        const refreshShort = data.last_refreshed_short || data.last_refreshed || '--:--';
+        const refreshFull = data.last_refreshed || 'Just now';
+
+        // Update Header Pill
+        if (headerPill) {
+            headerPill.classList.remove('status-stale', 'status-disconnected', 'status-error');
+            if (isConnected && !isStale) {
+                if (headerDot) headerDot.style.background = 'var(--green)';
+                if (headerIcon) {
+                    headerIcon.textContent = 'cloud_done';
+                    headerIcon.style.color = 'var(--green)';
+                }
+                if (headerText) headerText.textContent = 'Broker: Connected';
+            } else if (isConnected && isStale) {
+                headerPill.classList.add('status-stale');
+                if (headerDot) headerDot.style.background = 'var(--yellow)';
+                if (headerIcon) {
+                    headerIcon.textContent = 'cloud_queue';
+                    headerIcon.style.color = 'var(--yellow)';
+                }
+                if (headerText) headerText.textContent = 'Broker: Snapshot';
+            } else {
+                headerPill.classList.add('status-disconnected');
+                if (headerDot) headerDot.style.background = 'var(--yellow)';
+                if (headerIcon) {
+                    headerIcon.textContent = 'cloud_off';
+                    headerIcon.style.color = 'var(--yellow)';
+                }
+                if (headerText) headerText.textContent = 'Broker: Disconnected';
+            }
+            if (headerTime) headerTime.textContent = refreshShort;
+            headerPill.title = `Brokerage API: ${isConnected ? (isStale ? 'Cached Snapshot' : 'Live Connected') : 'Disconnected (Cached State)'} • Last Refreshed: ${refreshFull}`;
+        }
+
+        // Update Footer Status Pill
+        if (footerPill) {
+            if (footerDot) {
+                footerDot.classList.remove('dot-stale', 'dot-disconnected', 'dot-error');
+                if (isConnected && !isStale) {
+                    footerDot.style.background = 'var(--green)';
+                } else {
+                    footerDot.classList.add('dot-stale');
+                    footerDot.style.background = 'var(--yellow)';
+                }
+            }
+            if (footerText) {
+                footerText.textContent = isConnected && !isStale 
+                    ? 'Brokerage API: Connected' 
+                    : (isConnected ? 'Brokerage API: Cached Snapshot' : 'Brokerage API: Disconnected');
+            }
+            if (footerTime) {
+                footerTime.textContent = `Refreshed ${refreshShort}`;
+            }
+            footerPill.title = `Brokerage API status: ${isConnected ? (isStale ? 'Stale Cached Snapshot' : 'Connected') : 'Offline (Showing Saved State)'} • Last Refreshed: ${refreshFull}`;
+        }
+    } catch (err) {
+        console.warn('Unable to hydrate global broker status:', err);
+    }
+}
+
 // Automatic Page Navigation Progress Feedback
 document.addEventListener('DOMContentLoaded', () => {
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     updateThemeToggleButtons(currentTheme);
     checkDisclaimerStatus();
+    updateGlobalBrokerTelemetry();
 
     // Show prominent progress on internal link clicks and form submissions
     document.addEventListener('click', (e) => {

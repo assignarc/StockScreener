@@ -35,13 +35,14 @@ class BrokerController extends AbstractController
     ) {}
 
     /**
-     * Returns a list of all configured broker instances and their authorization status.
+     * Returns a list of all configured broker instances, authorization status, and global connectivity.
      *
      * @return JsonResponse JSON list of broker instances.
      */
     #[Route('/list', name: 'list', methods: ['GET'])]
     public function list(): JsonResponse
     {
+        $global = $this->brokerManager->getGlobalConnectionStatus();
         $list = [];
         foreach ($this->brokerManager->getBrokers() as $id => $broker) {
             $list[] = [
@@ -52,7 +53,29 @@ class BrokerController extends AbstractController
                 'authorized' => $broker->isAuthorized(),
             ];
         }
-        return $this->json(['status' => 'success', 'brokers' => $list]);
+        return $this->json([
+            'status'         => 'success',
+            'brokers'        => $list,
+            'is_connected'   => $global['is_connected'],
+            'is_stale'       => $global['is_stale'],
+            'connection'     => $global['status'],
+            'last_refreshed' => $global['last_refreshed'],
+            'last_refreshed_short' => $global['last_refreshed_short'],
+        ]);
+    }
+
+    /**
+     * Returns global broker connectivity status and last refreshed timestamp.
+     *
+     * @return JsonResponse Global status telemetry.
+     */
+    #[Route('/status', name: 'global_status', methods: ['GET'])]
+    public function globalStatus(): JsonResponse
+    {
+        return $this->json([
+            'status' => 'success',
+            'data'   => $this->brokerManager->getGlobalConnectionStatus(),
+        ]);
     }
 
     /**

@@ -15,6 +15,12 @@ class Kernel extends BaseKernel
 {
     use MicroKernelTrait;
 
+    public function boot(): void
+    {
+        parent::boot();
+        date_default_timezone_set('America/Chicago');
+    }
+
     /**
      * Returns an array of allowed environment identifiers for APP_ENV.
      *

@@ -1,5 +1,7 @@
 twig:
     file_name_pattern: '*.twig'
+    date:
+        timezone: 'America/Chicago'
     globals:
         app_name: '%app.name%'
         app_version: '%app.version%'

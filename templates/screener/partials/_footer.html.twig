@@ -12,9 +12,11 @@
             </p>
             <!-- UNIFIED SINGLE ROW SYSTEM & TELEMETRY STATUS -->
             <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
-                <span class="footer-status-pill">
-                    <span class="footer-status-dot"></span>
-                    <span>Brokerage API: Connected</span>
+                <span class="footer-status-pill" id="footerBrokerStatusPill" title="Brokerage Connectivity and Last Refreshed">
+                    <span class="footer-status-dot" id="footerBrokerStatusDot"></span>
+                    <span id="footerBrokerStatusText">Brokerage API: Connected</span>
+                    <span style="opacity:0.6; margin:0 2px;">•</span>
+                    <span style="color:var(--muted); font-size:10px;" id="footerBrokerRefreshTime">Refreshed {{ "now"|date("g:i A T") }}</span>
                 </span>
                 <span class="footer-status-pill">
                     <span class="footer-status-dot" style="background:var(--blue); box-shadow:0 0 6px rgba(88,166,255,0.6);"></span>

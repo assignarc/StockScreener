@@ -168,11 +168,11 @@ async function fetchStocks() {
 function filterSignal(signal, btn) {
     if (activeSignal === signal && signal !== 'ALL') {
         signal = 'ALL';
-        btn = document.querySelector('.controls .sig-btn') || btn;
+        btn = document.querySelector('.cmd-tab.sig-btn, .controls .sig-btn') || btn;
     }
     activeSignal = signal;
-    document.querySelectorAll('.controls .sig-btn').forEach(b => {
-        b.className = 'sig-btn';
+    document.querySelectorAll('.cmd-tab.sig-btn, .controls .sig-btn').forEach(b => {
+        b.classList.remove('active-all', 'active-call', 'active-put', 'active-wheel');
     });
     
     if (btn) {
@@ -188,10 +188,10 @@ function filterSignal(signal, btn) {
 function filterSector(sector, btn) {
     if (activeSector === sector && sector !== 'ALL') {
         sector = 'ALL';
-        btn = document.querySelector('.controls .fbtn') || btn;
+        btn = document.querySelector('.cmd-chip.fbtn, .controls .fbtn') || btn;
     }
     activeSector = sector;
-    document.querySelectorAll('.controls .fbtn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.cmd-chip.fbtn, .controls .fbtn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
     fetchStocks();
 }

@@ -10,6 +10,7 @@ use App\Broker\PublicBroker;
 use App\Broker\RobinhoodBroker;
 use App\Broker\SchwabBroker;
 use App\Broker\TastytradeBroker;
+use App\Repository\StockRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -33,13 +34,17 @@ class BrokerManagerService
      * @param HttpClientInterface $httpClient External HTTP client.
      * @param LoggerInterface $logger Application logger.
      * @param \Doctrine\DBAL\Connection|null $connection Database connection for local portfolio events.
+     * @param FinnhubService|null $finnhubService Market data service.
+     * @param StockRepository|null $stockRepository Stock repository for fundamental equity prices.
      */
     public function __construct(
         private AppConfigService $appConfig,
         private PersistentCacheService $cache,
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
-        private ?\Doctrine\DBAL\Connection $connection = null
+        private ?\Doctrine\DBAL\Connection $connection = null,
+        private ?FinnhubService $finnhubService = null,
+        private ?StockRepository $stockRepository = null
     ) {
         $this->initializeBrokers();
     }
@@ -156,6 +161,113 @@ class BrokerManagerService
     }
 
     /**
+     * Get overall broker connectivity status and last refreshed timestamp.
+     *
+     * @return array Telemetry and connectivity status payload.
+     */
+    public function getGlobalConnectionStatus(): array
+    {
+        $authorizedCount = 0;
+        $totalConfigured = 0;
+        $isAnyBrokerStale = false;
+        $latestRefresh = null;
+        $latestRefreshShort = null;
+
+        foreach ($this->brokers as $id => $broker) {
+            if (!$broker->isConfigured()) {
+                continue;
+            }
+            $totalConfigured++;
+            $cacheKey = 'b' . $id . '.' . str_replace(' ', '_', strtolower($broker->getNickname())) . '.portfolio';
+            $meta = $this->cache->getStaleWithMetadata($cacheKey, isSensitive: true);
+            
+            if ($meta !== null && $meta['createdAt'] !== null) {
+                $latestRefresh = $this->formatCentralTime($meta['createdAt']);
+                $latestRefreshShort = $this->formatCentralTime($meta['createdAt'], 'g:i A T');
+            }
+
+            if ($broker->isAuthorized()) {
+                $authorizedCount++;
+            } else {
+                $isAnyBrokerStale = true;
+            }
+        }
+
+        $isConnected = ($authorizedCount > 0);
+        $statusText = $isConnected 
+            ? ($isAnyBrokerStale ? 'Partially Connected' : 'Connected')
+            : 'Disconnected';
+
+        return [
+            'is_connected'         => $isConnected,
+            'is_stale'             => !$isConnected || $isAnyBrokerStale,
+            'status'               => $statusText,
+            'authorized_count'     => $authorizedCount,
+            'total_configured'     => $totalConfigured,
+            'last_refreshed'       => $latestRefresh ?: $this->formatCentralTime(),
+            'last_refreshed_short' => $latestRefreshShort ?: $this->formatCentralTime(null, 'g:i A T'),
+        ];
+    }
+
+    /**
+     * Resolves the current live or cached trading price for an underlying equity ticker.
+     *
+     * @param string $root Equity ticker root (e.g. "NVDA", "IBM", "MSFT").
+     * @param array $equityMap Current aggregated portfolio equity map.
+     * @return float|null Current share price if resolvable, or null.
+     */
+    private function resolveUnderlyingPrice(string $root, array $equityMap): ?float
+    {
+        $root = strtoupper(trim($root));
+
+        // 1. Direct match in current portfolio holdings if positive shares held
+        if (isset($equityMap[$root]) && ($equityMap[$root]['assetType'] ?? '') === 'EQUITY') {
+            $qty = (float) ($equityMap[$root]['totalQuantity'] ?? 0.0);
+            $mktVal = (float) ($equityMap[$root]['totalMarketValue'] ?? 0.0);
+            if ($qty > 0 && $mktVal > 0) {
+                return round($mktVal / $qty, 2);
+            }
+        }
+
+        // 2. Check accounts within equityMap for any positive position with marketValue/qty
+        if (isset($equityMap[$root]['accounts']) && is_array($equityMap[$root]['accounts'])) {
+            foreach ($equityMap[$root]['accounts'] as $accPos) {
+                $accQty = (float) ($accPos['quantity'] ?? 0.0);
+                $accMktVal = (float) ($accPos['marketValue'] ?? 0.0);
+                if ($accQty > 0 && $accMktVal > 0) {
+                    return round($accMktVal / $accQty, 2);
+                }
+            }
+        }
+
+        // 3. Fallback to Stock database entity price
+        if ($this->stockRepository !== null) {
+            try {
+                $stock = $this->stockRepository->findOneBy(['symbol' => $root]);
+                if ($stock && $stock->getPrice() > 0) {
+                    return round((float) $stock->getPrice(), 2);
+                }
+            } catch (\Throwable $e) {
+                // Ignore DB error and continue
+            }
+        }
+
+        // 4. Fallback to Finnhub live quote service
+        if ($this->finnhubService !== null) {
+            try {
+                $quote = $this->finnhubService->getQuote($root);
+                if (!empty($quote['c']) && (float) $quote['c'] > 0) {
+                    return round((float) $quote['c'], 2);
+                }
+            } catch (\Throwable $e) {
+                // Ignore API error and continue
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Aggregate portfolio balances, liquidation values, equity positions, and calculate
      * unencumbered share blocks across all registered and authorized brokers.
      *
@@ -170,6 +282,10 @@ class BrokerManagerService
         $authorizedCount = 0;
         $accountsSummary = [];
         $equityMap = [];
+        $isAnyBrokerStale = false;
+        $isAnyBrokerConnected = false;
+        $latestRefreshTimestamp = null;
+        $latestRefreshShort = null;
 
         foreach ($this->brokers as $id => $broker) {
             if (!$broker->isConfigured()) {
@@ -177,7 +293,21 @@ class BrokerManagerService
             }
 
             $portfolio = $broker->getAccountPortfolio();
-            if (isset($portfolio['error']) && !$broker->isAuthorized()) {
+            $isBrokerConnected = $broker->isAuthorized() && !($portfolio['is_stale'] ?? false);
+            if ($isBrokerConnected) {
+                $isAnyBrokerConnected = true;
+                $authorizedCount++;
+            } else {
+                $isAnyBrokerStale = true;
+            }
+
+            if (!empty($portfolio['last_refreshed']) && $portfolio['last_refreshed'] !== 'Never') {
+                $latestRefreshTimestamp = $portfolio['last_refreshed'];
+                $latestRefreshShort = $portfolio['last_refreshed_short'] ?? $this->formatCentralTime(null, 'g:i A T');
+            }
+
+            // If broker returned an error with no positions/accounts and no cache
+            if (isset($portfolio['error']) && empty($portfolio['positions']) && empty($portfolio['accounts'])) {
                 $accountsSummary[] = [
                     'id'          => $id,
                     'nickname'    => $broker->getNickname(),
@@ -188,7 +318,6 @@ class BrokerManagerService
                 continue;
             }
 
-            $authorizedCount++;
             $balances = $portfolio['balances'] ?? [];
             $cash = (float) ($balances['cash'] ?? 0.0);
             $pVal = (float) ($balances['portfolio_value'] ?? 0.0);
@@ -374,6 +503,7 @@ class BrokerManagerService
         $optionsMap = [];
         $accountOptionPledges = [];
         $accountOptions = [];
+        $openOptionPositions = [];
 
         foreach ($equityMap as $symbol => $e) {
             if ($e['assetType'] === 'OPTION') {
@@ -389,12 +519,298 @@ class BrokerManagerService
                     $dateStr = "20{$yy}-{$mm}-{$dd}";
 
                     $contractCount = max(1, (int) abs($e['totalQuantity']));
-                    $pledgedShares = $type === 'Call' ? ($contractCount * 100) : 0;
-                    $cashCollateral = $type === 'Put' ? ($contractCount * 100 * $strike) : 0.0;
+                    $rawQuantity = (float) $e['totalQuantity'];
+                    $isShort = $rawQuantity < 0;
+                    $pledgedShares = ($type === 'Call' && $isShort) ? ($contractCount * 100) : 0;
+                    $cashCollateral = ($type === 'Put' && $isShort) ? ($contractCount * 100 * $strike) : 0.0;
 
                     $readableSym = TaxEngine::formatOptionReadable($normSym);
                     $strikeStr = number_format($strike, 2);
                     $cashStr = number_format($cashCollateral, 2);
+
+                    $underlyingPrice = $this->resolveUnderlyingPrice($root, $equityMap);
+                    $underlyingPriceStr = $underlyingPrice !== null ? number_format($underlyingPrice, 2) : 'N/A';
+
+                    // Expiration & Days to Expiration (DTE)
+                    $dte = null;
+                    $dteText = 'N/A';
+                    try {
+                        $nowDate = new \DateTimeImmutable('today');
+                        $expDate = new \DateTimeImmutable($dateStr);
+                        $diffDays = (int) $nowDate->diff($expDate)->format('%r%a');
+                        $dte = $diffDays;
+                        if ($diffDays > 1) {
+                            $dteText = "{$diffDays} days left";
+                        } elseif ($diffDays === 1) {
+                            $dteText = "1 day left (Tomorrow)";
+                        } elseif ($diffDays === 0) {
+                            $dteText = "Expires Today";
+                        } else {
+                            $dteText = "Expired (" . abs($diffDays) . "d ago)";
+                        }
+                    } catch (\Throwable $err) {}
+
+                    // Strategy Classification
+                    if ($isShort && $type === 'Call') {
+                        $strategy = 'Covered Call';
+                    } elseif ($isShort && $type === 'Put') {
+                        $strategy = 'Cash-Secured Put';
+                    } elseif (!$isShort && $type === 'Call') {
+                        $strategy = 'Long Call';
+                    } else {
+                        $strategy = 'Long Put';
+                    }
+
+                    // Moneyness & Distance Calculation
+                    $moneyness = 'UNKNOWN';
+                    $distance = 0.0;
+                    $distancePct = 0.0;
+                    $distanceStr = 'N/A';
+
+                    if ($underlyingPrice !== null) {
+                        if ($type === 'Call') {
+                            $diff = $underlyingPrice - $strike;
+                            if ($diff > 0.01) {
+                                $moneyness = 'ITM';
+                                $distance = $diff;
+                                $distancePct = round(($diff / $strike) * 100, 1);
+                                $distanceStr = "\$" . number_format($diff, 2) . " ITM (+{$distancePct}%)";
+                            } elseif ($diff < -0.01) {
+                                $moneyness = 'OTM';
+                                $distance = abs($diff);
+                                $distancePct = round((abs($diff) / $underlyingPrice) * 100, 1);
+                                $distanceStr = "\$" . number_format(abs($diff), 2) . " OTM ({$distancePct}% buffer)";
+                            } else {
+                                $moneyness = 'ATM';
+                                $distance = 0.0;
+                                $distancePct = 0.0;
+                                $distanceStr = "At the Money (ATM)";
+                            }
+                        } else { // Put
+                            $diff = $strike - $underlyingPrice;
+                            if ($diff > 0.01) {
+                                $moneyness = 'ITM';
+                                $distance = $diff;
+                                $distancePct = round(($diff / $strike) * 100, 1);
+                                $distanceStr = "\$" . number_format($diff, 2) . " ITM (+{$distancePct}%)";
+                            } elseif ($diff < -0.01) {
+                                $moneyness = 'OTM';
+                                $distance = abs($diff);
+                                $distancePct = round((abs($diff) / $underlyingPrice) * 100, 1);
+                                $distanceStr = "\$" . number_format(abs($diff), 2) . " OTM ({$distancePct}% buffer)";
+                            } else {
+                                $moneyness = 'ATM';
+                                $distance = 0.0;
+                                $distancePct = 0.0;
+                                $distanceStr = "At the Money (ATM)";
+                            }
+                        }
+                    }
+
+                    // Commission Received Per Stock & Total Commission
+                    // In US options, 1 contract represents 100 shares of underlying stock.
+                    // Unit commission is the premium per share received (or paid).
+                    $unitCommission = 0.0;
+                    if (!empty($e['accounts'])) {
+                        $totQty = 0.0;
+                        $totCostProd = 0.0;
+                        foreach ($e['accounts'] as $accPos) {
+                            $aQty = abs((float) ($accPos['quantity'] ?? 0.0));
+                            $aCost = abs((float) ($accPos['averagePrice'] ?? 0.0));
+                            $totCostProd += ($aQty * $aCost);
+                            $totQty += $aQty;
+                        }
+                        if ($totQty > 0) {
+                            $unitCommission = $totCostProd / $totQty;
+                        }
+                    }
+                    if ($unitCommission == 0.0 && abs($e['totalQuantity']) > 0) {
+                        $unitCommission = abs((float) ($e['totalCostBasis'] / $e['totalQuantity']));
+                    }
+
+                    $sharesRepresented = $contractCount * 100;
+                    $totalCommission = round($sharesRepresented * $unitCommission, 2);
+                    $commissionPerStock = round($unitCommission, 2);
+                    $commissionPerStockStr = number_format($commissionPerStock, 2);
+                    $totalCommissionStr = number_format($totalCommission, 2);
+
+                    // Net Breakeven Calculation
+                    // For Short Put: Breakeven = Strike - PremiumCollected
+                    // For Short Call: Effective exit realization = Strike + PremiumCollected
+                    if ($type === 'Put') {
+                        $netBreakeven = round($strike - $commissionPerStock, 2);
+                        $breakevenFormula = "\${$strikeStr} strike − \${$commissionPerStockStr} premium";
+                    } else {
+                        $netBreakeven = round($strike + $commissionPerStock, 2);
+                        $breakevenFormula = "\${$strikeStr} strike + \${$commissionPerStockStr} premium";
+                    }
+                    $netBreakevenStr = number_format($netBreakeven, 2);
+
+                    $beDiff = 0.0;
+                    $beDiffStr = '0.00';
+                    $beDiffPct = 0.0;
+                    $isAboveBreakeven = true;
+                    $breakevenStatusStr = 'At Breakeven';
+                    $profitAtQuote = 0.0;
+                    $profitAtQuoteStr = '$0.00';
+                    $maxProfit = $totalCommission;
+                    $maxProfitStr = "+$" . number_format($totalCommission, 2);
+
+                    if ($underlyingPrice !== null && $underlyingPrice > 0) {
+                        if ($type === 'Put') {
+                            $beDiff = round($underlyingPrice - $netBreakeven, 2);
+                            $beDiffStr = number_format(abs($beDiff), 2);
+                            $beDiffPct = $netBreakeven > 0 ? round((abs($beDiff) / $netBreakeven) * 100, 1) : 0.0;
+
+                            if ($underlyingPrice >= $strike - 0.005) {
+                                // OTM Put: stock above strike, expires worthless, full premium kept
+                                $isAboveBreakeven = true;
+                                $profitAtQuote = $totalCommission;
+                                $profitAtQuoteStr = "+$" . number_format($profitAtQuote, 2);
+                                $breakevenStatusStr = "+\${$beDiffStr} (+{$beDiffPct}%) above Breakeven • {$profitAtQuoteStr} Max Profit";
+                            } elseif ($beDiff >= 0.005) {
+                                // ITM Put relative to strike, BUT above net breakeven
+                                // Total profit possible based on current quote = options contracts * 100 shares * buffer per share
+                                $isAboveBreakeven = true;
+                                $profitAtQuote = round($sharesRepresented * $beDiff, 2);
+                                $profitAtQuoteStr = "+$" . number_format($profitAtQuote, 2);
+                                $breakevenStatusStr = "+\${$beDiffStr} (+{$beDiffPct}%) above Breakeven • {$profitAtQuoteStr} profit at quote";
+                            } elseif ($beDiff <= -0.005) {
+                                // Below Breakeven (Loss zone)
+                                $isAboveBreakeven = false;
+                                $profitAtQuote = round($sharesRepresented * $beDiff, 2); // negative
+                                $profitAtQuoteStr = "-$" . number_format(abs($profitAtQuote), 2);
+                                $breakevenStatusStr = "-\${$beDiffStr} (-{$beDiffPct}%) below Breakeven • {$profitAtQuoteStr} basis loss";
+                            } else {
+                                $isAboveBreakeven = true;
+                                $profitAtQuote = 0.0;
+                                $profitAtQuoteStr = "$0.00";
+                                $breakevenStatusStr = "At Breakeven (\${$netBreakevenStr}) • \$0.00 profit";
+                            }
+                        } else {
+                            // Call (Covered Call)
+                            $callDiff = round($underlyingPrice - $strike, 2);
+                            $beDiff = abs($callDiff);
+                            $beDiffStr = number_format($beDiff, 2);
+                            $beDiffPct = $strike > 0 ? round(($beDiff / $strike) * 100, 1) : 0.0;
+
+                            if ($callDiff <= 0.005) {
+                                // OTM Call: stock below strike, option decays to $0, seller keeps 100% premium
+                                $isAboveBreakeven = true;
+                                $profitAtQuote = $totalCommission;
+                                $profitAtQuoteStr = "+$" . number_format($profitAtQuote, 2);
+                                $breakevenStatusStr = "+\${$beDiffStr} ({$beDiffPct}%) OTM Buffer • {$profitAtQuoteStr} Max Profit";
+                            } else {
+                                // ITM Call: stock above strike, shares called away at strike + keep premium
+                                $isAboveBreakeven = true;
+                                $profitAtQuote = $totalCommission;
+                                $profitAtQuoteStr = "+$" . number_format($profitAtQuote, 2);
+                                $breakevenStatusStr = "+\${$beDiffStr} (+{$beDiffPct}%) ITM • {$profitAtQuoteStr} Max Strategy Profit";
+                            }
+                        }
+                    }
+
+                    // Moneymaking Trajectory & Simple Analysis Engine
+                    $isMakingMoney = false;
+                    $healthStatusCode = 'UNKNOWN';
+                    $healthBadgeLabel = 'Pending';
+                    $healthBadgeClass = 'bg-yellow';
+                    $healthBadgeIcon = 'help';
+                    $simpleAnalysis = '';
+                    $actionAdvice = '';
+
+                    if ($isShort && $type === 'Call') {
+                        // Short Call (Covered Call):
+                        // If stock <= strike: Option decays to $0, seller keeps 100% premium and 100% shares.
+                        // If stock > strike: Shares are called away at strike + seller keeps 100% premium (MAX PROFIT scenario!).
+                        if ($moneyness === 'OTM') {
+                            $isMakingMoney = true;
+                            $healthStatusCode = 'PROFIT_ROUTE';
+                            $healthBadgeLabel = 'On Track for Max Profit';
+                            $healthBadgeClass = 'bg-green';
+                            $healthBadgeIcon = 'trending_up';
+                            $simpleAnalysis = "Stock trading at \${$underlyingPriceStr} is {$distanceStr} below the \${$strikeStr} strike. As time decays, this option is decaying toward \$0. You are on track to retain 100% of the \${$totalCommissionStr} premium collected (+\${$commissionPerStockStr}/share) without your shares being called away.";
+                            $actionAdvice = "Let expire worthless or buy back at 80%+ profit to unencumber shares early.";
+                        } elseif ($moneyness === 'ITM') {
+                            $isMakingMoney = true;
+                            $healthStatusCode = 'PROFIT_ROUTE';
+                            $healthBadgeLabel = 'Max Profit Zone (Called Away)';
+                            $healthBadgeClass = 'bg-green';
+                            $healthBadgeIcon = 'task_alt';
+                            $simpleAnalysis = "Stock trading at \${$underlyingPriceStr} is {$distanceStr} above the \${$strikeStr} strike. Your Covered Call is in its Max Profit zone. If held through expiration, your shares will be called away at \${$strikeStr} while retaining 100% of the \${$totalCommissionStr} premium (effective exit realization: \${$netBreakevenStr}/share, {$breakevenFormula}).";
+                            $actionAdvice = "Allow shares to be called away to lock in maximum strategy profit, or roll out and up to a later expiration/higher strike for a net credit if you wish to retain ownership of the shares.";
+                        } else { // ATM
+                            $isMakingMoney = true;
+                            $healthStatusCode = 'CAUTION';
+                            $healthBadgeLabel = 'Near Strike (Borderline)';
+                            $healthBadgeClass = 'bg-yellow';
+                            $healthBadgeIcon = 'change_circle';
+                            $simpleAnalysis = "Stock trading at \${$underlyingPriceStr} is hovering right on the \${$strikeStr} strike. Final price action into expiration will decide between keeping 100% premium or having shares called away at maximum strategy profit.";
+                            $actionAdvice = "Monitor closely into expiration week.";
+                        }
+                    } elseif ($isShort && $type === 'Put') {
+                        // Short Put (Cash-Secured Put):
+                        // If stock >= strike: OTM, put expires worthless, seller keeps 100% premium.
+                        // If netBreakeven <= stock < strike: ITM relative to strike, BUT ABOVE BREAKEVEN! Trader makes money / in profit!
+                        // If stock < netBreakeven: Stock dropped below net breakeven, assignment will incur unrealized loss.
+                        if ($moneyness === 'OTM') {
+                            $isMakingMoney = true;
+                            $healthStatusCode = 'PROFIT_ROUTE';
+                            $healthBadgeLabel = 'On Track for Max Profit';
+                            $healthBadgeClass = 'bg-green';
+                            $healthBadgeIcon = 'trending_up';
+                            $simpleAnalysis = "Stock trading at \${$underlyingPriceStr} is {$distanceStr} safely above the \${$strikeStr} strike (and \${$beDiffStr} above your \${$netBreakevenStr} breakeven). Theta decay is in your favor; on track to expire worthless and keep 100% of your \${$totalCommissionStr} cash premium (+\${$commissionPerStockStr}/share) without assignment.";
+                            $actionAdvice = "Allow theta decay to capture full premium, or close early at 80%+ profit to unfreeze \${$cashStr} cash collateral.";
+                        } elseif ($moneyness === 'ITM') {
+                            if ($isAboveBreakeven) {
+                                // INTC CASE: Stock is below strike, but ABOVE net breakeven!
+                                $isMakingMoney = true;
+                                $healthStatusCode = 'PROFIT_ROUTE';
+                                $healthBadgeLabel = 'Profitable (Above Breakeven)';
+                                $healthBadgeClass = 'bg-green';
+                                $healthBadgeIcon = 'verified';
+                                $simpleAnalysis = "Stock trading at \${$underlyingPriceStr} is below the \${$strikeStr} strike ({$distanceStr}), but sits safely \${$beDiffStr} (+{$beDiffPct}%) above your net breakeven of \${$netBreakevenStr} ({$breakevenFormula}). Based on the current quote, this secures an estimated total profit cushion of {$profitAtQuoteStr} ({$sharesRepresented} shares × \${$beDiffStr}/sh). If assigned at expiration, you acquire the 100 shares per contract at your effective net basis of \${$netBreakevenStr} (below current market price \${$underlyingPriceStr}), locking in this profit upon assignment.";
+                                $actionAdvice = "You are in good shape to make money. Hold through expiration to acquire shares at your discounted net basis (\${$netBreakevenStr}) and initiate the Wheel by selling Covered Calls, or close early if premium decays.";
+                            } else {
+                                // Stock dropped BELOW net breakeven!
+                                $isMakingMoney = false;
+                                $healthStatusCode = 'AT_RISK';
+                                $healthBadgeLabel = 'Below Breakeven (Assignment Loss)';
+                                $healthBadgeClass = 'bg-red';
+                                $healthBadgeIcon = 'warning';
+                                $simpleAnalysis = "Stock trading at \${$underlyingPriceStr} has dropped \${$beDiffStr} (-{$beDiffPct}%) below your net breakeven of \${$netBreakevenStr} ({$breakevenFormula}). If assigned past expiration to purchase 100 shares per contract at \${$strikeStr} (total capital: \${$cashStr}), your effective net basis of \${$netBreakevenStr} will show an unrealized loss.";
+                                $actionAdvice = "Prepare cash reserves (\${$cashStr}) to take share assignment at \${$strikeStr} and begin selling Covered Calls to lower your basis over time, or consider rolling down and out for an additional credit.";
+                            }
+                        } else { // ATM
+                            $isMakingMoney = true;
+                            $healthStatusCode = 'CAUTION';
+                            $healthBadgeLabel = 'Near Strike (Borderline)';
+                            $healthBadgeClass = 'bg-yellow';
+                            $healthBadgeIcon = 'change_circle';
+                            $simpleAnalysis = "Stock trading at \${$underlyingPriceStr} is hovering right on the \${$strikeStr} strike, well above your net breakeven of \${$netBreakevenStr} ({$breakevenFormula}). Volatility into expiration will determine assignment at your discounted basis vs keeping 100% premium.";
+                            $actionAdvice = "Monitor price action closely.";
+                        }
+                    } else {
+                        // Long option
+                        $uPl = (float) $e['totalUnrealizedPL'];
+                        if ($uPl >= 0) {
+                            $isMakingMoney = true;
+                            $healthStatusCode = 'PROFITABLE';
+                            $healthBadgeLabel = 'In Profit';
+                            $healthBadgeClass = 'bg-green';
+                            $healthBadgeIcon = 'trending_up';
+                            $simpleAnalysis = "Position is currently profitable with +" . number_format($uPl, 2) . " unrealized gain.";
+                            $actionAdvice = "Consider taking profit before theta decay erodes contract value.";
+                        } else {
+                            $isMakingMoney = false;
+                            $healthStatusCode = 'AT_RISK';
+                            $healthBadgeLabel = 'Losing / Time Decay';
+                            $healthBadgeClass = 'bg-red';
+                            $healthBadgeIcon = 'trending_down';
+                            $simpleAnalysis = "Position is showing an unrealized loss of " . number_format($uPl, 2) . ". Time decay is actively working against this long position.";
+                            $actionAdvice = "Evaluate stop-loss or closing position to preserve remaining capital.";
+                        }
+                    }
 
                     $status = $type === 'Call'
                         ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> COVERED CALL ACTIVE — {$pledgedShares} Shares Pledged ({$contractCount} Contracts, Strike: \${$strikeStr}, Exp: {$dateStr})"
@@ -409,23 +825,71 @@ class BrokerManagerService
                         ];
                     }
 
+                    $primaryAccountNickname = $optAccounts[0]['nickname'] ?? 'Broker Account';
+                    $primaryAccountNumber = $optAccounts[0]['accountNumber'] ?? 'N/A';
+
                     $optItem = [
                         'symbol' => $normSym,
                         'rawSymbol' => $symbol,
+                        'root' => $root,
+                        'description' => $e['description'] ?? "{$root} {$dateStr} \${$strikeStr} {$type}",
                         'readableSymbol' => $readableSym,
                         'type' => $type,
+                        'side' => $isShort ? 'SHORT' : 'LONG',
+                        'strategy' => $strategy,
+                        'quantity' => $rawQuantity,
+                        'contracts' => $contractCount,
+                        'sharesRepresented' => $sharesRepresented,
+                        'commissionPerStock' => $commissionPerStock,
+                        'commissionPerStockStr' => $commissionPerStockStr,
+                        'totalCommission' => $totalCommission,
+                        'totalCommissionStr' => $totalCommissionStr,
                         'strike' => $strike,
                         'strikeStr' => $strikeStr,
+                        'netBreakeven' => $netBreakeven,
+                        'netBreakevenStr' => $netBreakevenStr,
+                        'breakevenFormula' => $breakevenFormula,
+                        'breakevenDiff' => $beDiff,
+                        'breakevenDiffStr' => $beDiffStr,
+                        'breakevenDiffPct' => $beDiffPct,
+                        'isAboveBreakeven' => $isAboveBreakeven,
+                        'breakevenStatusStr' => $breakevenStatusStr,
+                        'profitAtQuote' => $profitAtQuote,
+                        'profitAtQuoteStr' => $profitAtQuoteStr,
+                        'maxProfit' => $maxProfit,
+                        'maxProfitStr' => $maxProfitStr,
                         'expiration' => $dateStr,
-                        'contracts' => $contractCount,
+                        'dte' => $dte,
+                        'dteText' => $dteText,
+                        'underlyingPrice' => $underlyingPrice,
+                        'underlyingPriceStr' => $underlyingPriceStr,
+                        'distance' => $distance,
+                        'distanceStr' => $distanceStr,
+                        'distancePct' => $distancePct,
+                        'moneyness' => $moneyness,
+                        'isMakingMoney' => $isMakingMoney,
+                        'healthStatusCode' => $healthStatusCode,
+                        'healthBadgeLabel' => $healthBadgeLabel,
+                        'healthBadgeClass' => $healthBadgeClass,
+                        'healthBadgeIcon' => $healthBadgeIcon,
+                        'simpleAnalysis' => $simpleAnalysis,
+                        'actionAdvice' => $actionAdvice,
                         'marketValue' => round($e['totalMarketValue'], 2),
+                        'marketValueStr' => number_format(round($e['totalMarketValue'], 2), 2),
+                        'costBasis' => round($e['totalCostBasis'], 2),
                         'unrealizedPL' => round($e['totalUnrealizedPL'], 2),
+                        'unrealizedPLStr' => ($e['totalUnrealizedPL'] >= 0 ? '+$' : '-$') . number_format(abs(round($e['totalUnrealizedPL'], 2)), 2),
+                        'unrealizedPLPct' => ($e['totalCostBasis'] != 0) ? round(($e['totalUnrealizedPL'] / abs($e['totalCostBasis'])) * 100, 1) : 0.0,
                         'pledgedShares' => $pledgedShares,
                         'cashCollateral' => $cashCollateral,
                         'cashCollateralStr' => $cashStr,
                         'status' => $status,
                         'accounts' => $optAccounts,
+                        'primaryAccountNickname' => $primaryAccountNickname,
+                        'primaryAccountNumber' => $primaryAccountNumber,
                     ];
+
+                    $openOptionPositions[] = $optItem;
 
                     if (!isset($optionsMap[$root])) {
                         $optionsMap[$root] = [];
@@ -450,6 +914,59 @@ class BrokerManagerService
                 }
             }
         }
+
+        // Sort open option positions by expiration ascending, then root
+        usort($openOptionPositions, function($a, $b) {
+            $expComp = strcmp($a['expiration'], $b['expiration']);
+            if ($expComp !== 0) {
+                return $expComp;
+            }
+            return strcmp($a['root'], $b['root']);
+        });
+
+        // Compute options summary stats
+        $profitRouteCount = 0;
+        $atRiskCount = 0;
+        $cautionCount = 0;
+        $totalContracts = 0;
+        $totalOptMktVal = 0.0;
+        $totalCSPCollateral = 0.0;
+        $totalCoveredPledgedShares = 0;
+        $totalOptUnrealizedPL = 0.0;
+        $totalCommissionCollected = 0.0;
+
+        foreach ($openOptionPositions as $oop) {
+            $totalContracts += $oop['contracts'];
+            $totalOptMktVal += $oop['marketValue'];
+            $totalCSPCollateral += $oop['cashCollateral'];
+            $totalCoveredPledgedShares += $oop['pledgedShares'];
+            $totalOptUnrealizedPL += $oop['unrealizedPL'];
+            if ($oop['side'] === 'SHORT') {
+                $totalCommissionCollected += $oop['totalCommission'];
+            }
+
+            if ($oop['healthStatusCode'] === 'PROFIT_ROUTE' || $oop['healthStatusCode'] === 'PROFITABLE') {
+                $profitRouteCount++;
+            } elseif ($oop['healthStatusCode'] === 'AT_RISK') {
+                $atRiskCount++;
+            } else {
+                $cautionCount++;
+            }
+        }
+
+        $optionsSummary = [
+            'totalPositions' => count($openOptionPositions),
+            'totalContracts' => $totalContracts,
+            'profitRouteCount' => $profitRouteCount,
+            'atRiskCount' => $atRiskCount,
+            'cautionCount' => $cautionCount,
+            'totalMarketValue' => round($totalOptMktVal, 2),
+            'totalCashCollateral' => round($totalCSPCollateral, 2),
+            'totalPledgedShares' => $totalCoveredPledgedShares,
+            'totalUnrealizedPL' => round($totalOptUnrealizedPL, 2),
+            'totalCommissionCollected' => round($totalCommissionCollected, 2),
+            'totalCommissionCollectedStr' => number_format(round($totalCommissionCollected, 2), 2),
+        ];
 
         // Ensure every root stock with options exists in $equityMap, and all accounts holding options exist in $equityMap[$root]['accounts']
         foreach ($optionsMap as $root => $opts) {
@@ -642,8 +1159,18 @@ class BrokerManagerService
             default      => 'Connected Brokerage API'
         };
 
+        $isStaleState = $isAnyBrokerStale || !$isAnyBrokerConnected;
+        $connectionStatusText = $isAnyBrokerConnected ? ($isAnyBrokerStale ? 'Partially Connected' : 'Connected') : 'Disconnected';
+        $resolvedLastRefreshed = $latestRefreshTimestamp ?: $this->formatCentralTime();
+        $resolvedLastRefreshedShort = $latestRefreshShort ?: $this->formatCentralTime(null, 'g:i A T');
+
         return [
             'status'                => 'success',
+            'is_stale'              => $isStaleState,
+            'is_connected'          => $isAnyBrokerConnected,
+            'connection_status'     => $connectionStatusText,
+            'last_refreshed'        => $resolvedLastRefreshed,
+            'last_refreshed_short'  => $resolvedLastRefreshedShort,
             'authorized_count'      => $authorizedCount,
             'total_brokers'         => count($this->brokers),
             'netLiquidationValue'   => $totalPortfolioVal,
@@ -656,15 +1183,22 @@ class BrokerManagerService
             ],
             'positions'             => $allPositions,
             'aggregatedEquities'    => $aggregatedEquities,
+            'openOptionPositions'   => $openOptionPositions,
+            'optionsSummary'        => $optionsSummary,
             'dataSource'            => [
-                'provider'      => $providerName,
-                'providerCode'  => strtoupper($primaryInst['type'] ?? 'schwab'),
-                'nickname'      => $primaryInst['nickname'] ?? 'Primary Broker',
-                'endpoint'      => '/trader/v1/accounts?fields=positions',
-                'mode'          => 'LIVE_API',
-                'timestamp'     => date('H:i T'),
-                'isSanitized'   => true,
-                'totalAccounts' => count($accountsSummary),
+                'provider'           => $providerName,
+                'providerCode'       => strtoupper($primaryInst['type'] ?? 'schwab'),
+                'nickname'           => $primaryInst['nickname'] ?? 'Primary Broker',
+                'endpoint'           => '/trader/v1/accounts?fields=positions',
+                'mode'               => $isStaleState ? 'CACHED_SNAPSHOT' : 'LIVE_API',
+                'timestamp'          => $resolvedLastRefreshedShort,
+                'lastRefreshed'      => $resolvedLastRefreshed,
+                'lastRefreshedShort' => $resolvedLastRefreshedShort,
+                'isConnected'        => $isAnyBrokerConnected,
+                'isStale'            => $isStaleState,
+                'connectionStatus'   => $connectionStatusText,
+                'isSanitized'        => true,
+                'totalAccounts'      => count($accountsSummary),
             ]
         ];
     }
@@ -1037,5 +1571,24 @@ class BrokerManagerService
             }
         }
         return $allOrders;
+    }
+
+    /**
+     * Format a timestamp explicitly in US Central Time (America/Chicago).
+     */
+    private function formatCentralTime(?\DateTimeInterface $dt = null, string $format = 'M j, Y g:i A T'): string
+    {
+        $tz = new \DateTimeZone('America/Chicago');
+        if ($dt === null) {
+            return (new \DateTimeImmutable('now', $tz))->format($format);
+        }
+        if ($dt instanceof \DateTimeImmutable) {
+            return $dt->setTimezone($tz)->format($format);
+        }
+        if ($dt instanceof \DateTime) {
+            $clone = clone $dt;
+            return $clone->setTimezone($tz)->format($format);
+        }
+        return (new \DateTimeImmutable($dt->format('c')))->setTimezone($tz)->format($format);
     }
 }

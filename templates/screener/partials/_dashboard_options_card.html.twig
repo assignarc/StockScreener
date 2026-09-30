@@ -1,0 +1,181 @@
+{# templates/screener/partials/_dashboard_options_card.html.twig #}
+<!-- EXECUTIVE DASHBOARD OPEN OPTIONS HEALTH CARD -->
+<div class="dash-options-widget" id="dashOptionsWidget">
+    <div class="dash-opt-header">
+        <div class="dash-opt-header-left">
+            <h3 class="dash-opt-title">
+                <span class="material-symbols-outlined dash-opt-icon">auto_awesome_motion</span>
+                <span>Open Options Positions & Moneymaking Health</span>
+                <span class="hbadge opt-count-badge">
+                    {{ portfolio.optionsSummary.totalPositions|default(0) }} Positions ({{ portfolio.optionsSummary.totalContracts|default(0) }} Contracts)
+                </span>
+            </h3>
+            <div class="dash-opt-desc">
+                Real-time moneymaking trajectory analysis based on underlying equity trading prices, strike prices, and assignment risk.
+            </div>
+        </div>
+        <div class="dash-opt-header-right">
+            <a href="/portfolio?tab=options" class="hbtn hbtn-blue" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px;">
+                <span class="material-symbols-outlined" style="font-size:14px;">visibility</span>
+                <span>View Full Options Tab →</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- EXECUTIVE QUICK KPI STRIP -->
+    <div class="dash-opt-kpi-strip">
+        <div class="dash-opt-kpi-pill">
+            <span class="material-symbols-outlined" style="font-size:14px; color:var(--blue);">receipt_long</span>
+            <span class="dash-opt-kpi-lbl">Total Contracts:</span>
+            <strong>{{ portfolio.optionsSummary.totalContracts|default(0) }}</strong>
+        </div>
+        <div class="dash-opt-kpi-pill">
+            <span class="material-symbols-outlined" style="font-size:14px; color:var(--green);">trending_up</span>
+            <span class="dash-opt-kpi-lbl">Profitable / On Track:</span>
+            <strong class="g">{{ portfolio.optionsSummary.profitRouteCount|default(0) }}</strong>
+        </div>
+        <div class="dash-opt-kpi-pill">
+            <span class="material-symbols-outlined" style="font-size:14px; color:var(--red);">warning</span>
+            <span class="dash-opt-kpi-lbl">Below Breakeven:</span>
+            <strong class="r">{{ portfolio.optionsSummary.atRiskCount|default(0) }}</strong>
+        </div>
+        <div class="dash-opt-kpi-pill">
+            <span class="material-symbols-outlined" style="font-size:14px; color:var(--green);">payments</span>
+            <span class="dash-opt-kpi-lbl">Total Commission:</span>
+            <strong class="g">+${{ portfolio.optionsSummary.totalCommissionCollectedStr|default('0.00') }}</strong>
+        </div>
+        <div class="dash-opt-kpi-pill">
+            <span class="material-symbols-outlined" style="font-size:14px; color:var(--yellow);">shield</span>
+            <span class="dash-opt-kpi-lbl">Cash Collateral:</span>
+            <strong class="y">${{ (portfolio.optionsSummary.totalCashCollateral|default(0))|number_format(0) }}</strong>
+        </div>
+        <div class="dash-opt-kpi-pill">
+            <span class="material-symbols-outlined" style="font-size:14px; color:var(--purple);">lock</span>
+            <span class="dash-opt-kpi-lbl">Pledged Shares:</span>
+            <strong style="color:var(--purple);">{{ (portfolio.optionsSummary.totalPledgedShares|default(0))|number_format(0) }}</strong>
+        </div>
+    </div>
+
+    <!-- POSITION CARDS GRID -->
+    <div class="dash-opt-cards-grid">
+        {% if portfolio.openOptionPositions is defined and portfolio.openOptionPositions|length > 0 %}
+            {% for opt in portfolio.openOptionPositions %}
+                {% set isProfit = opt.healthStatusCode == 'PROFIT_ROUTE' or opt.healthStatusCode == 'PROFITABLE' %}
+                {% set isAtRisk = opt.healthStatusCode == 'AT_RISK' %}
+                <div class="dash-opt-card">
+                    <!-- CARD HEADER -->
+                    <div class="dash-opt-card-top">
+                        <div class="dash-opt-sym-group">
+                            <a href="/screener?symbol={{ opt.root }}" class="dash-opt-sym-link hover-blue" title="Inspect {{ opt.root }} in Screener">
+                                {{ opt.root }}
+                            </a>
+                            <span class="opt-strategy-pill {% if opt.type == 'Call' %}opt-strat-call{% else %}opt-strat-put{% endif %}">
+                                <span class="material-symbols-outlined" style="font-size:11px;">{% if opt.type == 'Call' %}arrow_circle_up{% else %}shield{% endif %}</span>
+                                {{ opt.strategy }}
+                            </span>
+                            <span class="opt-contract-count">{{ opt.quantity }}</span>
+                            <span class="dash-opt-comm-badge" title="Total Commission Received">
+                                <span class="material-symbols-outlined" style="font-size:11px;">payments</span>
+                                +${{ opt.totalCommissionStr }}
+                            </span>
+                        </div>
+                        <div class="dash-opt-health-pill {% if isProfit %}badge-profit{% elseif isAtRisk %}badge-risk{% else %}badge-caution{% endif %}">
+                            <span class="material-symbols-outlined" style="font-size:13px;">{{ opt.healthBadgeIcon }}</span>
+                            <span>{{ opt.healthBadgeLabel }}</span>
+                        </div>
+                    </div>
+
+                    <!-- CARD PRICE VS STRIKE -->
+                    <div class="dash-opt-price-row">
+                        <div class="dash-opt-price-col">
+                            <div class="dash-opt-col-lbl">Equity Price</div>
+                            <div class="dash-opt-col-val">${{ opt.underlyingPriceStr }}</div>
+                        </div>
+                        <div class="dash-opt-dist-wrap">
+                            <span class="dash-opt-dist-pill {% if isProfit %}dist-green{% elseif isAtRisk %}dist-red{% else %}dist-yellow{% endif %}">
+                                {{ opt.distanceStr }}
+                            </span>
+                            <span class="dash-opt-dte-text">{{ opt.dteText }}</span>
+                        </div>
+                        <div class="dash-opt-price-col text-right">
+                            <div class="dash-opt-col-lbl">Strike Price</div>
+                            <div class="dash-opt-col-val" style="font-weight:800;">${{ opt.strikeStr }}</div>
+                        </div>
+                    </div>
+
+                    <!-- BREAKEVEN INDICATOR STRIP -->
+                    <div class="dash-opt-be-strip {% if opt.isAboveBreakeven %}be-strip-good{% else %}be-strip-bad{% endif %}">
+                        <div class="dash-opt-be-left">
+                            <span class="dash-opt-be-lbl">Net Breakeven:</span>
+                            <strong class="dash-opt-be-val">${{ opt.netBreakevenStr }}</strong>
+                        </div>
+                        <div class="dash-opt-be-right">
+                            <span class="dash-opt-be-tag {% if opt.isAboveBreakeven %}g{% else %}r{% endif %}">
+                                <span class="material-symbols-outlined" style="font-size:12px;">{% if opt.isAboveBreakeven %}verified{% else %}warning{% endif %}</span>
+                                <span>{{ opt.breakevenStatusStr }}</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- COMMISSION RECEIVED (PER STOCK & TOTAL) -->
+                    <div class="dash-opt-comm-row">
+                        <div class="dash-opt-comm-cell">
+                            <span class="material-symbols-outlined dash-opt-comm-icon">payments</span>
+                            <div class="dash-opt-comm-detail">
+                                <span class="dash-opt-comm-lbl">Comm / Stock</span>
+                                <span class="dash-opt-comm-val g">+${{ opt.commissionPerStockStr }} <span class="dash-opt-comm-unit">/ sh</span></span>
+                            </div>
+                        </div>
+                        <div class="dash-opt-comm-div"></div>
+                        <div class="dash-opt-comm-cell">
+                            <span class="material-symbols-outlined dash-opt-comm-icon">account_balance_wallet</span>
+                            <div class="dash-opt-comm-detail">
+                                <span class="dash-opt-comm-lbl">Total Comm ({{ opt.sharesRepresented }} sh)</span>
+                                <span class="dash-opt-comm-val g">+${{ opt.totalCommissionStr }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SIMPLE MONEYMAKING ANALYSIS BOX -->
+                    <div class="dash-opt-analysis {% if isProfit %}analysis-profit{% elseif isAtRisk %}analysis-risk{% else %}analysis-caution{% endif %}">
+                        <div class="dash-opt-analysis-title">
+                            <span class="material-symbols-outlined" style="font-size:14px;">
+                                {% if isProfit %}trending_up{% elseif isAtRisk %}report{% else %}help{% endif %}
+                            </span>
+                            <span>Moneymaking Trajectory</span>
+                        </div>
+                        <div class="dash-opt-analysis-body">
+                            {{ opt.simpleAnalysis }}
+                        </div>
+                    </div>
+
+                    <!-- CARD BOTTOM METRICS -->
+                    <div class="dash-opt-footer">
+                        <div class="dash-opt-foot-item">
+                            <span class="dash-opt-foot-lbl">Unrealized P&L:</span>
+                            <span class="dash-opt-foot-val {% if opt.unrealizedPL >= 0 %}g{% else %}r{% endif %}">
+                                {{ opt.unrealizedPLStr }}
+                            </span>
+                        </div>
+                        <div class="dash-opt-foot-item">
+                            <span class="dash-opt-foot-lbl">Account:</span>
+                            <span class="dash-opt-foot-val" style="color:var(--text-muted);">
+                                {{ opt.primaryAccountNickname }}
+                            </span>
+                        </div>
+                        <a href="/portfolio?tab=options#opt_card_{{ loop.index }}" class="dash-opt-drill" title="Inspect position details in Portfolio">
+                            <span>Details</span>
+                            <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="opt-empty-box" style="grid-column: 1 / -1; padding: 24px;">
+                <span class="material-symbols-outlined opt-empty-icon" style="font-size:32px;">layers_clear</span>
+                <h4 style="margin: 6px 0;">No Open Options Positions</h4>
+                <p style="margin: 0; font-size:12px; color:var(--muted);">All active positions are 100% in cash or unencumbered equities.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>

@@ -32,6 +32,24 @@
             </div>
         </div>
 
+        {% if portfolio.is_stale is defined and portfolio.is_stale %}
+            <!-- OFFLINE / CACHED SNAPSHOT RESILIENCE BANNER -->
+            <div style="background:rgba(210,153,34,0.12); border:1px solid rgba(210,153,34,0.35); border-radius:12px; padding:12px 18px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span class="material-symbols-outlined" style="color:var(--yellow); font-size:22px;">cloud_off</span>
+                    <div>
+                        <strong style="color:var(--yellow); font-size:13px;">Broker Disconnected — Showing Last Saved Portfolio State</strong>
+                        <div style="color:var(--text); font-size:11px; margin-top:2px;">
+                            Your portfolio balances, positions, and option allocations are preserved from the last successful synchronization on <strong style="color:var(--yellow);">{{ portfolio.last_refreshed|default('recent snapshot') }}</strong>.
+                        </div>
+                    </div>
+                </div>
+                <a href="/settings" class="hbtn" style="background:var(--bg2); border:1px solid var(--yellow); color:var(--yellow); font-size:11px; padding:5px 12px;">
+                    <span class="material-symbols-outlined" style="font-size:14px;">link</span> Reconnect Broker in Settings
+                </a>
+            </div>
+        {% endif %}
+
         <!-- PORTFOLIO SUMMARY CARDS -->
         <div class="port-summary">
             <div class="port-card">
@@ -58,6 +76,7 @@
         <!-- VIEW MODE SELECTOR SUBTABS -->
         <div class="view-subtabs">
             <button class="vtab-btn active" id="vtabAccounts" onclick="switchPortSubView('holdings')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">work</span> Portfolio Holdings & Accounts</button>
+            <button class="vtab-btn" id="vtabOptions" onclick="switchPortSubView('options')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">auto_awesome_motion</span> Open Options Positions</button>
             <button class="vtab-btn" id="vtabCalendar" onclick="switchPortSubView('calendar')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">calendar_month</span> Options & Equities Calendar</button>
             <button class="vtab-btn" id="vtabHistory" onclick="switchPortSubView('history')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">history</span> Activity & Cash History</button>
             <button class="vtab-btn" id="vtabOrders" onclick="switchPortSubView('orders')"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">pending_actions</span> Working & Open Orders</button>
@@ -69,6 +88,9 @@
             </div>
         </div>
 
+        <!-- SUBVIEW: OPEN OPTIONS POSITIONS & MONEYMAKING HEALTH -->
+        {% include 'screener/partials/_portfolio_options.html.twig' %}
+
         <!-- SUBVIEW 1: WORKING & OPEN ORDERS -->
         {% include 'screener/partials/_portfolio_orders.html.twig' %}
 
@@ -77,7 +99,6 @@
 
         <!-- SUBVIEW 3: OPTIONS & EQUITIES FORWARD CALENDAR -->
         {% include 'screener/partials/_portfolio_calendar.html.twig' %}
-
 
         <!-- SUBVIEW 4: PORTFOLIO HOLDINGS & ACCOUNTS (DEFAULT TAB) -->
         {% include 'screener/partials/_portfolio_holdings.html.twig' %}

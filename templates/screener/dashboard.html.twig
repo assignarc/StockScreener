@@ -94,6 +94,17 @@
                     <span>Stock Screener</span> <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span>
                 </div>
             </a>
+            <a href="/portfolio?tab=options" class="dash-card clickable" title="Drill down into Open Options Positions & Moneymaking Trajectory">
+                <div>
+                    <div class="lbl">Open Options (Moneymaking Health)</div>
+                    <div class="val" style="color:var(--green);">
+                        {{ portfolio.optionsSummary.profitRouteCount|default(0) }} <span style="font-size:12px; font-weight:600; color:var(--text-muted);">/ {{ portfolio.optionsSummary.totalPositions|default(0) }} On Track</span>
+                    </div>
+                </div>
+                <div class="drill-link" style="color:var(--green);">
+                    <span>Options Health</span> <span class="material-symbols-outlined" style="font-size:12px;">arrow_forward</span>
+                </div>
+            </a>
         </div>
 
         <!-- CAPITAL FLYWHEEL ENGINE ALLOCATOR WIDGET -->
@@ -166,6 +177,9 @@
                 </button>
             </div>
         </details>
+
+        <!-- EXECUTIVE OPEN OPTIONS HEALTH CARD WIDGET -->
+        {% include 'screener/partials/_dashboard_options_card.html.twig' %}
 
 
         <!-- GEMINI AI PORTFOLIO ASSISTANT WIDGET -->
@@ -242,7 +256,7 @@
                                                      {{ acc.nickname|default('Account') }}
                                                  </a>
                                                  <div style="font-size:10px; color:var(--muted);">
-                                                     {{ acc.accountNumber ?? acc.id ?? 'N/A' }} ({{ (acc.type|default('N/A'))|upper }})
+                                                     {{ acc.accountNumber|default(acc.id|default('N/A')) }} ({{ (acc.type|default('N/A'))|upper }})
                                                  </div>
                                              </td>
                                              <td style="text-align:right; padding:10px;">${{ (acc.liquidationValue|default(0))|number_format(2) }}</td>
@@ -265,7 +279,7 @@
                                                          <span class="material-symbols-outlined" style="font-size:13px;">visibility</span> Holdings
                                                      </a>
                                                      {% if not isRetire %}
-                                                         <a href="/portfolio/tax?account={{ acc.nickname|default(acc.accountNumber) }}" class="slick-pill-btn" style="font-size:11px; padding:3px 7px;" title="Drill down to Tax Center for this account">
+                                                         <a href="/portfolio/tax?account={{ acc.nickname|default(acc.accountNumber|default(acc.id|default(''))) }}" class="slick-pill-btn" style="font-size:11px; padding:3px 7px;" title="Drill down to Tax Center for this account">
                                                              <span class="material-symbols-outlined" style="font-size:13px; color:var(--yellow);">receipt_long</span> Tax
                                                          </a>
                                                      {% else %}

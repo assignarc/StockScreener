@@ -77,46 +77,91 @@
                 <!-- OPTIONS LEVEL 1 BASIC STRATEGY BANNER -->
                 <div class="screener-level1-banner">
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <span class="rb rLOW" style="background: rgba(88,166,255,0.2); color: var(--blue);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">lock</span> OPTION LEVEL 1 BASIC (100% COVERED / RISK DEFINED)</span>
+                        <span class="strategy-badge">
+                            <span class="material-symbols-outlined" style="font-size:14px;">lock</span> OPTION LEVEL 1 BASIC (100% COVERED / RISK DEFINED)
+                        </span>
                         <span style="font-size: 12px; color: var(--text);">
                             Allocating your <strong style="color:var(--green);" id="playbookCashText">{% if portfolio.availableCash is defined %}${{ portfolio.availableCash|number_format(2) }}{% else %}$0.00{% endif %} available cash</strong> into 100% Covered & Capped-Risk strategies:
                         </span>
                     </div>
-                    <div style="display: flex; gap: 12px; font-size: 11px; font-weight: 600;">
-                        <span style="color:var(--green);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_up</span> Defined-Risk Long CALLS</span>
-                        <span style="color:var(--yellow);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">autorenew</span> Cash-Secured PUTS</span>
-                        <span style="color:var(--purple);"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">work</span> Covered CALLS</span>
+                    <div class="strategy-items-list">
+                        <span class="strategy-item item-call"><span class="material-symbols-outlined" style="font-size:14px;">trending_up</span> Defined-Risk Long CALLS</span>
+                        <span class="strategy-item item-wheel"><span class="material-symbols-outlined" style="font-size:14px;">sync_alt</span> Cash-Secured PUTS</span>
+                        <span class="strategy-item item-put"><span class="material-symbols-outlined" style="font-size:14px;">shield</span> Covered CALLS</span>
                     </div>
                 </div>
 
-                <!-- CONTROLS & SIGNAL FILTERS -->
-                <div class="controls">
-                    <!-- Signal Filter Group -->
-                    <button class="sig-btn active-all" onclick="filterSignal('ALL', this)">All Signals</button>
-                    <button class="sig-btn" onclick="filterSignal('CALL', this)"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_up</span> CALLs (Growth)</button>
-                    <button class="sig-btn" onclick="filterSignal('PUT', this)"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">arrow_circle_down</span> PUTs (Hedge)</button>
-                    <button class="sig-btn" onclick="filterSignal('WHEEL', this)"><span class="material-symbols-outlined" style="font-size:14px; margin-right:2px;">autorenew</span> WHEEL (Income)</button>
+                <!-- MODERN COMMAND BAR & FILTER RIBBON -->
+                <div class="screener-command-bar">
+                    <!-- ROW 1: SEARCH, STRATEGY SIGNAL SEGMENTED CONTROL & QUICK METRICS -->
+                    <div class="cmd-row-primary">
+                        <!-- INSTANT SEARCH INPUT -->
+                        <div class="cmd-search-wrap">
+                            <span class="material-symbols-outlined cmd-search-icon">search</span>
+                            <input id="srch" class="cmd-search-input" placeholder="Search ticker, company name, sector..." oninput="onSearchInput()">
+                            <button class="cmd-search-clear" onclick="document.getElementById('srch').value=''; onSearchInput();" title="Clear Search">
+                                <span class="material-symbols-outlined" style="font-size:14px;">close</span>
+                            </button>
+                        </div>
 
-                    <span style="border-left: 1px solid var(--border); height: 20px; margin: 0 6px;"></span>
+                        <!-- STRATEGY SIGNAL SEGMENTED TRACK -->
+                        <div class="cmd-segment-group">
+                            <span class="cmd-label"><span class="material-symbols-outlined" style="font-size:14px; color:var(--purple);">tune</span> Signal:</span>
+                            <div class="cmd-track">
+                                <button class="cmd-tab sig-btn active-all" onclick="filterSignal('ALL', this)">
+                                    <span class="material-symbols-outlined" style="font-size:14px;">apps</span>
+                                    <span>All Signals</span>
+                                </button>
+                                <button class="cmd-tab sig-btn" onclick="filterSignal('CALL', this)">
+                                    <span class="material-symbols-outlined" style="font-size:14px; color:var(--green);">trending_up</span>
+                                    <span>CALL (Growth)</span>
+                                </button>
+                                <button class="cmd-tab sig-btn" onclick="filterSignal('WHEEL', this)">
+                                    <span class="material-symbols-outlined" style="font-size:14px; color:var(--yellow);">sync_alt</span>
+                                    <span>WHEEL (Income)</span>
+                                </button>
+                                <button class="cmd-tab sig-btn" onclick="filterSignal('PUT', this)">
+                                    <span class="material-symbols-outlined" style="font-size:14px; color:var(--red);">shield</span>
+                                    <span>PUT (Hedge)</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                    <button class="fbtn active" onclick="filterSector('ALL', this)">All Sectors</button>
-                    {% for sector in sectors %}
-                        <button class="fbtn" onclick="filterSector('{{ sector }}', this)">{{ sector }}</button>
-                    {% endfor %}
-                    <span class="sp"></span>
-                    <select class="fsel" onchange="filterAssetType(this.value)" style="margin-right: 6px;">
-                        <option value="ALL">All Asset Types</option>
-                        <option value="STOCK">Stocks</option>
-                        <option value="ETF">ETFs</option>
-                        <option value="BOND_ETF">Fixed Income / Bonds</option>
-                    </select>
-                    <select class="fsel" onchange="filterRisk(this.value)">
-                        <option value="ALL">All Risk Levels</option>
-                        <option value="LOW">Low Risk</option>
-                        <option value="MED">Med Risk</option>
-                        <option value="HIGH">High Risk</option>
-                    </select>
-                    <input id="srch" placeholder="Search Ticker, Name..." oninput="onSearchInput()">
+                    <!-- ROW 2: SECTOR PILL CAROUSEL & ASSET / RISK SELECTORS -->
+                    <div class="cmd-row-secondary">
+                        <div class="cmd-sector-ribbon">
+                            <span class="cmd-label"><span class="material-symbols-outlined" style="font-size:14px; color:var(--blue);">category</span> Sector:</span>
+                            <div class="cmd-chips-scroll">
+                                <button class="cmd-chip fbtn active" onclick="filterSector('ALL', this)">All Sectors</button>
+                                {% for sector in sectors %}
+                                    <button class="cmd-chip fbtn" onclick="filterSector('{{ sector }}', this)">{{ sector }}</button>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- ASSET TYPE & RISK LEVEL SELECTORS -->
+                        <div class="cmd-filter-right">
+                            <div class="cmd-select-wrap">
+                                <span class="material-symbols-outlined" style="font-size:14px; color:var(--muted);">account_tree</span>
+                                <select class="cmd-select" onchange="filterAssetType(this.value)">
+                                    <option value="ALL">All Asset Types</option>
+                                    <option value="STOCK">Stocks</option>
+                                    <option value="ETF">ETFs</option>
+                                    <option value="BOND_ETF">Fixed Income / Bonds</option>
+                                </select>
+                            </div>
+                            <div class="cmd-select-wrap">
+                                <span class="material-symbols-outlined" style="font-size:14px; color:var(--muted);">speed</span>
+                                <select class="cmd-select" onchange="filterRisk(this.value)">
+                                    <option value="ALL">All Risk Levels</option>
+                                    <option value="LOW">Low Risk (Conservative)</option>
+                                    <option value="MED">Med Risk (Balanced)</option>
+                                    <option value="HIGH">High Risk (Aggressive)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- STATUS BAR -->
@@ -245,41 +290,41 @@
     </div>
     <div class="rpb">
         <!-- PROGRESSIVE DISCLOSURE TIER 1: THE SAUSAGE (EXECUTIVE TRADE PLAN) -->
-        <div id="rpExecutiveBanner" class="fw-rec-card" style="background: linear-gradient(135deg, rgba(22, 27, 34, 0.95), rgba(30, 41, 59, 0.95)); border: 1px solid var(--border); border-left: 4px solid var(--blue); margin-bottom: 16px;">
-            <div class="fw-rec-header" style="border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px; margin-bottom: 10px;">
+        <div id="rpExecutiveBanner" class="exec-plan-card">
+            <div class="exec-plan-header">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="material-symbols-outlined" style="color: var(--blue); font-size: 20px;">assignment</span>
                     <div>
-                        <h4 class="fw-rec-title" style="font-size: 13px; font-weight: 700; margin: 0;" id="rpExecStrategyName">Defined-Risk Trade Plan</h4>
-                        <span id="rpExecTierName" style="font-size: 10px; color: var(--muted);">Progressive Signal Framework</span>
+                        <h4 class="exec-plan-title" id="rpExecStrategyName">Defined-Risk Strategy</h4>
+                        <span id="rpExecTierName" class="exec-plan-subtitle">Capital Compounder</span>
                     </div>
                 </div>
                 <span id="rpSignalBadge" class="badge-sig badge-CALL">CALL</span>
             </div>
 
             <!-- Plain English 1-Line Thesis -->
-            <div style="background: rgba(88, 166, 255, 0.08); border: 1px solid rgba(88, 166, 255, 0.2); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--blue); text-transform: uppercase; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
-                    <span class="material-symbols-outlined" style="font-size: 13px;">lightbulb</span> Executive Thesis
+            <div class="exec-thesis-box">
+                <div class="exec-thesis-label">
+                    <span class="material-symbols-outlined" style="font-size: 14px;">lightbulb</span> Executive Thesis
                 </div>
-                <div id="rpExecThesis" style="font-size: 11.5px; color: var(--text); line-height: 1.4;">
-                    Loading dynamic thesis...
+                <div id="rpExecThesis" class="exec-thesis-content">
+                    Live Schwab Option Chain Target Evaluation
                 </div>
             </div>
 
             <!-- Crisp 3-Column Plan -->
-            <div class="fw-rec-grid" style="grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
-                <div style="background: var(--bg3); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);">
+            <div class="exec-plan-grid">
+                <div class="exec-plan-cell">
                     <div class="m" style="font-size: 10px;">Recommended Sizing</div>
                     <strong id="rpExecAllocation" style="color: var(--green); font-size: 14px;">$1,000</strong>
                     <div style="font-size: 9.5px; color: var(--muted); margin-top: 2px;">100% Cash-Collateralized</div>
                 </div>
-                <div style="background: var(--bg3); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);">
+                <div class="exec-plan-cell">
                     <div class="m" style="font-size: 10px;">Entry / Buy Date</div>
                     <strong id="rpExecEntryDate" style="color: var(--blue); font-size: 14px;">Today</strong>
                     <div style="font-size: 9.5px; color: var(--muted); margin-top: 2px;">Stage in Morning Package</div>
                 </div>
-                <div style="background: var(--bg3); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border);">
+                <div class="exec-plan-cell">
                     <div class="m" style="font-size: 10px;">Target Exit / Sell Date</div>
                     <strong id="rpExecExitDate" style="color: var(--purple); font-size: 14px;">45 Days</strong>
                     <div id="rpExecDteNote" style="font-size: 9.5px; color: var(--muted); margin-top: 2px;">Dynamic Horizon</div>
@@ -287,14 +332,14 @@
             </div>
 
             <!-- Dynamic Exit Rules -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10.5px;">
-                <div style="background: rgba(63, 185, 80, 0.08); border: 1px solid rgba(63, 185, 80, 0.2); border-radius: 6px; padding: 6px 10px;">
-                    <strong style="color: var(--green); display: flex; align-items: center; gap: 3px;"><span class="material-symbols-outlined" style="font-size: 12px;">trending_up</span> Profit Exit:</strong>
-                    <span id="rpExecProfitRule" style="color: var(--muted);">+80% premium gain</span>
+            <div class="exec-exit-rules-grid">
+                <div class="exec-exit-rule-cell rule-profit">
+                    <strong style="color: var(--green); display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 13px;">trending_up</span> Profit Exit:</strong>
+                    <span id="rpExecProfitRule" style="color: var(--text);">+80% premium gain</span>
                 </div>
-                <div style="background: rgba(248, 81, 73, 0.08); border: 1px solid rgba(248, 81, 73, 0.2); border-radius: 6px; padding: 6px 10px;">
-                    <strong style="color: var(--red); display: flex; align-items: center; gap: 3px;"><span class="material-symbols-outlined" style="font-size: 12px;">shield</span> Stop Loss / Roll:</strong>
-                    <span id="rpExecStopLossRule" style="color: var(--muted);">Defined max loss</span>
+                <div class="exec-exit-rule-cell rule-stop">
+                    <strong style="color: var(--red); display: flex; align-items: center; gap: 4px;"><span class="material-symbols-outlined" style="font-size: 13px;">shield</span> Stop Loss / Roll:</strong>
+                    <span id="rpExecStopLossRule" style="color: var(--text);">Defined max loss</span>
                 </div>
             </div>
         </div>
@@ -313,24 +358,24 @@
 
         <div id="auditContainer" style="display: none;">
             <!-- SCHWAB LIVE OPTION CHAIN MATRIX -->
-            <div class="tb" style="background: var(--bg3); border-color: var(--border); margin-bottom: 18px;">
+            <div class="tb" style="margin-bottom: 18px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
-                    <h4 style="color:var(--purple); font-size: 11px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px;">account_balance</span> Schwab Developer API — Live Option Chain & Gemini AI Target Selection</h4>
+                    <h4 style="color:var(--text); font-size: 11px;"><span class="material-symbols-outlined" style="font-size:14px; margin-right:4px; color:var(--blue);">account_balance</span> Schwab Developer API — Live Option Chain & Gemini AI Target Selection</h4>
                     <span id="schwabSourceBadge" class="rb rLOW">Schwab API Connected</span>
                 </div>
 
                 <!-- GEMINI AI STRIKE DETERMINATION BANNER -->
-                <div id="geminiOptionAnalysisBox" style="background: linear-gradient(135deg, rgba(188,140,255,0.12), rgba(31,38,55,0.95)); border: 1px solid rgba(188,140,255,0.4); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: none;">
+                <div id="geminiOptionAnalysisBox" class="gemini-analysis-box" style="display: none;">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-                        <strong style="font-size:12px; color:var(--purple); display:flex; align-items:center; gap:6px;">
+                        <strong style="font-size:11.5px; color:var(--purple); display:flex; align-items:center; gap:6px;">
                             <span><span class="material-symbols-outlined" style="font-size:14px;">smart_toy</span> Gemini AI Options Target Determination</span>
                         </strong>
-                        <span class="rb" style="background:rgba(188,140,255,0.2); color:var(--purple);">Option Level 1 Basic</span>
+                        <span class="rb" style="background:rgba(142, 130, 184, 0.10); color:var(--purple); border:1px solid rgba(142, 130, 184, 0.20);">Option Level 1 Basic</span>
                     </div>
                     <div id="geminiOptionTargetsGrid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:11px; margin-bottom:8px;">
                         <!-- Filled dynamically via JS -->
                     </div>
-                    <div id="geminiOptionVerdict" style="font-size:11px; color:var(--muted); line-height:1.45; background:var(--bg2); padding:8px; border-radius:6px; border:1px solid var(--border);">
+                    <div id="geminiOptionVerdict" class="gemini-option-verdict">
                         <!-- Filled dynamically via JS -->
                     </div>
                 </div>

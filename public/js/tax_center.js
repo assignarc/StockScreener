@@ -178,6 +178,7 @@ function toggleAllGroups(expand) {
 
 function applyTaxFilters() {
     const searchVal = document.getElementById('filterSearch').value.toUpperCase().trim();
+    const searchNorm = searchVal.replace(/[\.\/\s]/g, '');
     const accountFilter = document.getElementById('filterAccount').value;
     const categoryFilter = document.getElementById('filterAccountCategory').value;
     const typeFilter = document.getElementById('filterAssetType').value;
@@ -258,7 +259,15 @@ function applyTaxFilters() {
 
         const matchesAcc = matchesAccount(r.account, r.accountNumber || r.account_number, accountFilter);
         const matchesType = (typeFilter === 'ALL' || r.assetType === typeFilter);
-        const matchesSearch = (searchVal === '' || r.symbol.toUpperCase().includes(searchVal) || (r.rawSymbol || '').toUpperCase().includes(searchVal));
+        const rSym = (r.symbol || '').toUpperCase();
+        const rRaw = (r.rawSymbol || '').toUpperCase();
+        const rDesc = (r.description || '').toUpperCase();
+        const matchesSearch = (searchVal === '' || 
+            rSym.includes(searchVal) || 
+            rRaw.includes(searchVal) || 
+            rDesc.includes(searchVal) ||
+            (searchNorm !== '' && (rSym.replace(/[\.\/\s]/g, '').includes(searchNorm) || rRaw.replace(/[\.\/\s]/g, '').includes(searchNorm)))
+        );
 
         return matchesTime && matchesCategory && matchesAcc && matchesType && matchesSearch;
     });
@@ -279,7 +288,13 @@ function applyTaxFilters() {
         else if (categoryFilter === 'RETIREMENT') matchesCategory = isRetirement;
 
         const matchesAcc = matchesAccount(inc.account, inc.accountNumber || inc.account_number, accountFilter);
-        const matchesSearch = (searchVal === '' || inc.symbol.toUpperCase().includes(searchVal));
+        const incSym = (inc.symbol || '').toUpperCase();
+        const incDesc = (inc.description || '').toUpperCase();
+        const matchesSearch = (searchVal === '' || 
+            incSym.includes(searchVal) || 
+            incDesc.includes(searchVal) ||
+            (searchNorm !== '' && incSym.replace(/[\.\/\s]/g, '').includes(searchNorm))
+        );
 
         return matchesTime && matchesCategory && matchesAcc && matchesSearch;
     });
@@ -564,12 +579,45 @@ function applyTaxFilters() {
         const acc = tx.account_nickname || tx.account_number || '';
         const matchesAcc = matchesAccount(acc, tx.account_number, accountFilter);
         const matchesType = (typeFilter === 'ALL' || (typeFilter === 'OPTION' && (tx.symbol || '').includes(' ')) || (typeFilter === 'EQUITY' && !(tx.symbol || '').includes(' ')));
-        const matchesSearch = (searchVal === '' || (tx.symbol || '').toUpperCase().includes(searchVal) || (tx.description || '').toUpperCase().includes(searchVal));
+        const txSym = (tx.symbol || tx.raw_symbol || '').toUpperCase();
+        const txDesc = (tx.description || '').toUpperCase();
+        let transferMatch = false;
+        if (tx.transfer_items && Array.isArray(tx.transfer_items)) {
+            transferMatch = tx.transfer_items.some(ti => {
+                const tiSym = (ti.symbol || '').toUpperCase();
+                const tiDesc = (ti.description || '').toUpperCase();
+                return tiSym.includes(searchVal) || tiDesc.includes(searchVal) || (searchNorm !== '' && tiSym.replace(/[\.\/\s]/g, '').includes(searchNorm));
+            });
+        }
+        const matchesSearch = (searchVal === '' || 
+            txSym.includes(searchVal) || 
+            txDesc.includes(searchVal) || 
+            (searchNorm !== '' && txSym.replace(/[\.\/\s]/g, '').includes(searchNorm)) ||
+            transferMatch
+        );
 
         return matchesTime && matchesAcc && matchesType && matchesSearch;
     });
 
     filteredTx.sort((a, b) => {
+        if (currentTxSortCol === 'date') {
+            const timeA = a.time || (a.date ? a.date + 'T00:00:00' : '');
+            const timeB = b.time || (b.date ? b.date + 'T00:00:00' : '');
+            let cmp = timeA.localeCompare(timeB);
+            if (cmp === 0) {
+                const oidA = a.order_id || a.orderId;
+                const oidB = b.order_id || b.orderId;
+                if (oidA && oidB && oidA === oidB) {
+                    const idA = Number(a.id) || 0;
+                    const idB = Number(b.id) || 0;
+                    cmp = currentTxSortDir === 'desc' ? (idB - idA) : (idA - idB);
+                } else {
+                    cmp = (Number(a.id) || 0) - (Number(b.id) || 0);
+                }
+            }
+            return currentTxSortDir === 'asc' ? cmp : -cmp;
+        }
+
         let valA = a[currentTxSortCol] ?? '';
         let valB = b[currentTxSortCol] ?? '';
         if (typeof valA === 'number' && typeof valB === 'number') {
@@ -585,8 +633,8 @@ function applyTaxFilters() {
     const allTxBody = document.getElementById('allTxBody');
     allTxBody.innerHTML = '';
     if (filteredTx.length > 0) {
-        filteredTx.forEach(tx => {
-            allTxBody.appendChild(createTransactionRow(tx));
+        filteredTx.forEach((tx, idx) => {
+            allTxBody.appendChild(createTransactionRow(tx, idx, filteredTx));
         });
     } else {
         allTxBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--muted);">No transactions matching active filters.</td></tr>`;
@@ -776,23 +824,116 @@ function createRealizationRow(r) {
     return row;
 }
 
-function createTransactionRow(tx) {
+// Index all orders across historyRaw to calculate accurate "Fill X of Y" and order summaries
+const orderFillsMapTax = {};
+const orderSummaryMapTax = {};
+
+if (Array.isArray(historyRaw)) {
+    historyRaw.forEach(t => {
+        const oid = t.order_id || t.orderId;
+        if (oid) {
+            if (!orderFillsMapTax[oid]) orderFillsMapTax[oid] = [];
+            orderFillsMapTax[oid].push(t);
+        }
+    });
+
+    Object.keys(orderFillsMapTax).forEach(oid => {
+        // Sort chronologically ascending
+        orderFillsMapTax[oid].sort((a, b) => {
+            const timeA = a.time || (a.date ? a.date + 'T00:00:00' : '');
+            const timeB = b.time || (b.date ? b.date + 'T00:00:00' : '');
+            const cmp = timeA.localeCompare(timeB);
+            if (cmp !== 0) return cmp;
+            return (Number(a.id) || 0) - (Number(b.id) || 0);
+        });
+
+        let totalAmt = 0;
+        let totalQty = 0;
+        orderFillsMapTax[oid].forEach(item => {
+            totalAmt += (Number(item.amount) || 0);
+            if (item.transfer_items && Array.isArray(item.transfer_items)) {
+                item.transfer_items.forEach(ti => {
+                    totalQty += Math.abs(Number(ti.amount) || 0);
+                });
+            }
+        });
+        orderSummaryMapTax[oid] = {
+            totalFills: orderFillsMapTax[oid].length,
+            totalAmount: totalAmt,
+            totalQuantity: totalQty,
+        };
+    });
+}
+
+function createTransactionRow(tx, idx = 0, list = []) {
     const item = tx.transfer_items ? tx.transfer_items[0] : null;
     const assetType = item ? (item.asset_type || '').toUpperCase() : '';
     const isOption = assetType === 'OPTION' || (tx.symbol && /^[A-Z0-9]+\s*\d{6}[CP]\d{8}$/.test(tx.symbol));
 
+    const oid = tx.order_id || tx.orderId;
+    const fills = oid && orderFillsMapTax[oid] ? orderFillsMapTax[oid] : [];
+    const totalFills = fills.length;
+    let fillIndex = 1;
+    if (totalFills > 1) {
+        const foundIdx = fills.findIndex(f => (f.id && tx.id && f.id === tx.id) || f === tx);
+        fillIndex = foundIdx >= 0 ? (foundIdx + 1) : 1;
+    }
+    const isMultiFill = totalFills > 1;
+
+    // Check adjacency in current visible list to connect into 1 segment
+    const prevTx = idx > 0 ? list[idx - 1] : null;
+    const nextTx = idx < list.length - 1 ? list[idx + 1] : null;
+    const prevOid = prevTx ? (prevTx.order_id || prevTx.orderId) : null;
+    const nextOid = nextTx ? (nextTx.order_id || nextTx.orderId) : null;
+
+    const isPrevSame = Boolean(oid && prevOid && (oid === prevOid));
+    const isNextSame = Boolean(oid && nextOid && (oid === nextOid));
+
     const row = document.createElement('tr');
-    row.style.borderBottom = '1px solid var(--border)';
+    let rowClasses = 'hist-row';
+    if (isMultiFill) {
+        rowClasses += ' hist-segment-row segment-active';
+        if (isNextSame) rowClasses += ' segment-mid';
+    }
+    row.className = rowClasses;
+    row.style.borderBottom = (isMultiFill && isNextSame) ? '1px dashed rgba(56, 189, 248, 0.28)' : '1px solid var(--border)';
     row.style.fontSize = '12px';
-    row.style.background = 'var(--bg1)';
+    row.style.background = isMultiFill ? 'rgba(56, 189, 248, 0.04)' : 'var(--bg1)';
+
+    const summary = oid && orderSummaryMapTax[oid] ? orderSummaryMapTax[oid] : null;
+    const summaryTooltip = summary 
+        ? `Order #${oid}: ${summary.totalFills} partial fills totaling ${summary.totalQuantity ? summary.totalQuantity + ' units, ' : ''}${summary.totalAmount >= 0 ? '+' : ''}$${Math.abs(summary.totalAmount).toFixed(2)}`
+        : `Broker Order #${oid}`;
+
+    const orderMetaHtml = oid ? `
+        <div style="display:inline-flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap;">
+            ${isMultiFill ? `
+                <span class="hist-fill-badge" title="${summaryTooltip}">
+                    <span class="material-symbols-outlined" style="font-size:12px;">hub</span>
+                    Fill ${fillIndex} of ${totalFills}
+                </span>
+            ` : ''}
+            <span class="hist-order-id-tag" title="Broker Order ID: ${oid}">
+                <span class="material-symbols-outlined" style="font-size:11px; opacity:0.7;">tag</span>
+                Order #${oid}
+            </span>
+        </div>
+    ` : '';
+
     row.innerHTML = `
-        <td style="padding:12px; color:var(--text); font-weight:600;">${tx.date}</td>
+        <td style="padding:12px; color:var(--text); font-weight:600; white-space:nowrap;">
+            <div>${tx.date}</div>
+            ${isPrevSame ? `<div style="font-size:9.5px; color:var(--blue); font-weight:700; margin-top:2px; display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:12px;">subdirectory_arrow_right</span> Fill ${fillIndex}</div>` : ''}
+        </td>
         <td style="padding:12px;">
             <strong style="color:var(--text); font-size:13px; font-family:'JetBrains Mono',monospace;">${tx.symbol || '--'}</strong>
         </td>
         <td style="padding:12px; color:var(--muted);">${tx.account_nickname || tx.account_number || '--'}</td>
         <td style="padding:12px;"><span class="hbadge" style="background:rgba(56,189,248,0.15); color:var(--blue); font-size:10px;">${tx.type || 'TRADE'}</span></td>
-        <td style="padding:12px; color:var(--muted); font-size:11px;">${tx.description || '--'}</td>
+        <td style="padding:12px; color:var(--muted); font-size:11px; max-width:340px;">
+            <div style="color:var(--text); font-weight:500; line-height:1.3;">${tx.display_detail || tx.description || '--'}</div>
+            ${orderMetaHtml}
+        </td>
         <td style="padding:12px; text-align:right; color:var(--text); font-family:'SFMono-Regular',Consolas,monospace;">${tx.price ? formatCurrency(tx.price) : '--'}</td>
         <td style="padding:12px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:800; color:${tx.amount >= 0 ? 'var(--green)' : 'var(--red)'};">
             ${(tx.amount >= 0 ? '+' : '') + formatCurrency(tx.amount || 0)}

@@ -48,9 +48,10 @@ class PersistentCache
      */
     public function __construct(string $key, mixed $value, int $ttlSeconds = 3600, bool $isSensitive = false)
     {
+        $tz = new \DateTimeZone('America/Chicago');
         $this->cacheKey    = $key;
         $this->isSensitive = $isSensitive;
-        $this->createdAt   = new \DateTimeImmutable();
+        $this->createdAt   = new \DateTimeImmutable('now', $tz);
         $this->expiresAt   = $this->createdAt->modify("+{$ttlSeconds} seconds");
         $this->setValue($value);
     }
@@ -93,7 +94,9 @@ class PersistentCache
      */
     public function setValue(mixed $value): static
     {
+        $tz = new \DateTimeZone('America/Chicago');
         $this->cacheValue = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $this->createdAt  = new \DateTimeImmutable('now', $tz);
         return $this;
     }
 
@@ -115,7 +118,8 @@ class PersistentCache
      */
     public function setTtl(int $ttlSeconds): static
     {
-        $this->expiresAt = (new \DateTimeImmutable())->modify("+{$ttlSeconds} seconds");
+        $tz = new \DateTimeZone('America/Chicago');
+        $this->expiresAt = (new \DateTimeImmutable('now', $tz))->modify("+{$ttlSeconds} seconds");
         return $this;
     }
 
@@ -126,7 +130,8 @@ class PersistentCache
      */
     public function isExpired(): bool
     {
-        return $this->expiresAt <= new \DateTimeImmutable();
+        $tz = new \DateTimeZone('America/Chicago');
+        return $this->expiresAt <= new \DateTimeImmutable('now', $tz);
     }
 
     /**
