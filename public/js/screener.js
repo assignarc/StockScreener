@@ -450,7 +450,18 @@ async function fetchPortfolio() {
                     <td style="text-align:right;"><strong style="color:var(--purple);">${e.allocationPct}%</strong></td>
                     <td style="text-align:center;"><span class="rb rLOW">${e.accountCount} Acc</span></td>
                     <td style="text-align:center;">
-                        <button class="fbtn" onclick="searchEquityInScreener('${e.symbol}')" style="display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">search</span> Analyze Options</button>
+                        <div class="opt-btn-popover-wrap">
+                            <button type="button" class="opt-foot-icon-btn" onclick="searchEquityInScreener('${e.symbol}')" aria-label="Analyze Options">
+                                <span class="material-symbols-outlined" style="color:var(--blue);">search</span>
+                            </button>
+                            <div class="opt-btn-popover" style="right:0;">
+                                <div class="opt-pop-title">
+                                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">search</span>
+                                    <span>Analyze Options</span>
+                                </div>
+                                <div class="opt-pop-desc">Scan live options chain and evaluate flywheel strategies for ${e.symbol}.</div>
+                            </div>
+                        </div>
                     </td>
                 `;
                 aggBody.appendChild(tr);
@@ -794,7 +805,18 @@ function renderTrackedStocksTable() {
             <td style="padding:10px 12px; text-align:right;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '—'}</td>
             <td style="padding:10px 12px; text-align:center;"><strong class="g">${s.score}</strong></td>
             <td style="padding:10px 12px; text-align:center;">
-                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4); display:inline-flex; align-items:center; gap:4px;" onclick="deleteTrackedStock(${s.id})"><span class="material-symbols-outlined" style="font-size:14px;">delete</span> Delete</button>
+                <div class="opt-btn-popover-wrap">
+                    <button type="button" class="opt-foot-icon-btn" style="color:var(--red); border-color:rgba(248,81,73,0.35);" onclick="deleteTrackedStock(${s.id})" aria-label="Delete">
+                        <span class="material-symbols-outlined" style="color:var(--red);">delete</span>
+                    </button>
+                    <div class="opt-btn-popover" style="right:0;">
+                        <div class="opt-pop-title">
+                            <span class="material-symbols-outlined" style="font-size:13px; color:var(--red);">delete</span>
+                            <span>Remove Candidate</span>
+                        </div>
+                        <div class="opt-pop-desc">Remove ${s.symbol} from your tracked screener database.</div>
+                    </div>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -997,7 +1019,18 @@ function renderTab3TrackedTable() {
             <td style="padding:10px 12px; text-align:right;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '—'}</td>
             <td style="padding:10px 12px; text-align:center;"><strong class="g">${s.score}</strong></td>
             <td style="padding:10px 12px; text-align:center;">
-                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4); display:inline-flex; align-items:center; gap:4px;" onclick="deleteTrackedStock(${s.id})"><span class="material-symbols-outlined" style="font-size:14px;">delete</span> Delete</button>
+                <div class="opt-btn-popover-wrap">
+                    <button type="button" class="opt-foot-icon-btn" style="color:var(--red); border-color:rgba(248,81,73,0.35);" onclick="deleteTrackedStock(${s.id})" aria-label="Delete">
+                        <span class="material-symbols-outlined" style="color:var(--red);">delete</span>
+                    </button>
+                    <div class="opt-btn-popover" style="right:0;">
+                        <div class="opt-pop-title">
+                            <span class="material-symbols-outlined" style="font-size:13px; color:var(--red);">delete</span>
+                            <span>Remove Candidate</span>
+                        </div>
+                        <div class="opt-pop-desc">Remove ${s.symbol} from your tracked screener database.</div>
+                    </div>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);

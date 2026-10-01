@@ -86,8 +86,8 @@
                     <!-- GRAPH-LEVEL SCOPE / ACCOUNT FILTER -->
                     <input type="hidden" id="selectProvider" value="ALL">
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <label style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase;">Account Scope:</label>
-                        <select id="selectAccount" onchange="applyFiltersAndSort()" style="background: var(--bg3); color: var(--text); border: 1px solid var(--border); padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;">
+                        <label class="filter-label">Account Scope:</label>
+                        <select id="selectAccount" class="app-filter-select" onchange="applyFiltersAndSort()" style="min-width: 180px;">
                             <option value="ALL">All Accounts (Consolidated)</option>
                             {% for a in growth.accounts %}
                                 <option value="{{ a }}">{{ a }}</option>
@@ -118,8 +118,8 @@
                     </div>
 
                     <!-- CSV IMPORT BUTTON -->
-                    <button onclick="document.getElementById('csvFileInput').click()" style="background: rgba(168, 85, 247, 0.15); color: var(--purple); border: 1px solid rgba(168, 85, 247, 0.3); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                        <span class="material-symbols-outlined" style="font-size: 16px;">upload_file</span> Import Schwab CSV
+                    <button onclick="document.getElementById('csvFileInput').click()" class="hbtn hbtn-purple" style="font-size: 11px; padding: 5px 12px; font-weight: 700;">
+                        <span class="material-symbols-outlined" style="font-size: 14px;">upload_file</span> Import Schwab CSV
                     </button>
                     <input type="file" id="csvFileInput" accept=".csv" onchange="uploadSchwabCsv(this)" style="display: none;">
                 </div>

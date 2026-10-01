@@ -275,13 +275,35 @@
                                              </td>
                                              <td style="text-align:center; padding:10px;">
                                                  <div style="display:inline-flex; gap:4px; align-items:center;">
-                                                     <a href="/portfolio?tab=holdings&account={{ accIdStr }}#account_card_{{ accIdStr }}" class="slick-pill-btn" style="font-size:11px; padding:3px 7px;" title="Drill down to Portfolio Holdings for this account">
-                                                         <span class="material-symbols-outlined" style="font-size:13px;">visibility</span> Holdings
-                                                     </a>
-                                                     {% if not isRetire %}
-                                                         <a href="/portfolio/tax?account={{ acc.nickname|default(acc.accountNumber|default(acc.id|default(''))) }}" class="slick-pill-btn" style="font-size:11px; padding:3px 7px;" title="Drill down to Tax Center for this account">
-                                                             <span class="material-symbols-outlined" style="font-size:13px; color:var(--yellow);">receipt_long</span> Tax
+                                                     <div class="opt-btn-popover-wrap">
+                                                         <a href="/portfolio?tab=holdings&account={{ accIdStr }}#account_card_{{ accIdStr }}" class="opt-foot-icon-btn" aria-label="Holdings">
+                                                             <span class="material-symbols-outlined">work</span>
                                                          </a>
+                                                         <div class="opt-btn-popover" style="right: auto; left: 50%; transform: translateX(-50%);">
+                                                             <div class="opt-pop-title">
+                                                                 <span class="material-symbols-outlined" style="font-size:13px; color:var(--purple);">work</span>
+                                                                 <span>Portfolio Holdings</span>
+                                                             </div>
+                                                             <div class="opt-pop-desc">
+                                                                 Drill down to positions and stock holdings in {{ acc.nickname|default('this account') }}.
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                     {% if not isRetire %}
+                                                         <div class="opt-btn-popover-wrap">
+                                                             <a href="/portfolio/tax?account={{ acc.nickname|default(acc.accountNumber|default(acc.id|default(''))) }}" class="opt-foot-icon-btn" aria-label="Tax Center">
+                                                                 <span class="material-symbols-outlined" style="color:var(--yellow);">receipt_long</span>
+                                                             </a>
+                                                             <div class="opt-btn-popover" style="right: auto; left: 50%; transform: translateX(-50%);">
+                                                                 <div class="opt-pop-title">
+                                                                     <span class="material-symbols-outlined" style="font-size:13px; color:var(--yellow);">receipt_long</span>
+                                                                     <span>Tax Center</span>
+                                                                 </div>
+                                                                 <div class="opt-pop-desc">
+                                                                     Inspect realized capital gains, losses, and 1099-B tax liabilities for {{ acc.nickname|default('this account') }}.
+                                                                 </div>
+                                                             </div>
+                                                         </div>
                                                      {% else %}
                                                          <span class="hbadge" style="font-size:9px; background:rgba(168,85,247,0.1); color:var(--purple); border-color:rgba(168,85,247,0.3);" title="Tax Exempt / Deferred IRA">
                                                              IRA
@@ -333,9 +355,20 @@
                                                     <a href="/portfolio?tab=holdings&symbol={{ e.symbol }}" style="color:var(--text); text-decoration:none; font-weight:700;" class="hover-blue" title="Drill down to {{ e.symbol }} in Portfolio Holdings">
                                                         {{ e.symbol }}
                                                     </a>
-                                                    <a href="/screener?symbol={{ e.symbol }}" style="color:var(--blue); font-size:11px; display:inline-flex; align-items:center;" title="Inspect in Screener">
-                                                        <span class="material-symbols-outlined" style="font-size:13px;">bolt</span>
-                                                    </a>
+                                                    <div class="opt-btn-popover-wrap">
+                                                        <a href="/screener?symbol={{ e.symbol }}" class="opt-foot-icon-btn" aria-label="Screener">
+                                                            <span class="material-symbols-outlined" style="color:var(--blue);">bolt</span>
+                                                        </a>
+                                                        <div class="opt-btn-popover" style="right: auto; left: 50%; transform: translateX(-50%);">
+                                                            <div class="opt-pop-title">
+                                                                <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">bolt</span>
+                                                                <span>Stock Screener</span>
+                                                            </div>
+                                                            <div class="opt-pop-desc">
+                                                                Evaluate {{ e.symbol }} fundamentals, analyst targets, and options strategies.
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td style="padding:10px;"><span class="m">{{ e.assetType }}</span></td>

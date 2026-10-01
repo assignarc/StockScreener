@@ -33,7 +33,18 @@ function renderTrackedTable() {
             <td style="padding:10px 12px; text-align:right;">$${s.targetPrice ? s.targetPrice.toFixed(2) : '—'}</td>
             <td style="padding:10px 12px; text-align:center;"><strong class="g">${s.score}</strong></td>
             <td style="padding:10px 12px; text-align:center;">
-                <button class="fbtn" style="color:var(--red); border-color:rgba(248,81,73,0.4); display:inline-flex; align-items:center; gap:4px;" onclick="deleteTrackedStock(${s.id})"><span class="material-symbols-outlined" style="font-size:14px;">delete</span> Delete</button>
+                <div class="opt-btn-popover-wrap">
+                    <button type="button" class="opt-foot-icon-btn" style="color:var(--red); border-color:rgba(248,81,73,0.35);" onclick="deleteTrackedStock(${s.id})" aria-label="Delete">
+                        <span class="material-symbols-outlined" style="color:var(--red);">delete</span>
+                    </button>
+                    <div class="opt-btn-popover" style="right:0;">
+                        <div class="opt-pop-title">
+                            <span class="material-symbols-outlined" style="font-size:13px; color:var(--red);">delete</span>
+                            <span>Remove Candidate</span>
+                        </div>
+                        <div class="opt-pop-desc">Remove ${s.symbol} from your tracked screener database.</div>
+                    </div>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);

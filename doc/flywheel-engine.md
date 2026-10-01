@@ -112,10 +112,51 @@ System parameters are managed dynamically via `AppConfigService` and the `/setti
 
 ---
 
-## 5. Related Design Documents
+## 5. Executive Advisor Insights Engine (`AdvisorService`)
+
+The `AdvisorService` (`src/Service/AdvisorService.php`) processes portfolio holdings, tax lot ledgers, and unencumbered cash balances to surface real-time actionable advisory insights ("nuggets") across three strategic pillars:
+
+### 5.1 Tax Savings & Asset Location
+- **Tax Loss Harvesting (TLH) Scanner:** Identifies unrealized tax loss clusters where individual lot losses exceed **$100** and aggregated unrealized losses exceed **$250**. Prompts the investor to harvest capital losses to offset taxable gains or up to $3,000 in ordinary income, with strict reminders regarding the 30-day wash sale window.
+- **Tax Drag / Asset Location Analyzer:** Detects income-generating assets (e.g., `SGOV`, `BIL`, `TLT`, `AGG`, `BND`, `JEPI`, `JEPQ`, `XYLD`) held in taxable accounts exceeding **$1,000** in value. Recommends relocating yield-heavy instruments to tax-deferred retirement accounts (Traditional/Roth IRA) to eliminate annual tax drag.
+
+### 5.2 Income Generation & Cash Optimization
+- **Unencumbered Cash Yield Scanner:** Evaluates liquid cash not pledged to Cash-Secured Puts. If unencumbered cash exceeds **$5,000**, the advisor calculates potential annual yield (~4.5%-5.0%) achievable by sweeping idle funds into ultra-short T-Bill ETFs or Treasury instruments.
+- **Unencumbered Covered Call Scanner:** Identifies equity positions with **100+ unencumbered shares** not currently pledged to active call contracts, calculating available contract units ($N = \lfloor \text{Shares} / 100 \rfloor$) and prompting covered call monetization.
+
+### 5.3 Growth & Risk Management
+- **Single-Ticker Concentration Risk:** Flags equity positions that represent **> 25%** of total portfolio liquidation value, alerting the user to single-stock volatility exposure and suggesting rebalancing or collar hedging.
+
+---
+
+## 6. Dynamic Signal & Progressive Disclosure Engine (`DynamicSignalService`)
+
+The `DynamicSignalService` (`src/Service/DynamicSignalService.php`) bridges live Finnhub market intelligence (analyst price targets, recommendation trends, and corporate earnings calendars) with portfolio context, outputting signals under a **Two-Tier Progressive Disclosure** architecture:
+
+### 6.1 Two-Tier Progressive Disclosure Model
+1. **Tier 1: "The Executive Output" (Crisp Executive Summary):**
+   - Direct strategic action: Buy Date, Target Exit Date, Target DTE, Suggested Strike.
+   - Recommended dollar allocation (capped at 8% of available liquid cash, max $2,500).
+   - One-sentence plain thesis, specific profit-exit target rule, and defined stop-loss rule.
+2. **Tier 2: "The Deep Audit" (Institutional Underwriting):**
+   - Wall Street consensus target range (`targetMean`, `targetHigh`, `targetLow`).
+   - Analyst recommendation breakdown (Buy, Hold, Sell vote distributions).
+   - Catalyst timeline with days to next earnings event.
+   - Zero-margin validation confirming 100% cash/share collateral backing.
+
+### 6.2 Binary Earnings Collision Avoidance
+Holding short options through corporate earnings announcements exposes capital to extreme binary gap risk and post-announcement implied volatility (IV) crush. If an upcoming earnings announcement falls between 14 and 75 days out:
+$$\text{Target Exit DTE} = \max(14, \text{Days To Earnings} - 4)$$
+The exit horizon is automatically calibrated to close contracts **4 days prior to the earnings event**, capturing theta decay while immunizing the strategy against earnings surprises.
+
+---
+
+## 7. Related Design Documents
 
 - [System Architecture and High-Level Design](architecture.md)
-- [Broker Integrations and Data Ingestion Flow](broker-integrations.md)
+- [Broker Integrations, Options Analytics, and Data Ingestion](broker-integrations.md)
 - [LLM Strategy Router and Signal Analysis](llm-analysis.md)
 - [Database Schema and Persistent Caching](database-caching.md)
-- [Security Architecture and Guardrails](security-guardrails.md)
+- [Security Architecture, Guardrails, and Legal Disclaimers](security-guardrails.md)
+- [Tax Engine and Portfolio Performance Accounting](tax-engine.md)
+

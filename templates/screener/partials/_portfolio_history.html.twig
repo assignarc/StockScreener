@@ -61,24 +61,26 @@
                     <span style="font-family:'Outfit',sans-serif; font-weight:700; font-size:14px; color:var(--text); text-transform:uppercase; letter-spacing:.5px;">Brokerage Activity Log</span>
                     <span id="histMatchCountBadge" class="hbadge" style="background:rgba(88,166,255,0.15); color:var(--blue); font-size:10px; padding:2px 8px; border-radius:12px;">0 items</span>
                 </div>
-                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                    <span style="font-size:11px; color:var(--muted); margin-right:4px;">Quick Type:</span>
-                    <button class="hbtn active" id="histChipAll" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('ALL')">All</button>
-                    <button class="hbtn" id="histChipTrades" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('TRADE')"><span class="material-symbols-outlined" style="font-size:13px;">trending_up</span> Trades</button>
-                    <button class="hbtn" id="histChipOptions" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('OPTION')"><span class="material-symbols-outlined" style="font-size:13px;">tune</span> Options</button>
-                    <button class="hbtn" id="histChipDividends" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('DIVIDEND')"><span class="material-symbols-outlined" style="font-size:13px;">payments</span> Dividends</button>
-                    <button class="hbtn" id="histChipInterest" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('INTEREST')"><span class="material-symbols-outlined" style="font-size:13px;">account_balance</span> Interest</button>
-                    <button class="hbtn" id="histChipJournals" style="padding:4px 10px; font-size:11px; display:flex; align-items:center; gap:4px;" onclick="setHistTypeFilter('JOURNAL')"><span class="material-symbols-outlined" style="font-size:13px;">swap_horiz</span> Transfers</button>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span class="filter-label">Quick Type:</span>
+                    <div class="seg-track">
+                        <button class="seg-btn active" id="histChipAll" onclick="setHistTypeFilter('ALL')">All</button>
+                        <button class="seg-btn" id="histChipTrades" onclick="setHistTypeFilter('TRADE')"><span class="material-symbols-outlined" style="font-size:13px;">trending_up</span> Trades</button>
+                        <button class="seg-btn" id="histChipOptions" onclick="setHistTypeFilter('OPTION')"><span class="material-symbols-outlined" style="font-size:13px;">tune</span> Options</button>
+                        <button class="seg-btn" id="histChipDividends" onclick="setHistTypeFilter('DIVIDEND')"><span class="material-symbols-outlined" style="font-size:13px;">payments</span> Dividends</button>
+                        <button class="seg-btn" id="histChipInterest" onclick="setHistTypeFilter('INTEREST')"><span class="material-symbols-outlined" style="font-size:13px;">account_balance</span> Interest</button>
+                        <button class="seg-btn" id="histChipJournals" onclick="setHistTypeFilter('JOURNAL')"><span class="material-symbols-outlined" style="font-size:13px;">swap_horiz</span> Transfers</button>
+                    </div>
                 </div>
             </div>
 
             <!-- TOOLBAR ROW 2: FILTERS & SEARCH CONTROLS -->
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 20px; background:var(--bg3); border-bottom:1px solid var(--border);">
-                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1;">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; flex:1;">
                     <!-- ACCOUNT FILTER SELECT -->
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <label for="histAccountSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Account:</label>
-                        <select id="histAccountSelect" onchange="onHistFilterChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; min-width:180px;">
+                        <label for="histAccountSelect" class="filter-label">Account:</label>
+                        <select id="histAccountSelect" class="app-filter-select" onchange="onHistFilterChange()" style="min-width:180px;">
                             <option value="ALL">All Accounts (All)</option>
                             <optgroup label="Account Category">
                                 <option value="TAXABLE">Taxable Accounts Only</option>
@@ -92,8 +94,8 @@
 
                     <!-- ACTIVITY TYPE SELECT -->
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <label for="histTypeSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Type:</label>
-                        <select id="histTypeSelect" onchange="onHistTypeSelectChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+                        <label for="histTypeSelect" class="filter-label">Type:</label>
+                        <select id="histTypeSelect" class="app-filter-select" onchange="onHistTypeSelectChange()">
                             <option value="ALL">All Activity Types</option>
                             <option value="TRADE">Stock & ETF Trades</option>
                             <option value="OPTION">Options (Calls, Puts, Premia)</option>
@@ -106,8 +108,8 @@
 
                     <!-- CASH FLOW IMPACT SELECT -->
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <label for="histCashFlowSelect" style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">Cash Flow:</label>
-                        <select id="histCashFlowSelect" onchange="onHistFilterChange()" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">
+                        <label for="histCashFlowSelect" class="filter-label">Cash Flow:</label>
+                        <select id="histCashFlowSelect" class="app-filter-select" onchange="onHistFilterChange()">
                             <option value="ALL">All Amounts</option>
                             <option value="INFLOW">Inflows / Credits (+)</option>
                             <option value="OUTFLOW">Outflows / Debits (-)</option>
@@ -118,10 +120,10 @@
                 <!-- SEARCH & RESET -->
                 <div style="display:flex; align-items:center; gap:8px;">
                     <div style="position:relative; display:flex; align-items:center;">
-                        <span class="material-symbols-outlined" style="position:absolute; left:8px; font-size:16px; color:var(--muted); pointer-events:none;">search</span>
-                        <input type="text" id="histSearchInput" oninput="onHistFilterChange()" placeholder="Search ticker, desc..." style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 10px 6px 30px; border-radius:8px; font-size:12px; width:190px;">
+                        <span class="material-symbols-outlined" style="position:absolute; left:10px; font-size:16px; color:var(--muted); pointer-events:none;">search</span>
+                        <input type="text" id="histSearchInput" class="app-filter-input" oninput="onHistFilterChange()" placeholder="Search ticker, desc..." style="width:190px;">
                     </div>
-                    <button class="hbtn" onclick="resetHistFilters()" style="padding:6px 10px; font-size:11px;" title="Reset all filters">
+                    <button class="hbtn" onclick="resetHistFilters()" style="padding:6px 12px; font-size:11px; height:34px; box-sizing:border-box;" title="Reset all filters">
                         <span class="material-symbols-outlined" style="font-size:14px; vertical-align:middle;">restart_alt</span> Reset
                     </button>
                 </div>
@@ -170,8 +172,8 @@
                 <div id="histPageInfo">Showing 0 of 0 transactions</div>
                 <div style="display:flex; align-items:center; gap:12px;">
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <span>Show:</span>
-                        <select id="histPageSizeSelect" onchange="changeHistPageSize(this.value)" style="background:var(--bg3); color:var(--text); border:1px solid var(--border); padding:3px 8px; border-radius:6px; font-size:11px; cursor:pointer;">
+                        <span class="filter-label">Show:</span>
+                        <select id="histPageSizeSelect" class="app-filter-select" onchange="changeHistPageSize(this.value)" style="height:28px; padding:0 24px 0 8px; font-size:11px;">
                             <option value="25">25</option>
                             <option value="50" selected>50</option>
                             <option value="100">100</option>

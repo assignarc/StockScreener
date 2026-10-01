@@ -69,10 +69,24 @@ Real brokerage account numbers are never exposed in plaintext in browser logs or
 
 ---
 
-## 5. Related Design Documents
+## 5. Legal Disclaimer and Compliance Workflow
+
+To reinforce self-directed investor compliance and mitigate educational vs. financial advice liabilities, the application enforces an explicit **Legal Disclaimer Acknowledgment Workflow**:
+
+### Acknowledgment Gating
+- **Disclaimer Status Endpoint (`GET /api/disclaimer/status`)**: Verifies whether the active session/user has formally acknowledged the investment disclaimer.
+- **Acknowledgment Action (`POST /api/disclaimer/acknowledge`)**: Persists acknowledgment timestamps in `AppConfig` (`disclaimer.acknowledged = true`, `disclaimer.acknowledged_at = ISO8601`).
+- **Interactive UI Modal**: Blocks live trade signal generation and displays a prominent compliance modal until the user explicitly accepts the terms.
+- **Educational / Analytical Scope**: States unambiguously that StockScreener is an analytical and mathematical screener tool, not a registered investment advisor, and does not execute trades automatically.
+
+---
+
+## 6. Related Design Documents
 
 - [System Architecture and High-Level Design](architecture.md)
 - [Capital Flywheel Compounding Engine](flywheel-engine.md)
-- [Broker Integrations and Data Ingestion Flow](broker-integrations.md)
+- [Broker Integrations, Options Analytics, and Data Ingestion](broker-integrations.md)
 - [LLM Strategy Router and Signal Analysis](llm-analysis.md)
 - [Database Schema and Persistent Caching](database-caching.md)
+- [Tax Engine and Portfolio Performance Accounting](tax-engine.md)
+

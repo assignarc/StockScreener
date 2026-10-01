@@ -1788,13 +1788,14 @@ function setAccountViewLayout(mode) {
 
     if (!cardsContainer || !secContainer) return;
 
+    if (btnGrid) btnGrid.classList.remove('active');
+    if (btnList) btnList.classList.remove('active');
+    if (btnSec) btnSec.classList.remove('active');
+
     if (mode === 'security') {
         cardsContainer.style.display = 'none';
         secContainer.style.display = 'block';
-
-        if (btnSec) { btnSec.style.background = 'var(--bg2)'; btnSec.style.color = 'var(--text)'; }
-        if (btnGrid) { btnGrid.style.background = 'transparent'; btnGrid.style.color = 'var(--muted)'; }
-        if (btnList) { btnList.style.background = 'transparent'; btnList.style.color = 'var(--muted)'; }
+        if (btnSec) btnSec.classList.add('active');
     } else {
         secContainer.style.display = 'none';
         cardsContainer.style.display = 'grid';
@@ -1803,16 +1804,12 @@ function setAccountViewLayout(mode) {
             cardsContainer.style.gridTemplateColumns = '1fr';
             cardsContainer.classList.add('account-mode-list');
             cardsContainer.classList.remove('account-mode-grid');
-            if (btnList) { btnList.style.background = 'var(--bg2)'; btnList.style.color = 'var(--text)'; }
-            if (btnGrid) { btnGrid.style.background = 'transparent'; btnGrid.style.color = 'var(--muted)'; }
-            if (btnSec) { btnSec.style.background = 'transparent'; btnSec.style.color = 'var(--muted)'; }
+            if (btnList) btnList.classList.add('active');
         } else {
             cardsContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(320px, 1fr))';
             cardsContainer.classList.add('account-mode-grid');
             cardsContainer.classList.remove('account-mode-list');
-            if (btnGrid) { btnGrid.style.background = 'var(--bg2)'; btnGrid.style.color = 'var(--text)'; }
-            if (btnList) { btnList.style.background = 'transparent'; btnList.style.color = 'var(--muted)'; }
-            if (btnSec) { btnSec.style.background = 'transparent'; btnSec.style.color = 'var(--muted)'; }
+            if (btnGrid) btnGrid.classList.add('active');
         }
     }
 }

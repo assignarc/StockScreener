@@ -14,12 +14,12 @@
             </div>
 
             <!-- 6-MONTH FORWARD BROWSABLE MONTH CONTROLS -->
-            <div style="display:flex; align-items:center; gap:8px; background:var(--bg3); padding:4px 10px; border-radius:10px; border:1px solid var(--border);">
-                <button onclick="changeCalMonth(-1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2); display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:14px;">chevron_left</span> Prev Month</button>
-                <select id="calMonthSelect" onchange="selectCalMonth(this.value)" style="background:var(--bg2); color:var(--text); border:1px solid var(--border); padding:6px 12px; border-radius:6px; font-size:13px; font-weight:700; cursor:pointer;">
+            <div class="seg-track" style="padding: 4px 6px;">
+                <button onclick="changeCalMonth(-1)" class="seg-btn" style="height: 34px;"><span class="material-symbols-outlined" style="font-size:16px;">chevron_left</span> Prev</button>
+                <select id="calMonthSelect" class="app-filter-select" onchange="selectCalMonth(this.value)" style="min-width:160px;">
                     <!-- Populated dynamically via JS -->
                 </select>
-                <button onclick="changeCalMonth(1)" class="hbtn" style="padding:4px 10px; font-size:12px; background:var(--bg2); display:inline-flex; align-items:center; gap:2px;">Next Month <span class="material-symbols-outlined" style="font-size:14px;">chevron_right</span></button>
+                <button onclick="changeCalMonth(1)" class="seg-btn" style="height: 34px;">Next <span class="material-symbols-outlined" style="font-size:16px;">chevron_right</span></button>
             </div>
 
             <div id="calCashProjectionHeader" style="display:flex; gap:12px; flex-wrap:wrap; width:100%; margin-top:8px;">

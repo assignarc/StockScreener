@@ -107,9 +107,20 @@
                                 </div>
                             </div>
                             {% if inst.type == 'schwab' or inst.type == 'etrade' %}
-                            <a href="/api/broker/{{ inst.id }}/login" target="_blank" class="hbtn hbtn-blue">
-                                <span class="material-symbols-outlined">link</span> OAuth
-                            </a>
+                            <div class="opt-btn-popover-wrap">
+                                <a href="/api/broker/{{ inst.id }}/login" target="_blank" class="opt-foot-icon-btn" aria-label="OAuth Login" style="width:28px; height:28px; background:rgba(56,189,248,0.12); border-color:rgba(56,189,248,0.35); color:var(--blue);">
+                                    <span class="material-symbols-outlined" style="font-size:16px;">link</span>
+                                </a>
+                                <div class="opt-btn-popover" style="right:0;">
+                                    <div class="opt-pop-title">
+                                        <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">link</span>
+                                        <span>OAuth Authorization</span>
+                                    </div>
+                                    <div class="opt-pop-desc">
+                                        Open broker OAuth 2.0 portal to authenticate and refresh API tokens.
+                                    </div>
+                                </div>
+                            </div>
                             {% endif %}
                         </div>
                         {% else %}

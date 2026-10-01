@@ -283,7 +283,20 @@ function renderEventsTable(events) {
                 <td style="padding: 10px 8px; font-weight: 600; color: var(--muted); white-space: nowrap;">${ev.account_number || 'Account'}</td>
                 <td style="padding: 10px 8px; font-weight: 700; color: var(--text); white-space: nowrap;">
                     ${displaySymbol}
-                    ${isOptionSymbol || isOpt ? `<button onclick="toggleRowDetail('${rowId}')" style="background: none; border: none; color: var(--blue); cursor: pointer; padding: 0 4px; font-size: 10px; font-weight: 700; display:inline-flex; align-items:center; gap:2px;"><span class="material-symbols-outlined" style="font-size:12px;">info</span> info</button>` : ''}
+                    ${isOptionSymbol || isOpt ? `
+                        <div class="opt-btn-popover-wrap" style="vertical-align:middle; margin-left:4px;">
+                            <button type="button" onclick="toggleRowDetail('${rowId}')" class="opt-foot-icon-btn" aria-label="Option Details" style="width:20px; height:20px;">
+                                <span class="material-symbols-outlined" style="font-size:12px; color:var(--blue);">info</span>
+                            </button>
+                            <div class="opt-btn-popover" style="left:50%; right:auto; transform:translateX(-50%);">
+                                <div class="opt-pop-title">
+                                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">info</span>
+                                    <span>Option Contract Spec</span>
+                                </div>
+                                <div class="opt-pop-desc">Toggle detailed OCC option contract specifications and trade breakdown.</div>
+                            </div>
+                        </div>
+                    ` : ''}
                 </td>
                 <td style="padding: 10px 8px; text-align: center;">
                     ${descText ? `

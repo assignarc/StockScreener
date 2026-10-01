@@ -147,7 +147,7 @@
 
                 <!-- Specific Account Dropdown Filter -->
                 <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Account:</span>
+                    <span class="filter-label">Account:</span>
                     <select id="filterAccount" onchange="applyTaxFilters()" class="tax-filter-select">
                         <option value="ALL">All Accounts</option>
                         {% set uniqueAccounts = [] %}
@@ -187,7 +187,7 @@
 
                 <!-- Group By Selector -->
                 <div id="groupSelectorContainer" style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Group By:</span>
+                    <span class="filter-label">Group By:</span>
                     <select id="filterGroupBy" onchange="applyTaxFilters()" class="tax-filter-select">
                         <option value="NONE">None (Chronological)</option>
                         <option value="TICKER">Security Ticker</option>

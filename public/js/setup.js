@@ -59,11 +59,33 @@ function renderBrokerInstances() {
         const iNum = index + 1;
         const instId = inst.id || ('b' + iNum);
         const removeBtn = (brokerInstances.length > 1) 
-            ? `<button type="button" class="slick-pill-btn" style="color:var(--red); border-color:rgba(248,113,113,0.3);" onclick="removeBrokerInstanceCard(${index})"><span class="material-symbols-outlined">delete</span> Remove</button>` 
+            ? `<div class="opt-btn-popover-wrap">
+                <button type="button" class="opt-foot-icon-btn" style="color:var(--red); border-color:rgba(248,113,113,0.35); width:28px; height:28px;" onclick="removeBrokerInstanceCard(${index})" aria-label="Remove Broker">
+                    <span class="material-symbols-outlined" style="font-size:16px; color:var(--red);">delete</span>
+                </button>
+                <div class="opt-btn-popover" style="right:0;">
+                    <div class="opt-pop-title">
+                        <span class="material-symbols-outlined" style="font-size:13px; color:var(--red);">delete</span>
+                        <span>Remove Connection</span>
+                    </div>
+                    <div class="opt-pop-desc">Remove this broker integration slot from your setup configuration.</div>
+                </div>
+            </div>` 
             : '';
 
         const oauthBtn = (inst.type === 'schwab' || inst.type === 'etrade')
-            ? `<a href="/api/broker/${encodeURIComponent(instId)}/login" target="_blank" class="hbtn hbtn-blue" style="font-size:12px; padding:6px 14px; display:inline-flex; align-items:center; gap:6px; font-weight:700; text-decoration:none;"><span class="material-symbols-outlined">link</span> Connect via OAuth</a>`
+            ? `<div class="opt-btn-popover-wrap">
+                <a href="/api/broker/${encodeURIComponent(instId)}/login" target="_blank" class="opt-foot-icon-btn" style="width:28px; height:28px; background:rgba(56,189,248,0.12); border-color:rgba(56,189,248,0.35); color:var(--blue);" aria-label="Connect via OAuth">
+                    <span class="material-symbols-outlined" style="font-size:16px;">link</span>
+                </a>
+                <div class="opt-btn-popover" style="right:0;">
+                    <div class="opt-pop-title">
+                        <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">link</span>
+                        <span>OAuth Connect</span>
+                    </div>
+                    <div class="opt-pop-desc">Open broker OAuth portal to authorize live market and trading access.</div>
+                </div>
+            </div>`
             : '';
 
         const currentScheme = window.location.protocol;
@@ -80,9 +102,20 @@ function renderBrokerInstances() {
                     <ol style="margin:0; padding-left:18px;">
                         <li>Register or log in at the <a href="https://developer.schwab.com/" target="_blank" style="color:var(--blue); text-decoration:underline;">Schwab Developer Portal</a>.</li>
                         <li>Create a new App and configure the Redirect URI to match your exact dynamic local callback URL below:
-                            <div style="margin:4px 0; font-family:monospace; background:var(--bg1); padding:4px 8px; border-radius:6px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:gap:6px;">
+                            <div style="margin:4px 0; font-family:monospace; background:var(--bg1); padding:4px 8px; border-radius:6px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:6px;">
                                 <span style="word-break:break-all; color:var(--text);">${dynamicRedirectUrl}</span>
-                                <button type="button" class="slick-pill-btn" onclick="copyDynamicText('${dynamicRedirectUrl}', this)" style="padding:2px 8px;">Copy URL</button>
+                                <div class="opt-btn-popover-wrap">
+                                    <button type="button" class="opt-foot-icon-btn" onclick="copyDynamicText('${dynamicRedirectUrl}', this)" aria-label="Copy URL" style="width:24px; height:24px;">
+                                        <span class="material-symbols-outlined" style="font-size:13px;">content_copy</span>
+                                    </button>
+                                    <div class="opt-btn-popover" style="right:0;">
+                                        <div class="opt-pop-title">
+                                            <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">content_copy</span>
+                                            <span>Copy Redirect URI</span>
+                                        </div>
+                                        <div class="opt-pop-desc">Copy OAuth callback URL to clipboard.</div>
+                                    </div>
+                                </div>
                             </div>
                         </li>
                         <li>Copy the generated <strong>App Key</strong> (Client ID) and <strong>App Secret</strong> into the fields below, then click <strong>Connect via OAuth</strong> above.</li>
@@ -136,9 +169,20 @@ function renderBrokerInstances() {
                     </div>
                     <ol style="margin:0; padding-left:18px;">
                         <li>Set the E*TRADE OAuth Callback URI inside your E*TRADE portal configuration to:
-                            <div style="margin:4px 0; font-family:monospace; background:var(--bg1); padding:4px 8px; border-radius:6px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                            <div style="margin:4px 0; font-family:monospace; background:var(--bg1); padding:4px 8px; border-radius:6px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:6px;">
                                 <span style="word-break:break-all; color:var(--text);">${dynamicRedirectUrl}</span>
-                                <button type="button" class="slick-pill-btn" onclick="copyDynamicText('${dynamicRedirectUrl}', this)" style="padding:2px 8px;">Copy URL</button>
+                                <div class="opt-btn-popover-wrap">
+                                    <button type="button" class="opt-foot-icon-btn" onclick="copyDynamicText('${dynamicRedirectUrl}', this)" aria-label="Copy URL" style="width:24px; height:24px;">
+                                        <span class="material-symbols-outlined" style="font-size:13px;">content_copy</span>
+                                    </button>
+                                    <div class="opt-btn-popover" style="right:0;">
+                                        <div class="opt-pop-title">
+                                            <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">content_copy</span>
+                                            <span>Copy Redirect URI</span>
+                                        </div>
+                                        <div class="opt-pop-desc">Copy OAuth callback URL to clipboard.</div>
+                                    </div>
+                                </div>
                             </div>
                         </li>
                         <li>Provide your E*TRADE Consumer Key and Consumer Secret in the inputs below, then initiate authentication.</li>
@@ -183,9 +227,31 @@ function renderBrokerInstances() {
             <div style="margin-bottom:14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase;">App Key / Client ID</label>
-                    <div style="display:flex; gap:6px;">
-                        <button type="button" class="slick-pill-btn" onclick="pasteToField('bKey_${index}')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
-                        <button type="button" class="slick-pill-btn" onclick="copyFromField('bKey_${index}', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <div class="opt-btn-popover-wrap">
+                            <button type="button" class="opt-foot-icon-btn" onclick="pasteToField('bKey_${index}')" aria-label="Paste App Key">
+                                <span class="material-symbols-outlined">content_paste</span>
+                            </button>
+                            <div class="opt-btn-popover" style="right:0;">
+                                <div class="opt-pop-title">
+                                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">content_paste</span>
+                                    <span>Paste from Clipboard</span>
+                                </div>
+                                <div class="opt-pop-desc">Paste your API Key directly into this field.</div>
+                            </div>
+                        </div>
+                        <div class="opt-btn-popover-wrap">
+                            <button type="button" class="opt-foot-icon-btn" onclick="copyFromField('bKey_${index}', this)" aria-label="Copy App Key">
+                                <span class="material-symbols-outlined">content_copy</span>
+                            </button>
+                            <div class="opt-btn-popover" style="right:0;">
+                                <div class="opt-pop-title">
+                                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">content_copy</span>
+                                    <span>Copy to Clipboard</span>
+                                </div>
+                                <div class="opt-pop-desc">Copy current App Key to clipboard.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <input type="text" id="bKey_${index}" class="large-key-input" placeholder="App Key / Client ID..." value="${escapeHtml(inst.app_key || '')}" oninput="updateInstanceField(${index}, 'app_key', this.value)">
@@ -194,10 +260,43 @@ function renderBrokerInstances() {
             <div style="margin-bottom:14px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <label style="font-size:11px; font-weight:700; color:var(--text); text-transform:uppercase;">App Secret / Token</label>
-                    <div style="display:flex; gap:6px;">
-                        <button type="button" class="slick-pill-btn" onclick="toggleSecretVisibility('bSec_${index}', this)"><span class="material-symbols-outlined">visibility</span> Show</button>
-                        <button type="button" class="slick-pill-btn" onclick="pasteToField('bSec_${index}')"><span class="material-symbols-outlined">content_paste</span> Paste</button>
-                        <button type="button" class="slick-pill-btn" onclick="copyFromField('bSec_${index}', this)"><span class="material-symbols-outlined">content_copy</span> Copy</button>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <div class="opt-btn-popover-wrap">
+                            <button type="button" class="opt-foot-icon-btn" onclick="toggleSecretVisibility('bSec_${index}', this)" aria-label="Toggle Visibility">
+                                <span class="material-symbols-outlined">visibility</span>
+                            </button>
+                            <div class="opt-btn-popover" style="right:0;">
+                                <div class="opt-pop-title">
+                                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">visibility</span>
+                                    <span>Show / Hide Secret</span>
+                                </div>
+                                <div class="opt-pop-desc">Reveal or conceal secret characters in this field.</div>
+                            </div>
+                        </div>
+                        <div class="opt-btn-popover-wrap">
+                            <button type="button" class="opt-foot-icon-btn" onclick="pasteToField('bSec_${index}')" aria-label="Paste Secret">
+                                <span class="material-symbols-outlined">content_paste</span>
+                            </button>
+                            <div class="opt-btn-popover" style="right:0;">
+                                <div class="opt-pop-title">
+                                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">content_paste</span>
+                                    <span>Paste from Clipboard</span>
+                                </div>
+                                <div class="opt-pop-desc">Paste secret value from clipboard.</div>
+                            </div>
+                        </div>
+                        <div class="opt-btn-popover-wrap">
+                            <button type="button" class="opt-foot-icon-btn" onclick="copyFromField('bSec_${index}', this)" aria-label="Copy Secret">
+                                <span class="material-symbols-outlined">content_copy</span>
+                            </button>
+                            <div class="opt-btn-popover" style="right:0;">
+                                <div class="opt-pop-title">
+                                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">content_copy</span>
+                                    <span>Copy to Clipboard</span>
+                                </div>
+                                <div class="opt-pop-desc">Copy secret value to clipboard.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <input type="password" id="bSec_${index}" class="large-key-input" placeholder="App Secret..." value="${escapeHtml(inst.app_secret || '')}" oninput="updateInstanceField(${index}, 'app_secret', this.value)">

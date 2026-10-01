@@ -297,8 +297,13 @@
     gap: 6px;
 }
 .cfg-unit-select {
-    padding: 7px 10px;
-    background: var(--bg3);
+    height: 34px;
+    padding: 0 28px 0 10px;
+    background-color: var(--bg2);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text);
@@ -306,9 +311,19 @@
     font-weight: 600;
     cursor: pointer;
     outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.cfg-unit-select:hover {
+    border-color: var(--blue);
+    background-color: var(--bg3);
 }
 .cfg-unit-select:focus {
-    border-color: var(--blue);
+    border-color: var(--blue) !important;
+    box-shadow: 0 0 0 2px var(--accent-glow) !important;
 }
 
 /* ── Quick-Preset Chips ─────────────────────────────────────────────── */
@@ -571,9 +586,14 @@
 }
 
 [data-theme="light"] .cfg-unit-select {
-    background: #ffffff;
+    background-color: #ffffff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%230284c7' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     border-color: #cbd5e1;
     color: var(--text);
+}
+[data-theme="light"] .cfg-unit-select:hover {
+    background-color: #f8fafc;
+    border-color: var(--blue);
 }
 
 [data-theme="light"] .cfg-chip {

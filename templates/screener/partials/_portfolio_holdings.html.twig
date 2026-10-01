@@ -14,11 +14,11 @@
             </div>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;">View Mode:</span>
-            <div style="display:flex; background:var(--bg3); padding:3px; border-radius:8px; border:1px solid var(--border);">
-                <button id="accViewModeGrid" onclick="setAccountViewLayout('grid')" style="border:none; background:var(--bg2); color:var(--text); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">grid_view</span> Cards (1-6 / Row)</button>
-                <button id="accViewModeList" onclick="setAccountViewLayout('list')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">view_list</span> Compact List</button>
-                <button id="accViewModeSec" onclick="setAccountViewLayout('security')" style="border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:5px 12px; border-radius:6px; cursor:pointer; transition:all 0.2s ease; display:inline-flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:14px;">layers</span> Security Aggregated</button>
+            <span class="filter-label">View Mode:</span>
+            <div class="seg-track" id="accViewModeSegTrack">
+                <button type="button" id="accViewModeGrid" class="seg-btn active" onclick="setAccountViewLayout('grid')"><span class="material-symbols-outlined" style="font-size:14px;">grid_view</span> Cards (1-6 / Row)</button>
+                <button type="button" id="accViewModeList" class="seg-btn" onclick="setAccountViewLayout('list')"><span class="material-symbols-outlined" style="font-size:14px;">view_list</span> Compact List</button>
+                <button type="button" id="accViewModeSec" class="seg-btn" onclick="setAccountViewLayout('security')"><span class="material-symbols-outlined" style="font-size:14px;">layers</span> Security Aggregated</button>
             </div>
         </div>
     </div>
@@ -191,6 +191,20 @@
                                             <div class="sec-ticker-row">
                                                 <strong class="sec-ticker-symbol">{{ e.symbol }}</strong>
                                                 <span class="sec-asset-badge">{{ e.assetType|default('EQUITY') }}</span>
+                                                <div class="opt-btn-popover-wrap" onclick="event.stopPropagation();">
+                                                    <a href="/screener?symbol={{ e.symbol }}" class="opt-foot-icon-btn" aria-label="Screener" style="width:20px; height:20px;">
+                                                        <span class="material-symbols-outlined" style="font-size:12px; color:var(--blue);">bolt</span>
+                                                    </a>
+                                                    <div class="opt-btn-popover" style="left:0; right:auto;">
+                                                        <div class="opt-pop-title">
+                                                            <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">bolt</span>
+                                                            <span>Stock Screener</span>
+                                                        </div>
+                                                        <div class="opt-pop-desc">
+                                                            Evaluate {{ e.symbol }} fundamentals and options flywheel strategies.
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             {% if e.description is defined and e.description %}
                                                 <div class="sec-ticker-desc" title="{{ e.description }}">{{ e.description }}</div>

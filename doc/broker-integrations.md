@@ -76,7 +76,44 @@ Raw brokerage API responses expose hashed or truncated account numbers. To provi
 
 ---
 
-## 4. Transaction Ingestion and Daily-Gated Caching
+---
+
+## 4. Advanced Options Analytics and Collateral Accounting
+
+`BrokerManagerService` includes a specialized options parsing and valuation subsystem that transforms raw broker option positions into structured analytical models:
+
+### 4.1 OCC Symbol Parsing & Underlying Resolution
+Option symbols conform to the Options Clearing Corporation (OCC) standard:
+$$\text{Pattern: } \underbrace{\text{TICKER}}_{\text{Root}} \quad \underbrace{\text{YYMMDD}}_{\text{Expiration}} \quad \underbrace{\text{[C|P]}}_{\text{Type}} \quad \underbrace{\text{00000000}}_{\text{Strike } \times 1000}$$
+- Example: `NVDA 260807C00215000` $\rightarrow$ NVDA, Aug 7, 2026, Call, Strike: $215.00.
+- `resolveUnderlyingPrice()` matches the option root ticker back to active equity holdings or cached market quotes to enable real-time valuation.
+
+### 4.2 Moneyness and Buffer Valuation
+The system determines the real-time moneyness status and cushion distance:
+
+- **For Call Contracts:**
+  $$\text{Distance} = \text{Underlying Price} - \text{Strike}$$
+  - $\text{Distance} > \$0.01 \rightarrow \mathbf{ITM}$ (In-the-Money, $\text{Gain \%} = \frac{\text{Distance}}{\text{Strike}} \times 100$)
+  - $\text{Distance} < -\$0.01 \rightarrow \mathbf{OTM}$ (Out-of-the-Money, $\text{Buffer \%} = \frac{|\text{Distance}|}{\text{Underlying Price}} \times 100$)
+  - $|\text{Distance}| \le \$0.01 \rightarrow \mathbf{ATM}$ (At-the-Money)
+
+- **For Put Contracts:**
+  $$\text{Distance} = \text{Strike} - \text{Underlying Price}$$
+  - $\text{Distance} > \$0.01 \rightarrow \mathbf{ITM}$
+  - $\text{Distance} < -\$0.01 \rightarrow \mathbf{OTM}$
+  - $|\text{Distance}| \le \$0.01 \rightarrow \mathbf{ATM}$
+
+### 4.3 Break-Even Price and Collateral Ringfencing
+- **Break-Even Price:**
+  - **Covered Call / Long Call:** $\text{Break-Even} = \text{Strike} + \text{Premium Collected/Paid}$
+  - **Cash-Secured Put / Long Put:** $\text{Break-Even} = \text{Strike} - \text{Premium Collected/Paid}$
+- **Collateral Ringfencing:**
+  - **Cash-Secured Puts (Short Puts):** Strictly earmarks $100\% \text{ Cash Collateral} = |\text{Quantity}| \times \text{Strike} \times 100$. This amount is deducted directly from liquid available cash to prevent margin traps.
+  - **Covered Calls (Short Calls):** Pledges $|\text{Quantity}| \times 100$ shares of underlying stock, reducing the account's unencumbered share count.
+
+---
+
+## 5. Transaction Ingestion and Daily-Gated Caching
 
 To avoid triggering upstream rate limits and API quotas, the system enforces a daily-gated history fetching pipeline:
 
@@ -94,7 +131,7 @@ Is Cache Valid & Fresh Today?
                                Merge new transactions with SQLite ledger
                                             |
                                             v
-                               Save updated ledger with 1-year TTL
+                              Save updated ledger with 1-year TTL
 ```
 
 - **Incremental Deduplication**: Historical transactions are keyed by unique transaction IDs and trade settlement dates to prevent double-counting.
@@ -102,7 +139,7 @@ Is Cache Valid & Fresh Today?
 
 ---
 
-## 5. Schwab CSV Batch Importer (`SchwabCsvImporterService`)
+## 6. Schwab CSV Batch Importer (`SchwabCsvImporterService`)
 
 For historical records predating API availability or offline accounts, the application provides a CSV file parsing service:
 - Parses Schwab account export files (`.csv`).
@@ -111,10 +148,10 @@ For historical records predating API availability or offline accounts, the appli
 
 ---
 
-## 6. Market Data Ingestion (`FinnhubService`)
+## 7. Market Data Ingestion (`FinnhubService`)
 
 Market data for equities and corporate event calendars is ingested from Finnhub with persistent SQLite caching:
-- **Quote Data (`/api/v1/quote`)**: Real-time and batch stock prices. Cached for **15 minutes** (`900s`). Requests are restricted to **US market hours** (Mon–Fri 9:30 AM – 4:00 PM ET); outside market hours, cached/stale quotes are served to protect API quotas.
+- **Quote Data (`/api/v1/quote`)**: Real-time and batch stock prices. Cached for **15 minutes** (`900s`). Requests are strictly restricted to **US market hours** (Mon–Fri 9:30 AM – 4:00 PM ET); outside market hours, cached/stale quotes are served to protect API quotas.
 - **Dividend Calendar (`/api/v1/stock/dividend2`)**: Ex-dividend dates, pay dates, and per-share amounts. Cached for **30 days** (`2,592,000s`).
 - **Earnings Calendar (`/api/v1/calendar/earnings`)**: Historical and upcoming corporate earnings release dates. Cached for **7 days** (`604,800s`).
 - **Symbol Search (`/api/v1/search`)**: Ticker lookups and directory search. Cached for **14 days** (`1,209,600s`); new search queries fetch immediately from the API.
@@ -123,10 +160,12 @@ Market data for equities and corporate event calendars is ingested from Finnhub 
 
 ---
 
-## 7. Related Design Documents
+## 8. Related Design Documents
 
 - [System Architecture and High-Level Design](architecture.md)
 - [Capital Flywheel Compounding Engine](flywheel-engine.md)
 - [LLM Strategy Router and Signal Analysis](llm-analysis.md)
 - [Database Schema and Persistent Caching](database-caching.md)
-- [Security Architecture and Guardrails](security-guardrails.md)
+- [Security Architecture, Guardrails, and Legal Disclaimers](security-guardrails.md)
+- [Tax Engine and Portfolio Performance Accounting](tax-engine.md)
+

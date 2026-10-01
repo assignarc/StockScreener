@@ -107,24 +107,24 @@
 
     <!-- FILTER & SEARCH BAR -->
     <div class="opt-toolbar">
-        <div class="opt-search-box">
-            <span class="material-symbols-outlined opt-search-icon">search</span>
-            <input type="text" id="optSearchInput" placeholder="Filter by symbol, strategy, or account..." onkeyup="filterOpenOptions()" class="opt-search-input">
+        <div style="position: relative; display: flex; align-items: center;">
+            <span class="material-symbols-outlined" style="position: absolute; left: 10px; font-size: 16px; color: var(--muted); pointer-events: none;">search</span>
+            <input type="text" id="optSearchInput" placeholder="Filter by symbol, strategy, or account..." onkeyup="filterOpenOptions()" class="app-filter-input" style="width: 280px;">
         </div>
-        <div class="opt-filter-pills">
-            <button type="button" class="opt-pill-filter active" id="filterOptAll" onclick="setOptionsFilter('ALL')">
+        <div class="seg-track">
+            <button type="button" class="seg-btn opt-pill-filter active" id="filterOptAll" onclick="setOptionsFilter('ALL')">
                 <span class="material-symbols-outlined" style="font-size:13px;">apps</span> All ({{ portfolio.optionsSummary.totalPositions|default(0) }})
             </button>
-            <button type="button" class="opt-pill-filter" id="filterOptProfit" onclick="setOptionsFilter('PROFIT_ROUTE')">
+            <button type="button" class="seg-btn opt-pill-filter" id="filterOptProfit" onclick="setOptionsFilter('PROFIT_ROUTE')">
                 <span class="material-symbols-outlined" style="font-size:13px; color:var(--green);">trending_up</span> On Track / Profitable ({{ portfolio.optionsSummary.profitRouteCount|default(0) }})
             </button>
-            <button type="button" class="opt-pill-filter" id="filterOptRisk" onclick="setOptionsFilter('AT_RISK')">
+            <button type="button" class="seg-btn opt-pill-filter" id="filterOptRisk" onclick="setOptionsFilter('AT_RISK')">
                 <span class="material-symbols-outlined" style="font-size:13px; color:var(--red);">warning</span> Below Breakeven ({{ portfolio.optionsSummary.atRiskCount|default(0) }})
             </button>
-            <button type="button" class="opt-pill-filter" id="filterOptCalls" onclick="setOptionsFilter('CALL')">
+            <button type="button" class="seg-btn opt-pill-filter" id="filterOptCalls" onclick="setOptionsFilter('CALL')">
                 <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">arrow_circle_up</span> Covered Calls
             </button>
-            <button type="button" class="opt-pill-filter" id="filterOptPuts" onclick="setOptionsFilter('PUT')">
+            <button type="button" class="seg-btn opt-pill-filter" id="filterOptPuts" onclick="setOptionsFilter('PUT')">
                 <span class="material-symbols-outlined" style="font-size:13px; color:var(--yellow);">shield</span> Cash-Secured Puts
             </button>
         </div>
@@ -137,7 +137,8 @@
                 {% set isProfit = opt.healthStatusCode == 'PROFIT_ROUTE' or opt.healthStatusCode == 'PROFITABLE' %}
                 {% set isAtRisk = opt.healthStatusCode == 'AT_RISK' %}
                 <div class="opt-card" data-symbol="{{ opt.root }}" data-strategy="{{ opt.type|upper }}" data-status="{{ opt.healthStatusCode }}" data-account="{{ opt.primaryAccountNickname }}" id="opt_card_{{ loop.index }}">
-                    <!-- CARD TOP BAR -->
+                    
+                    <!-- COMPACT CARD HEADER (CLEAN & UNIFORM HEIGHT) -->
                     <div class="opt-card-header">
                         <div class="opt-card-primary">
                             <div class="opt-sym-row">
@@ -145,185 +146,277 @@
                                     {{ opt.root }}
                                 </a>
                                 <span class="opt-strategy-pill {% if opt.type == 'Call' %}opt-strat-call{% else %}opt-strat-put{% endif %}">
-                                    <span class="material-symbols-outlined" style="font-size:12px;">{% if opt.type == 'Call' %}arrow_circle_up{% else %}shield{% endif %}</span>
-                                    {{ opt.strategy }}
-                                </span>
-                                <span class="opt-contract-count">{{ opt.quantity }} Contracts</span>
-                                <span class="opt-comm-badge">
-                                    <span class="material-symbols-outlined" style="font-size:12px;">payments</span>
-                                    +${{ opt.totalCommissionStr }} Comm
+                                    <span class="material-symbols-outlined">{% if opt.type == 'Call' %}arrow_circle_up{% else %}shield{% endif %}</span>
+                                    <span>{{ opt.strategy }}</span>
                                 </span>
                             </div>
-                            <div class="opt-readable-name">{{ opt.description }}</div>
                         </div>
 
                         <div class="opt-card-header-right">
                             <div class="opt-health-badge {% if isProfit %}badge-profit{% elseif isAtRisk %}badge-risk{% else %}badge-caution{% endif %}">
-                                <span class="material-symbols-outlined" style="font-size:14px;">{{ opt.healthBadgeIcon }}</span>
+                                <span class="material-symbols-outlined">{{ opt.healthBadgeIcon }}</span>
                                 <span>{{ opt.healthBadgeLabel }}</span>
-                            </div>
-                            <div class="opt-account-tag">
-                                <span class="material-symbols-outlined" style="font-size:12px; color:var(--muted);">account_balance</span>
-                                <span>{{ opt.primaryAccountNickname }} ({{ opt.primaryAccountNumber }})</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- CARD BODY: PRICING COMPARISON, COMMISSION & ANALYSIS -->
+                    <!-- COMPACT METRICS GRID -->
                     <div class="opt-card-body">
+                        <div class="opt-metrics-grid">
+                            
+                            <!-- 1. STRIKE VS CURRENT QUOTE -->
+                            <div class="opt-metric-cell">
+                                <div class="opt-m-lbl">Strike vs Stock</div>
+                                <div class="opt-m-val">
+                                    ${{ opt.strikeStr }} <span class="opt-quote-sub">(${{ opt.underlyingPriceStr }})</span>
+                                </div>
+                                <div class="opt-m-sub">
+                                    <span class="opt-distance-pill-mini {% if isProfit %}dist-green{% elseif isAtRisk %}dist-red{% else %}dist-yellow{% endif %}">
+                                        {{ opt.distanceStr }}
+                                    </span>
+                                </div>
+                            </div>
 
-                        <!-- PRICE & STRIKE COMPARISON BAR -->
-                        <div class="opt-price-compare-bar">
-                            <div class="opt-price-col">
-                                <div class="opt-metric-sub">Current Equity Price</div>
-                                <div class="opt-price-val">
-                                    {% if opt.underlyingPrice is not null %}
-                                        ${{ opt.underlyingPriceStr }}
+                            <!-- 2. COST BASIS / ENTRY BASIS -->
+                            <div class="opt-metric-cell">
+                                <div class="opt-m-lbl">
+                                    {% if opt.type == 'Call' %}Stock Cost Basis{% else %}Effective Entry{% endif %}
+                                </div>
+                                <div class="opt-m-val">
+                                    {% if opt.type == 'Call' and opt.hasStockHolding %}
+                                        ${{ opt.stockCostBasisStr }}
                                     {% else %}
-                                        <span class="m">N/A</span>
+                                        ${{ opt.netBreakevenStr }}
+                                    {% endif %}
+                                </div>
+                                <div class="opt-m-sub">
+                                    {% if opt.type == 'Call' and opt.isStrikeBelowCost %}
+                                        <span class="r" style="font-weight:700;">Strike < Basis ({{ opt.strikeCostDiffStr }})</span>
+                                    {% elseif opt.type == 'Call' %}
+                                        <span class="g">{{ opt.pledgedShares }} Pledged Shs</span>
+                                    {% else %}
+                                        <span class="y">${{ opt.cashCollateralStr }} Collateral</span>
                                     {% endif %}
                                 </div>
                             </div>
 
-                            <div class="opt-compare-mid">
-                                <div class="opt-distance-pill {% if isProfit %}dist-green{% elseif isAtRisk %}dist-red{% else %}dist-yellow{% endif %}">
-                                    <span class="material-symbols-outlined" style="font-size:13px;">{% if opt.moneyness == 'OTM' %}check_circle{% elseif opt.moneyness == 'ITM' %}error{% else %}change_circle{% endif %}</span>
-                                    <span>{{ opt.distanceStr }}</span>
+                            <!-- 3. NET COMMISSION & FEES -->
+                            <div class="opt-metric-cell">
+                                <div class="opt-m-lbl">Net Premium</div>
+                                <div class="opt-m-val g">
+                                    +${{ opt.netCommissionStr }}
                                 </div>
-                                <div class="opt-dte-pill">
-                                    <span class="material-symbols-outlined" style="font-size:12px;">schedule</span>
-                                    <span>{{ opt.dteText }} ({{ opt.expiration }})</span>
+                                <div class="opt-m-sub">
+                                    <span class="opt-fee-text">Gross +${{ opt.grossCommissionStr }} • -${{ opt.totalOptionFeesStr }} fee</span>
                                 </div>
                             </div>
 
-                            <div class="opt-price-col text-right">
-                                <div class="opt-metric-sub">Option Strike Price</div>
-                                <div class="opt-price-val" style="color:var(--text); font-weight:800;">
-                                    ${{ opt.strikeStr }}
+                            <!-- 4. BOTTOMLINE IMPACT (CALLED AWAY / ROC) -->
+                            <div class="opt-metric-cell">
+                                <div class="opt-m-lbl">
+                                    {% if opt.type == 'Call' %}If Called Away (Net){% else %}Max Profit (OTM Exp){% endif %}
+                                </div>
+                                <div class="opt-m-val {% if opt.totalBottomlineGain >= 0 %}g{% else %}r{% endif %}">
+                                    {{ opt.totalBottomlineGainStr }}
+                                </div>
+                                <div class="opt-m-sub">
+                                    {% if opt.type == 'Call' and opt.hasStockHolding %}
+                                        <span class="{% if opt.bottomlineRoiPct >= 0 %}g{% else %}r{% endif %}">
+                                            {{ opt.bottomlineRoiPct }}% Net ROI (Stock+Opt)
+                                        </span>
+                                    {% else %}
+                                        <span class="g">+{{ opt.bottomlineRoiPct }}% Return on Cash</span>
+                                    {% endif %}
                                 </div>
                             </div>
+
+                            <!-- 5. POSITION CONTRACTS -->
+                            <div class="opt-metric-cell">
+                                <div class="opt-m-lbl">Position Contracts</div>
+                                <div class="opt-m-val">
+                                    {{ opt.quantity }}
+                                </div>
+                                <div class="opt-m-sub">
+                                    <span>{{ opt.sharesRepresented }} Shares</span>
+                                </div>
+                            </div>
+
+                            <!-- 6. EXPIRATION & DTE -->
+                            <div class="opt-metric-cell">
+                                <div class="opt-m-lbl">Expiration / DTE</div>
+                                <div class="opt-m-val" style="font-size:13px;">
+                                    {{ opt.expiration }}
+                                </div>
+                                <div class="opt-m-sub">
+                                    <span class="opt-dte-pill-mini">
+                                        <span class="material-symbols-outlined" style="font-size:11px;">schedule</span>
+                                        {{ opt.dteText }}
+                                    </span>
+                                </div>
+                            </div>
+
                         </div>
 
-                        <!-- NET BREAKEVEN & SAFETY BUFFER STRIP -->
-                        <div class="opt-breakeven-strip {% if opt.isAboveBreakeven %}be-strip-good{% else %}be-strip-bad{% endif %}">
-                            <div class="opt-be-left">
-                                <span class="material-symbols-outlined opt-be-icon">balance</span>
-                                <div class="opt-be-meta">
-                                    <div class="opt-be-title">
-                                        Net Breakeven Basis: <strong class="opt-be-price">${{ opt.netBreakevenStr }}</strong>
-                                        <span class="opt-be-formula">({{ opt.breakevenFormula }})</span>
+                        <!-- COLLAPSIBLE ANALYSIS & RECOMMENDATION PANEL -->
+                        <details class="opt-analysis-details">
+                            <summary class="opt-analysis-summary">
+                                <div class="opt-summary-title">
+                                    <span class="material-symbols-outlined" style="font-size:15px; color:var(--blue);">analytics</span>
+                                    <span>Financial Breakdown, Trajectory & Guidance</span>
+                                </div>
+                                <span class="material-symbols-outlined opt-summary-arrow">expand_more</span>
+                            </summary>
+                            
+                            <div class="opt-analysis-expanded">
+                                <!-- DETAILED FINANCIAL MATH STRIP -->
+                                <div class="opt-math-box">
+                                    <div class="opt-math-title">
+                                        <span class="material-symbols-outlined" style="font-size:14px; color:var(--blue);">calculate</span>
+                                        <span>
+                                            {% if opt.type == 'Call' %}
+                                                Covered Call Bottomline Realization Math (If Called Away)
+                                            {% else %}
+                                                Cash-Secured Put Economics & Assignment Protection
+                                            {% endif %}
+                                        </span>
                                     </div>
-                                    <div class="opt-be-sub">
-                                        {% if opt.type == 'Put' %}
-                                            Bottom line purchase cost upon assignment — protected by ${{ opt.commissionPerStockStr }}/sh premium
+                                    <div class="opt-math-grid">
+                                        {% if opt.type == 'Call' and opt.hasStockHolding %}
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Stock Realized Capital Gain:</span>
+                                                <span class="opt-m-calc">{{ opt.sharesRepresented }} shs × (${{ opt.strikeStr }} - ${{ opt.stockCostBasisStr }}) = <strong>{{ opt.totalStockCapGainStr }}</strong></span>
+                                            </div>
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Option Gross Premium:</span>
+                                                <span class="opt-m-calc g">+${{ opt.grossCommissionStr }} (+${{ opt.grossCommissionPerStockStr }}/sh)</span>
+                                            </div>
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Option Contract Trade Fee:</span>
+                                                <span class="opt-m-calc r">-${{ opt.totalOptionFeesStr }} <span class="opt-fee-source-tag">({{ opt.feeSource }})</span></span>
+                                            </div>
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Stock Exit Regulatory Fees:</span>
+                                                <span class="opt-m-calc r">-${{ opt.stockExitFeesStr }} <span class="opt-fee-source-tag">(SEC + FINRA TAF on sale)</span></span>
+                                            </div>
+                                            <div class="opt-math-row opt-math-total {% if opt.totalBottomlineGain >= 0 %}math-total-good{% else %}math-total-bad{% endif %}">
+                                                <span class="opt-m-label"><strong>Total Net Realized Bottomline:</strong></span>
+                                                <span class="opt-m-calc"><strong class="{% if opt.totalBottomlineGain >= 0 %}g{% else %}r{% endif %}">{{ opt.totalBottomlineGainStr }} ({{ opt.bottomlineRoiPct }}% Net ROI)</strong></span>
+                                            </div>
+                                            <div class="opt-math-row opt-math-footer">
+                                                <span class="opt-m-label">Downside Breakeven Protection:</span>
+                                                <span class="opt-m-calc"><strong>${{ opt.netBreakevenStr }}/sh</strong> <span style="font-weight:400; color:var(--muted);">({{ opt.breakevenFormula }})</span></span>
+                                            </div>
+                                        {% elseif opt.type == 'Call' %}
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Option Gross Premium:</span>
+                                                <span class="opt-m-calc g">+${{ opt.grossCommissionStr }}</span>
+                                            </div>
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Option Contract Trade Fee:</span>
+                                                <span class="opt-m-calc r">-${{ opt.totalOptionFeesStr }} <span class="opt-fee-source-tag">({{ opt.feeSource }})</span></span>
+                                            </div>
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Stock Exit Regulatory Fees:</span>
+                                                <span class="opt-m-calc r">-${{ opt.stockExitFeesStr }} <span class="opt-fee-source-tag">(SEC + FINRA TAF)</span></span>
+                                            </div>
+                                            <div class="opt-math-row opt-math-total math-total-good">
+                                                <span class="opt-m-label"><strong>Net Bottomline Realization:</strong></span>
+                                                <span class="opt-m-calc"><strong class="g">{{ opt.totalBottomlineGainStr }}</strong></span>
+                                            </div>
+                                            <div class="opt-math-row opt-math-footer">
+                                                <span class="opt-m-label">Gross Exit Realization:</span>
+                                                <span class="opt-m-calc"><strong>${{ opt.netBreakevenStr }}/sh</strong> <span style="font-weight:400; color:var(--muted);">(${{ opt.strikeStr }} + ${{ opt.commissionPerStockStr }}/sh)</span></span>
+                                            </div>
                                         {% else %}
-                                            Total exit proceeds if shares called away — strike plus ${{ opt.commissionPerStockStr }}/sh premium
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Cash Collateral Committed:</span>
+                                                <span class="opt-m-calc">${{ opt.cashCollateralStr }} ({{ opt.sharesRepresented }} shs × ${{ opt.strikeStr }})</span>
+                                            </div>
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Option Gross Premium:</span>
+                                                <span class="opt-m-calc g">+${{ opt.grossCommissionStr }}</span>
+                                            </div>
+                                            <div class="opt-math-row">
+                                                <span class="opt-m-label">Option Contract Trade Fee:</span>
+                                                <span class="opt-m-calc r">-${{ opt.totalOptionFeesStr }} <span class="opt-fee-source-tag">({{ opt.feeSource }})</span></span>
+                                            </div>
+                                            <div class="opt-math-row opt-math-total math-total-good">
+                                                <span class="opt-m-label"><strong>Net Retained Profit (If OTM Expiry):</strong></span>
+                                                <span class="opt-m-calc"><strong class="g">+${{ opt.netCommissionStr }} (+{{ opt.bottomlineRoiPct }}% ROC)</strong></span>
+                                            </div>
+                                            <div class="opt-math-row opt-math-footer">
+                                                <span class="opt-m-label">Effective Net Entry if Assigned:</span>
+                                                <span class="opt-m-calc"><strong>${{ opt.netBreakevenStr }}/sh</strong> <span style="font-weight:400; color:var(--muted);">({{ opt.breakevenFormula }})</span></span>
+                                            </div>
                                         {% endif %}
                                     </div>
                                 </div>
-                            </div>
-                            <div class="opt-be-right">
-                                <span class="opt-be-badge {% if opt.isAboveBreakeven %}be-badge-good{% else %}be-badge-bad{% endif %}">
-                                    <span class="material-symbols-outlined" style="font-size:13px;">{% if opt.isAboveBreakeven %}verified{% else %}warning{% endif %}</span>
-                                    <span>{{ opt.breakevenStatusStr }}</span>
-                                </span>
-                            </div>
-                        </div>
 
-                        <!-- COMMISSION RECEIVED DISPLAY (PER STOCK & TOTAL) -->
-                        <div class="opt-comm-strip">
-                            <div class="opt-comm-item">
-                                <span class="material-symbols-outlined opt-comm-icon">payments</span>
-                                <div>
-                                    <div class="opt-comm-lbl">Commission Received Per Stock</div>
-                                    <div class="opt-comm-val g">+${{ opt.commissionPerStockStr }} <span class="opt-comm-sub">/ share</span></div>
-                                </div>
-                            </div>
-                            <div class="opt-comm-divider"></div>
-                            <div class="opt-comm-item">
-                                <span class="material-symbols-outlined opt-comm-icon">account_balance_wallet</span>
-                                <div>
-                                    <div class="opt-comm-lbl">Total Commission Received ({{ opt.sharesRepresented }} Shares)</div>
-                                    <div class="opt-comm-val g">+${{ opt.totalCommissionStr }}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- SIMPLE MONEYMAKING ANALYSIS CALLOUT -->
-                        <div class="opt-analysis-box {% if isProfit %}analysis-profit{% elseif isAtRisk %}analysis-risk{% else %}analysis-caution{% endif %}">
-                            <div class="opt-analysis-hdr">
-                                <span class="material-symbols-outlined" style="font-size:16px;">
-                                    {% if isProfit %}trending_up{% elseif isAtRisk %}report{% else %}help{% endif %}
-                                </span>
-                                <strong>Moneymaking Trajectory Analysis:</strong>
-                            </div>
-                            <div class="opt-analysis-text">
-                                {{ opt.simpleAnalysis }}
-                            </div>
-                            {% if opt.actionAdvice %}
-                                <div class="opt-action-line">
-                                    <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">tips_and_updates</span>
-                                    <span><strong>Guidance:</strong> {{ opt.actionAdvice }}</span>
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- FINANCIAL METRICS ROW -->
-                        <div class="opt-stats-row">
-                            <div class="opt-stat-item">
-                                <span class="opt-stat-lbl">Net Breakeven</span>
-                                <span class="opt-stat-val {% if opt.isAboveBreakeven %}g{% else %}r{% endif %}">
-                                    ${{ opt.netBreakevenStr }}
-                                </span>
-                                <span class="opt-stat-sub">Basis / share</span>
-                            </div>
-                            <div class="opt-stat-item">
-                                <span class="opt-stat-lbl">Breakeven Buffer</span>
-                                <span class="opt-stat-val {% if opt.isAboveBreakeven %}g{% else %}r{% endif %}">
-                                    {% if opt.isAboveBreakeven %}+${{ opt.breakevenDiffStr }}{% else %}-${{ opt.breakevenDiffStr }}{% endif %}
-                                </span>
-                                <span class="opt-stat-sub">{% if opt.isAboveBreakeven %}+{{ opt.breakevenDiffPct }}% cushion{% else %}-{{ opt.breakevenDiffPct }}% below{% endif %}</span>
-                            </div>
-                            <div class="opt-stat-item">
-                                <span class="opt-stat-lbl">Profit at Quote</span>
-                                <span class="opt-stat-val {% if opt.isAboveBreakeven %}g{% else %}r{% endif %}">
-                                    {{ opt.profitAtQuoteStr }}
-                                </span>
-                                <span class="opt-stat-sub">{% if opt.underlyingPrice >= opt.strike %}Max Profit{% else %}Current Quote{% endif %}</span>
-                            </div>
-                            <div class="opt-stat-item">
-                                <span class="opt-stat-lbl">Total Commission</span>
-                                <span class="opt-stat-val g">
-                                    +${{ opt.totalCommissionStr }}
-                                </span>
-                                <span class="opt-stat-sub">+${{ opt.commissionPerStockStr }} / sh</span>
-                            </div>
-                            <div class="opt-stat-item">
-                                <span class="opt-stat-lbl">Collateral / Backing</span>
-                                <span class="opt-stat-val" style="color:var(--blue);">
-                                    {% if opt.type == 'Call' %}
-                                        {{ opt.pledgedShares }} Shs
-                                    {% else %}
-                                        ${{ opt.cashCollateralStr }}
+                                <!-- TRAJECTORY ANALYSIS TEXT -->
+                                <div class="opt-analysis-narrative {% if isProfit %}narrative-profit{% elseif isAtRisk %}narrative-risk{% else %}narrative-caution{% endif %}">
+                                    <div class="opt-narrative-hdr">
+                                        <span class="material-symbols-outlined" style="font-size:14px;">
+                                            {% if isProfit %}trending_up{% elseif isAtRisk %}report{% else %}help{% endif %}
+                                        </span>
+                                        <strong>Trajectory Analysis:</strong>
+                                    </div>
+                                    <div class="opt-narrative-body">
+                                        {{ opt.simpleAnalysis }}
+                                    </div>
+                                    {% if opt.actionAdvice %}
+                                        <div class="opt-action-line">
+                                            <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">tips_and_updates</span>
+                                            <span><strong>Guidance:</strong> {{ opt.actionAdvice }}</span>
+                                        </div>
                                     {% endif %}
-                                </span>
-                                <span class="opt-stat-sub">{% if opt.type == 'Call' %}Pledged Stock{% else %}Cash Held{% endif %}</span>
+                                </div>
                             </div>
-                        </div>
+                        </details>
                     </div>
 
-                    <!-- CARD FOOTER ACTIONS -->
+                    <!-- CARD FOOTER -->
                     <div class="opt-card-footer">
-                        <div class="opt-occ-code">
-                            <code>{{ opt.symbol }}</code>
+                        <div class="opt-footer-desc" title="{{ opt.symbol }}: {{ opt.description }}">
+                            <span class="material-symbols-outlined opt-desc-icon">description</span>
+                            <span class="opt-footer-desc-text">{{ opt.description }}</span>
                         </div>
-                        <div class="opt-card-links">
-                            <a href="/screener?symbol={{ opt.root }}" class="slick-pill-btn" title="View {{ opt.root }} Technicals and Signals">
-                                <span class="material-symbols-outlined" style="font-size:13px;">bolt</span> Screener
-                            </a>
-                            <a href="/portfolio?tab=holdings&symbol={{ opt.root }}" class="slick-pill-btn" title="View {{ opt.root }} in Portfolio Holdings">
-                                <span class="material-symbols-outlined" style="font-size:13px;">work</span> Holdings
-                            </a>
+                        <div class="opt-footer-right">
+                            <span class="opt-account-tag" title="Account: {{ opt.primaryAccountNickname }} ({{ opt.primaryAccountNumber }})">
+                                <span class="material-symbols-outlined">account_balance</span>
+                                <span>{{ opt.primaryAccountNickname }}</span>
+                            </span>
+
+                            <!-- SCREENER ACTION BUTTON WITH POPOVER -->
+                            <div class="opt-btn-popover-wrap">
+                                <a href="/screener?symbol={{ opt.root }}" class="opt-foot-icon-btn" aria-label="Open Screener for {{ opt.root }}">
+                                    <span class="material-symbols-outlined">bolt</span>
+                                </a>
+                                <div class="opt-btn-popover">
+                                    <div class="opt-pop-title">
+                                        <span class="material-symbols-outlined" style="font-size:13px; color:var(--blue);">bolt</span>
+                                        <span>Screener Technicals</span>
+                                    </div>
+                                    <div class="opt-pop-desc">
+                                        Analyze {{ opt.root }} technical indicators, options chain, and setup signals in Screener.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- HOLDINGS ACTION BUTTON WITH POPOVER -->
+                            <div class="opt-btn-popover-wrap">
+                                <a href="/portfolio?tab=holdings&symbol={{ opt.root }}" class="opt-foot-icon-btn" aria-label="View {{ opt.root }} Holdings">
+                                    <span class="material-symbols-outlined">work</span>
+                                </a>
+                                <div class="opt-btn-popover">
+                                    <div class="opt-pop-title">
+                                        <span class="material-symbols-outlined" style="font-size:13px; color:var(--purple);">work</span>
+                                        <span>Equity Holdings</span>
+                                    </div>
+                                    <div class="opt-pop-desc">
+                                        View underlying {{ opt.root }} share lots, average cost basis, and pledged shares in Portfolio.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
