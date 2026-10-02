@@ -4049,4 +4049,128 @@ select optgroup {
     background: rgba(255, 255, 255, 0.06);
 }
 
+/* MARKET CLOSE & EXPIRATION SETTLEMENT PREDICTOR BANNER */
+.opt-settlement-banner {
+    border-radius: 9px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 11.5px;
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+.opt-settle-green {
+    background: rgba(34, 197, 94, 0.08);
+    border-color: rgba(34, 197, 94, 0.35);
+}
+.opt-settle-blue {
+    background: rgba(56, 189, 248, 0.08);
+    border-color: rgba(56, 189, 248, 0.35);
+}
+.opt-settle-yellow {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.35);
+}
+.opt-settle-red {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.35);
+}
+.opt-settle-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.opt-settle-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
+}
+.opt-settle-icon {
+    font-size: 18px;
+    line-height: 1.2;
+    flex-shrink: 0;
+}
+.opt-settle-green .opt-settle-icon { color: var(--green); }
+.opt-settle-blue .opt-settle-icon { color: var(--blue); }
+.opt-settle-yellow .opt-settle-icon { color: var(--yellow); }
+.opt-settle-red .opt-settle-icon { color: var(--red); }
+
+.opt-settle-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 3px;
+}
+.opt-settle-status-tag {
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.opt-settle-green .opt-settle-status-tag { color: var(--green); }
+.opt-settle-blue .opt-settle-status-tag { color: var(--blue); }
+.opt-settle-yellow .opt-settle-status-tag { color: var(--yellow); }
+.opt-settle-red .opt-settle-status-tag { color: var(--red); }
+
+.opt-close-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    color: var(--muted);
+}
+.opt-close-badge strong {
+    color: var(--text);
+}
+.opt-settle-desc {
+    font-size: 11px;
+    color: var(--text);
+    line-height: 1.4;
+}
+.opt-settle-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.opt-settle-impact-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+.opt-settle-impact-lbl {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 700;
+}
+.opt-settle-impact-val {
+    font-size: 12px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    color: var(--text);
+}
+.opt-settle-notice {
+    font-size: 9.5px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 2px;
+}
+
 

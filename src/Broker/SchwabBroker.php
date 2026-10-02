@@ -547,7 +547,7 @@ class SchwabBroker implements BrokerInterface
             }
 
             $timeout   = (float) $this->appConfig->get('api.timeout.broker.transactions', 10.0);
-            $txTypes   = 'TRADE,DIVIDEND_OR_INTEREST,JOURNAL';
+            $txTypes   = 'TRADE,RECEIVE_AND_DELIVER,DIVIDEND_OR_INTEREST,ACH_RECEIPT,ACH_DISBURSEMENT,ELECTRONIC_FUND,WIRE_OUT,WIRE_IN,JOURNAL,MEMORANDUM,MARGIN_CALL,MONEY_MARKET,SMA_ADJUSTMENT';
 
             $allHistory = [];
             foreach ($accounts as $accountItem) {

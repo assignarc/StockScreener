@@ -103,6 +103,7 @@
                             <option value="INTEREST">Interest Income</option>
                             <option value="JOURNAL">Transfers & Journals</option>
                             <option value="FEE">Fees & Adjustments</option>
+                            <option value="CANCELED">Canceled / Void Orders</option>
                         </select>
                     </div>
 
@@ -115,6 +116,15 @@
                             <option value="OUTFLOW">Outflows / Debits (-)</option>
                         </select>
                     </div>
+
+                    <!-- SHOW CANCELED / VOID ORDERS CHECKBOX -->
+                    <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:11.5px; color:var(--text); font-weight:600; user-select:none; padding:4px 8px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid var(--border);">
+                        <input type="checkbox" id="histShowCanceledCheckbox" onchange="onHistFilterChange()" style="cursor:pointer; accent-color:var(--red, #ef4444); width:14px; height:14px;">
+                        <span style="display:inline-flex; align-items:center; gap:4px; color:var(--text);">
+                            <span class="material-symbols-outlined" style="font-size:14px; color:var(--red);">cancel</span>
+                            Show Canceled / Void Orders
+                        </span>
+                    </label>
                 </div>
 
                 <!-- SEARCH & RESET -->

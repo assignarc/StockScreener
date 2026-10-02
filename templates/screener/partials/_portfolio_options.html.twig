@@ -257,6 +257,43 @@
 
                         </div>
 
+                        <!-- MARKET CLOSE EXPIRATION SETTLEMENT OUTCOME PREDICTOR -->
+                        {% set isSettleGreen = opt.predictedOutcomeCode == 'CALLED_AWAY' or opt.predictedOutcomeCode == 'EXPIRED_WORTHLESS' %}
+                        {% set isSettleBlue = opt.predictedOutcomeCode == 'ASSIGNED' %}
+                        {% set isSettleYellow = opt.predictedOutcomeCode == 'PIN_RISK' or opt.predictedOutcomeCode == 'ACTIVE' %}
+                        <div class="opt-settlement-banner {% if isSettleGreen %}opt-settle-green{% elseif isSettleBlue %}opt-settle-blue{% elseif isSettleYellow %}opt-settle-yellow{% else %}opt-settle-red{% endif %}">
+                            <div class="opt-settle-top">
+                                <div class="opt-settle-left">
+                                    <span class="material-symbols-outlined opt-settle-icon">{{ opt.predictedOutcomeIcon|default('schedule') }}</span>
+                                    <div style="min-width:0;">
+                                        <div class="opt-settle-title-row">
+                                            <span class="opt-settle-status-tag">{{ opt.predictedOutcomeTitle|default('Settlement Prediction') }}</span>
+                                            <span class="opt-close-badge">
+                                                <span class="material-symbols-outlined" style="font-size:12px; vertical-align:middle;">lock_clock</span>
+                                                Today's Close: <strong>${{ opt.closePriceStr|default(opt.underlyingPriceStr) }}</strong>
+                                            </span>
+                                        </div>
+                                        <div class="opt-settle-desc">
+                                            {{ opt.predictedSettlementDetail }}
+                                        </div>
+                                        <div class="opt-settle-notice">
+                                            *Predicted based on today's market close. Broker cash/shares register will reflect after weekend settlement.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="opt-settle-right">
+                                    <div class="opt-settle-impact-box">
+                                        <span class="opt-settle-impact-lbl">Cash Impact</span>
+                                        <strong class="opt-settle-impact-val {% if opt.predictedCashImpact > 0 %}g{% endif %}">{{ opt.predictedCashImpactStr }}</strong>
+                                    </div>
+                                    <div class="opt-settle-impact-box" style="margin-top:4px;">
+                                        <span class="opt-settle-impact-lbl">Shares Impact</span>
+                                        <span style="font-size:10.5px; font-weight:600; color:var(--text); white-space:nowrap;">{{ opt.predictedSharesImpact }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- COLLAPSIBLE ANALYSIS & RECOMMENDATION PANEL -->
                         <details class="opt-analysis-details">
                             <summary class="opt-analysis-summary">

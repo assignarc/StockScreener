@@ -366,6 +366,13 @@
                     <span id="txFilteredBadge" style="font-size: 11px; background: rgba(56,189,248,0.15); color: var(--blue); padding: 2px 8px; border-radius: 12px; font-weight: 700;">0 Transactions</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:11.5px; color:var(--text); font-weight:600; user-select:none; padding:4px 8px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid var(--border);">
+                        <input type="checkbox" id="taxShowCanceledCheckbox" onchange="applyTaxFilters()" style="cursor:pointer; accent-color:var(--red, #ef4444); width:14px; height:14px;">
+                        <span style="display:inline-flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-outlined" style="font-size:14px; color:var(--red);">cancel</span>
+                            Show Canceled / Void Orders
+                        </span>
+                    </label>
                     <div style="background: var(--bg1); border: 1px solid var(--border); padding: 4px 10px; border-radius: 8px;">
                         <span style="font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase;">Net Cash Flow: </span>
                         <span id="tblTxNetFlow" style="font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 900; color: var(--blue);">$0.00</span>

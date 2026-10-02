@@ -139,18 +139,36 @@ class DatabaseBootstrapService
                 analyst_rating VARCHAR(50) DEFAULT NULL,
                 thesis CLOB DEFAULT NULL,
                 catalysts CLOB DEFAULT NULL,
-                key_risks CLOB DEFAULT NULL
+                key_risks CLOB DEFAULT NULL,
+                asset_type VARCHAR(50) NOT NULL DEFAULT "STOCK"
             )
         ');
         $this->connection->executeStatement('
             CREATE UNIQUE INDEX IF NOT EXISTS UNIQ_STOCK_SYMBOL ON stock (symbol)
         ');
+        $this->connection->executeStatement('
+            CREATE INDEX IF NOT EXISTS idx_stock_sector ON stock (sector)
+        ');
+        $this->connection->executeStatement('
+            CREATE INDEX IF NOT EXISTS idx_stock_risk ON stock (risk)
+        ');
+        $this->connection->executeStatement('
+            CREATE INDEX IF NOT EXISTS idx_stock_score ON stock (score)
+        ');
+        $this->connection->executeStatement('
+            CREATE INDEX IF NOT EXISTS idx_stock_asset_type ON stock (asset_type)
+        ');
+
+        // Defensive column upgrade for stock
+        try {
+            $this->connection->executeStatement('ALTER TABLE stock ADD COLUMN asset_type VARCHAR(50) DEFAULT "STOCK"');
+        } catch (\Throwable $e) {}
 
         // 4. watchlist table
         $this->connection->executeStatement('
             CREATE TABLE IF NOT EXISTS watchlist (
                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                symbol VARCHAR(10) NOT NULL,
+                symbol VARCHAR(20) NOT NULL,
                 added_at DATETIME NOT NULL
             )
         ');
@@ -191,11 +209,16 @@ class DatabaseBootstrapService
                 cost_basis DOUBLE PRECISION DEFAULT 0.0,
                 realized_gain DOUBLE PRECISION DEFAULT 0.0,
                 est_tax DOUBLE PRECISION DEFAULT 0.0,
+                quantity DOUBLE PRECISION DEFAULT 0.0,
+                price DOUBLE PRECISION DEFAULT 0.0,
+                fees DOUBLE PRECISION DEFAULT 0.0,
+                action VARCHAR(50) DEFAULT NULL,
                 title VARCHAR(255) NOT NULL,
                 description CLOB DEFAULT NULL,
                 created_at DATETIME NOT NULL
             )
         ');
+        // Defensive column upgrades for portfolio_events
         try {
             $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN provider VARCHAR(50) DEFAULT "Schwab"');
         } catch (\Throwable $e) {}
@@ -204,6 +227,18 @@ class DatabaseBootstrapService
         } catch (\Throwable $e) {}
         try {
             $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN cost_basis DOUBLE PRECISION DEFAULT 0.0');
+        } catch (\Throwable $e) {}
+        try {
+            $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN quantity DOUBLE PRECISION DEFAULT 0.0');
+        } catch (\Throwable $e) {}
+        try {
+            $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN price DOUBLE PRECISION DEFAULT 0.0');
+        } catch (\Throwable $e) {}
+        try {
+            $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN fees DOUBLE PRECISION DEFAULT 0.0');
+        } catch (\Throwable $e) {}
+        try {
+            $this->connection->executeStatement('ALTER TABLE portfolio_events ADD COLUMN action VARCHAR(50) DEFAULT NULL');
         } catch (\Throwable $e) {}
 
         $this->connection->executeStatement('
@@ -269,17 +304,20 @@ class DatabaseBootstrapService
             @unlink($legacyTokenFile);
         }
 
-        // Seed Core Watchlist Tickers
+        // Seed Core Watchlist Tickers & Major ETFs
         $defaultStocks = [
-            ['NVDA',  'NVIDIA Corporation',       'Technology',             128.50, 155.00, '$3.16T', '+122.0%', '75.0%', '48 Months', '1.2%', 'LOW', 92, 'STRONG BUY', 'Market leader in AI datacenter GPUs.'],
-            ['AAPL',  'Apple Inc.',               'Technology',             224.23, 260.00, '$3.44T', '+6.1%',   '46.3%', '36 Months', '0.8%', 'LOW', 88, 'BUY',        'Robust ecosystem with Apple Intelligence rollout.'],
-            ['MSFT',  'Microsoft Corporation',    'Technology',             448.37, 500.00, '$3.33T', '+15.0%',  '70.1%', '60 Months', '0.5%', 'LOW', 90, 'STRONG BUY', 'Azure AI acceleration.'],
-            ['GOOGL', 'Alphabet Inc.',            'Communication Services', 182.30, 215.00, '$2.26T', '+13.6%',  '57.4%', '48 Months', '0.6%', 'LOW', 85, 'BUY',        'Dominant search moat and Gemini enterprise integration.'],
-            ['AMZN',  'Amazon.com Inc.',          'Consumer Cyclical',      184.20, 220.00, '$1.92T', '+12.5%',  '48.8%', '36 Months', '0.9%', 'LOW', 87, 'BUY',        'AWS cloud expansion and retail margins.'],
-            ['META',  'Meta Platforms Inc.',      'Communication Services', 510.60, 580.00, '$1.29T', '+22.1%',  '81.8%', '36 Months', '1.1%', 'LOW', 89, 'BUY',        'Family of Apps monetization and AI advertising.'],
-            ['AVGO',  'Broadcom Inc.',            'Technology',             168.40, 195.00, '$780B',  '+43.0%',  '64.0%', '30 Months', '1.4%', 'LOW', 86, 'BUY',        'Custom ASIC AI chips partner for hyper-scalers.'],
-            ['JPM',   'JPMorgan Chase & Co.',     'Financial Services',     214.50, 235.00, '$610B',  '+11.0%',  '58.0%', 'N/A',       '0.7%', 'LOW', 82, 'BUY',        'Strong net interest income and balance sheet.'],
-            ['TSLA',  'Tesla Inc.',               'Consumer Cyclical',      245.00, 300.00, '$780B',  '+8.0%',   '18.0%', '36 Months', '3.8%', 'HIGH', 68, 'HOLD',       'Autonomous driving catalysts and energy storage growth.'],
+            ['NVDA',  'NVIDIA Corporation',       'Technology',             128.50, 155.00, '$3.16T', '+122.0%', '75.0%', '48 Months', '1.2%', 'LOW', 92, 'STRONG BUY', 'Market leader in AI datacenter GPUs.', 'STOCK'],
+            ['AAPL',  'Apple Inc.',               'Technology',             224.23, 260.00, '$3.44T', '+6.1%',   '46.3%', '36 Months', '0.8%', 'LOW', 88, 'BUY',        'Robust ecosystem with Apple Intelligence rollout.', 'STOCK'],
+            ['MSFT',  'Microsoft Corporation',    'Technology',             448.37, 500.00, '$3.33T', '+15.0%',  '70.1%', '60 Months', '0.5%', 'LOW', 90, 'STRONG BUY', 'Azure AI acceleration.', 'STOCK'],
+            ['GOOGL', 'Alphabet Inc.',            'Communication Services', 182.30, 215.00, '$2.26T', '+13.6%',  '57.4%', '48 Months', '0.6%', 'LOW', 85, 'BUY',        'Dominant search moat and Gemini enterprise integration.', 'STOCK'],
+            ['AMZN',  'Amazon.com Inc.',          'Consumer Cyclical',      184.20, 220.00, '$1.92T', '+12.5%',  '48.8%', '36 Months', '0.9%', 'LOW', 87, 'BUY',        'AWS cloud expansion and retail margins.', 'STOCK'],
+            ['META',  'Meta Platforms Inc.',      'Communication Services', 510.60, 580.00, '$1.29T', '+22.1%',  '81.8%', '36 Months', '1.1%', 'LOW', 89, 'BUY',        'Family of Apps monetization and AI advertising.', 'STOCK'],
+            ['AVGO',  'Broadcom Inc.',            'Technology',             168.40, 195.00, '$780B',  '+43.0%',  '64.0%', '30 Months', '1.4%', 'LOW', 86, 'BUY',        'Custom ASIC AI chips partner for hyper-scalers.', 'STOCK'],
+            ['JPM',   'JPMorgan Chase & Co.',     'Financial Services',     214.50, 235.00, '$610B',  '+11.0%',  '58.0%', 'N/A',       '0.7%', 'LOW', 82, 'BUY',        'Strong net interest income and balance sheet.', 'STOCK'],
+            ['TSLA',  'Tesla Inc.',               'Consumer Cyclical',      245.00, 300.00, '$780B',  '+8.0%',   '18.0%', '36 Months', '3.8%', 'HIGH', 68, 'HOLD',       'Autonomous driving catalysts and energy storage growth.', 'STOCK'],
+            ['SPY',   'SPDR S&P 500 ETF Trust',   'Index Funds',            570.00, 620.00, '$550B',  '+10.5%',  'N/A',   'N/A',       '0.4%', 'LOW', 95, 'STRONG BUY', 'Broad S&P 500 benchmark ETF for core asset allocation.', 'ETF'],
+            ['QQQ',   'Invesco QQQ Trust',        'Index Funds',            485.00, 540.00, '$280B',  '+14.0%',  'N/A',   'N/A',       '0.5%', 'LOW', 93, 'STRONG BUY', 'Nasdaq 100 top 100 non-financial tech leaders.', 'ETF'],
+            ['SGOV',  'iShares 0-3 Month Treasury','Fixed Income',          100.50, 100.50, '$28B',   '+5.2%',   'N/A',   'N/A',       '0.1%', 'LOW', 90, 'BUY',        'Ultra-short US Treasury yield cash-equivalent vehicle.', 'ETF'],
         ];
 
         foreach ($defaultStocks as $s) {
@@ -289,9 +327,9 @@ class DatabaseBootstrapService
             );
             if ($exists === 0) {
                 $this->connection->executeStatement(
-                    'INSERT INTO stock (symbol, name, sector, price, target_price, market_cap, rev_growth, gross_margin, cash_runway, short_interest, risk, score, analyst_rating, thesis)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                    [$s[0], $s[1], $s[2], $s[3], $s[4], $s[5], $s[6], $s[7], $s[8], $s[9], $s[10], $s[11], $s[12], $s[13]]
+                    'INSERT INTO stock (symbol, name, sector, price, target_price, market_cap, rev_growth, gross_margin, cash_runway, short_interest, risk, score, analyst_rating, thesis, asset_type)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                    [$s[0], $s[1], $s[2], $s[3], $s[4], $s[5], $s[6], $s[7], $s[8], $s[9], $s[10], $s[11], $s[12], $s[13], $s[14]]
                 );
             }
         }
@@ -322,14 +360,17 @@ class DatabaseBootstrapService
         $this->ensureSchemaAndSeed();
         return [
             'databaseFile'   => 'var/data.db',
-            'databaseSizeKb' => round((filesize($this->projectDir . '/var/data.db') ?: 0) / 1024, 1),
+            'databaseSizeKb' => round((@filesize($this->projectDir . '/var/data.db') ?: 0) / 1024, 1),
             'tables' => [
-                'app_config'       => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM app_config'),
-                'persistent_cache' => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM persistent_cache'),
-                'stock'            => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM stock'),
-                'watchlist'        => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM watchlist'),
+                'app_config'          => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM app_config'),
+                'persistent_cache'    => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM persistent_cache'),
+                'stock'               => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM stock'),
+                'watchlist'           => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM watchlist'),
+                'portfolio_snapshots' => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM portfolio_snapshots'),
+                'portfolio_events'    => (int) $this->connection->fetchOne('SELECT COUNT(id) FROM portfolio_events'),
             ],
             'setupCompleted' => $this->isSetupCompleted(),
         ];
     }
 }
+

@@ -567,7 +567,16 @@ function applyTaxFilters() {
     document.getElementById('tblDivTax').textContent = formatCurrency(dividendTax);
 
     // 7. FILTER AUDIT LOG TRANSACTIONS
+    const showCanceledTax = document.getElementById('taxShowCanceledCheckbox') ? document.getElementById('taxShowCanceledCheckbox').checked : false;
+
     const filteredTx = historyRaw.filter(tx => {
+        const rawStatus = (tx.status || '').toUpperCase();
+        const isCanceled = tx.is_canceled || (tx.category === 'CANCELED') || ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(rawStatus);
+
+        if (!showCanceledTax && isCanceled) {
+            return false;
+        }
+
         const rowDate = new Date(tx.date);
         let matchesTime = true;
         if (currentFilterTimeframe === '30d') matchesTime = (rowDate >= d30);
@@ -667,7 +676,13 @@ function applyTaxFilters() {
 
     // Audit Log Summary Banner
     let totalTxCashFlow = 0.0;
-    filteredTx.forEach(tx => { totalTxCashFlow += (tx.amount || 0); });
+    filteredTx.forEach(tx => {
+        const rawStatus = (tx.status || '').toUpperCase();
+        const isCanceled = tx.is_canceled || (tx.category === 'CANCELED') || ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(rawStatus);
+        if (!isCanceled) {
+            totalTxCashFlow += (tx.amount || 0);
+        }
+    });
 
     // Option cash vs tax reconciliation badge in Schedule D banner
     const optBadge = document.getElementById('optionReconcileBadge');
@@ -920,6 +935,20 @@ function createTransactionRow(tx, idx = 0, list = []) {
         </div>
     ` : '';
 
+    const rawStatus = (tx.status || '').toUpperCase();
+    const isCanceled = tx.is_canceled || (tx.category === 'CANCELED') || ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(rawStatus);
+    const typeBadgeStyle = isCanceled 
+        ? 'background:rgba(239,68,68,0.15); color:var(--red); font-weight:700;' 
+        : 'background:rgba(56,189,248,0.15); color:var(--blue);';
+    let typeLabel = tx.type || 'TRADE';
+    if (isCanceled) {
+        typeLabel = ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(rawStatus) ? rawStatus : 'CANCELED';
+    }
+
+    const formattedAmountHtml = isCanceled
+        ? `<span style="text-decoration:line-through; opacity:0.65; color:var(--muted);">${(tx.amount >= 0 ? '+' : '') + formatCurrency(tx.amount || 0)}</span><div style="font-size:10px; color:var(--red); font-weight:700;">CANCELED / $0.00</div>`
+        : `<span style="color:${tx.amount >= 0 ? 'var(--green)' : 'var(--red)'};">${(tx.amount >= 0 ? '+' : '') + formatCurrency(tx.amount || 0)}</span>`;
+
     row.innerHTML = `
         <td style="padding:12px; color:var(--text); font-weight:600; white-space:nowrap;">
             <div>${tx.date}</div>
@@ -929,14 +958,14 @@ function createTransactionRow(tx, idx = 0, list = []) {
             <strong style="color:var(--text); font-size:13px; font-family:'JetBrains Mono',monospace;">${tx.symbol || '--'}</strong>
         </td>
         <td style="padding:12px; color:var(--muted);">${tx.account_nickname || tx.account_number || '--'}</td>
-        <td style="padding:12px;"><span class="hbadge" style="background:rgba(56,189,248,0.15); color:var(--blue); font-size:10px;">${tx.type || 'TRADE'}</span></td>
+        <td style="padding:12px;"><span class="hbadge" style="${typeBadgeStyle} font-size:10px;">${typeLabel}</span></td>
         <td style="padding:12px; color:var(--muted); font-size:11px; max-width:340px;">
             <div style="color:var(--text); font-weight:500; line-height:1.3;">${tx.display_detail || tx.description || '--'}</div>
             ${orderMetaHtml}
         </td>
         <td style="padding:12px; text-align:right; color:var(--text); font-family:'SFMono-Regular',Consolas,monospace;">${tx.price ? formatCurrency(tx.price) : '--'}</td>
-        <td style="padding:12px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:800; color:${tx.amount >= 0 ? 'var(--green)' : 'var(--red)'};">
-            ${(tx.amount >= 0 ? '+' : '') + formatCurrency(tx.amount || 0)}
+        <td style="padding:12px; text-align:right; font-family:'SFMono-Regular',Consolas,monospace; font-weight:800;">
+            ${formattedAmountHtml}
         </td>
     `;
     return row;

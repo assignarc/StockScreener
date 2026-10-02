@@ -275,6 +275,9 @@ function getAccountCategory(accName) {
 }
 
 function getTxCategory(tx) {
+    if (tx.is_canceled || (tx.status && ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(tx.status.toUpperCase()))) {
+        return 'CANCELED';
+    }
     if (tx.category) {
         return tx.category;
     }
@@ -327,8 +330,27 @@ function getTxCategory(tx) {
 }
 
 function getBadgeConfig(cat, tx) {
+    const rawStatus = (tx.status || '').toUpperCase();
+    const isCanceled = tx.is_canceled || cat === 'CANCELED' || ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(rawStatus);
+    if (isCanceled) {
+        let label = 'CANCELED';
+        if (rawStatus && ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(rawStatus)) {
+            label = rawStatus;
+        }
+        return {
+            label: label,
+            bg: 'rgba(239, 68, 68, 0.18)',
+            color: 'var(--red, #ef4444)'
+        };
+    }
     const rawAction = (tx.action || '').toUpperCase();
     switch (cat) {
+        case 'CANCELED':
+            return {
+                label: 'CANCELED',
+                bg: 'rgba(239, 68, 68, 0.18)',
+                color: 'var(--red, #ef4444)'
+            };
         case 'OPTION':
             return {
                 label: rawAction ? rawAction.replace('ASSIGNMENT', 'ASSIGNED') : 'OPTION',
@@ -545,6 +567,9 @@ function resetHistFilters() {
     const searchInput = document.getElementById('histSearchInput');
     if (searchInput) searchInput.value = '';
 
+    const cancelCb = document.getElementById('histShowCanceledCheckbox');
+    if (cancelCb) cancelCb.checked = false;
+
     updateHistTypeChips('ALL');
     updateHistSortIndicators();
     applyHistoryFiltersAndSort();
@@ -572,9 +597,19 @@ function applyHistoryFiltersAndSort() {
     }
 
     const term = (currentHistSearchTerm || '').trim().toLowerCase();
+    const showCanceled = document.getElementById('histShowCanceledCheckbox') ? document.getElementById('histShowCanceledCheckbox').checked : false;
 
     // 1. FILTER
     const filtered = historyRawTransactions.filter(tx => {
+        const cat = getTxCategory(tx);
+        const rawStatus = (tx.status || '').toUpperCase();
+        const isCanceled = cat === 'CANCELED' || tx.is_canceled || ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(rawStatus);
+
+        // Hide canceled / void / invalid orders unless checkbox is checked or explicitly filtering for CANCELED
+        if (!showCanceled && currentHistTypeFilter !== 'CANCELED' && isCanceled) {
+            return false;
+        }
+
         // Account filter
         const accName = getTxAccountName(tx);
         if (currentHistAccountFilter === 'TAXABLE') {
@@ -586,7 +621,6 @@ function applyHistoryFiltersAndSort() {
         }
 
         // Type filter
-        const cat = getTxCategory(tx);
         if (currentHistTypeFilter !== 'ALL') {
             if (cat !== currentHistTypeFilter) return false;
         }
@@ -635,14 +669,18 @@ function applyHistoryFiltersAndSort() {
         return true;
     });
 
-    // 2. STAT CARDS RECALCULATION (Calculated on the filtered set)
+    // 2. STAT CARDS RECALCULATION (Calculated on the filtered set, ignoring canceled transactions)
     let sumDivs = 0;
     let sumPremiums = 0;
     let sumNetCash = 0;
 
     filtered.forEach(tx => {
-        const amt = Number(tx.amount) || 0;
         const cat = getTxCategory(tx);
+        const rawStatus = (tx.status || '').toUpperCase();
+        const isCanceled = cat === 'CANCELED' || tx.is_canceled || ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(rawStatus);
+        if (isCanceled) return;
+
+        const amt = Number(tx.amount) || 0;
         if (cat === 'DIVIDEND' && amt > 0) {
             sumDivs += amt;
         }
@@ -827,15 +865,18 @@ function renderHistoryRows(txList) {
     });
 
     tbody.innerHTML = txList.map((tx, idx) => {
-        const amt = Number(tx.amount) || 0;
-        const isCredit = amt > 0;
-        const isZero = amt === 0;
-        const amtColor = isZero ? 'var(--muted)' : (isCredit ? 'var(--green, #22c55e)' : 'var(--yellow, #fbbf24)');
-        const amtSign = isCredit ? '+' : (amt < 0 ? '-' : '');
-        const formattedAmt = `${amtSign}$${Math.abs(amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-
         const cat = getTxCategory(tx);
         const badgeCfg = getBadgeConfig(cat, tx);
+        const isCanceled = cat === 'CANCELED' || tx.is_canceled || (tx.status && ['INVALID', 'CANCELED', 'VOID', 'REJECTED'].includes(tx.status.toUpperCase()));
+
+        const amt = Number(tx.amount) || 0;
+        const isCredit = amt > 0;
+        const isZero = amt === 0 || isCanceled;
+        const amtColor = isCanceled ? 'var(--muted)' : (isZero ? 'var(--muted)' : (isCredit ? 'var(--green, #22c55e)' : 'var(--yellow, #fbbf24)'));
+        const amtSign = isCredit ? '+' : (amt < 0 ? '-' : '');
+        const formattedAmt = isCanceled
+            ? `<span style="text-decoration: line-through; opacity: 0.65;">${amtSign}$${Math.abs(amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span> <span style="font-size: 10.5px; color: var(--red); font-weight: 700; display: block; margin-top: 2px;">CANCELED / $0.00</span>`
+            : `${amtSign}$${Math.abs(amt).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         const descInfo = getTxDisplayDescription(tx);
         const accName = getTxAccountName(tx);
         const accCategory = getAccountCategory(accName);
@@ -941,6 +982,17 @@ function renderHistoryRows(txList) {
 
 
 
+function formatStrikePrice(strikeVal) {
+    if (!strikeVal) return '';
+    const s = String(strikeVal).trim();
+    if (s.startsWith('$')) return s;
+    const num = Number(s);
+    return isNaN(num) ? s : ('$' + num.toFixed(2));
+}
+
+let calendarApiData = null;
+let currentCalYear = new Date().getFullYear();
+let currentCalMonth = new Date().getMonth();
 let isLoadingCalendarEvents = false;
 async function loadPortfolioCalendarEvents() {
     if (isLoadingCalendarEvents) return;
@@ -1129,7 +1181,8 @@ function renderCalendarForSelectedMonth() {
                 bg     = isPast ? 'rgba(210,153,34,0.12)' : 'rgba(210,153,34,0.22)';
                 fg     = 'var(--yellow)';
                 border = isPast ? 'rgba(210,153,34,0.25)' : 'rgba(210,153,34,0.5)';
-                label  = `${e.symbol} $${e.strike}`;
+                const optStrike = formatStrikePrice(e.strike);
+                label  = `${e.symbol} ${optStrike}`;
             }
             
             const catStr = isHist ? 'HISTORY' : (isDiv ? 'DIVIDEND' : (isEarn ? 'EARNINGS' : 'OPTION'));
@@ -1510,7 +1563,8 @@ function openCalEventCard(encodedJson) {
     const isEarnings = ev.category && ev.category.startsWith('EARNINGS');
 
     if (isOption) {
-        title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">lock</span> Option Expiration Card: ${ev.symbol} ${ev.strike || ''}`;
+        const optStrike = formatStrikePrice(ev.strike);
+        title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">lock</span> Option Expiration Card: ${ev.symbol} ${optStrike}`;
     } else if (isHistory) {
         const symbolText = ev.realSymbol && ev.realSymbol !== 'CURRENCY_USD' && ev.realSymbol !== 'USD' ? ` (${ev.realSymbol})` : '';
         title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">receipt_long</span> Transaction: ${ev.accountNickname || 'Broker'}${symbolText}`;
@@ -1583,13 +1637,14 @@ function openCalEventCard(encodedJson) {
 
     let aiReviewHtml = '';
     if (isOption) {
+        const optStrike = formatStrikePrice(ev.strike);
         aiReviewHtml = `
             <div style="margin-top:14px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
                         <span><span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle;">psychology</span> AI Option Analysis</span>
                     </h5>
-                    <button class="hbtn hbtn-blue" style="font-size:11px; padding:4px 8px;" onclick="triggerAiReview('${ev.symbol}', '${ev.strike}')">
+                    <button class="hbtn hbtn-blue" style="font-size:11px; padding:4px 8px;" onclick="triggerAiReview('${ev.symbol}', '${optStrike}')">
                         <span class="material-symbols-outlined" style="font-size:14px;">auto_awesome</span> Generate Review
                     </button>
                 </div>
@@ -1599,13 +1654,14 @@ function openCalEventCard(encodedJson) {
                         Generating AI Analysis...
                     </div>
                     <div style="font-size:11px; color:var(--text); line-height:1.5; opacity:0.8;">
-                        Analyzing greek exposure, premium decay, and probability of assignment for ${ev.symbol} $${ev.strike}...
+                        Analyzing greek exposure, premium decay, and probability of assignment for ${ev.symbol} ${optStrike}...
                     </div>
                 </div>
             </div>
         `;
     }
 
+    const optStrike = formatStrikePrice(ev.strike);
     cnt.innerHTML = `
         <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border); margin-bottom:14px;">
             <h4 style="font-size:16px; font-weight:800; color:var(--text); margin:0 0 6px 0;">${ev.title}</h4>
@@ -1623,7 +1679,7 @@ function openCalEventCard(encodedJson) {
             <h5 style="font-size:13px; font-weight:700; color:var(--blue); margin:0 0 6px 0; display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:16px;">lightbulb</span> Event Details</h5>
             <p style="margin:0; font-size:12px; color:var(--text); line-height:1.5;">
                 ${isOption 
-                    ? `On <strong>${ev.date}</strong>, this <strong>${ev.symbol} $${ev.strike} Call</strong> expires. If exercised (assigned), selling your <strong>${ev.pledgedShares} shares</strong> at the <strong>$${ev.strike} strike price</strong> releases <strong class="g">+$${ev.assignedCashIfExercised ? ev.assignedCashIfExercised.toLocaleString() : '0'} in cash liquidity</strong> back into your brokerage account!`
+                    ? `On <strong>${ev.date}</strong>, this <strong>${ev.symbol} ${optStrike} Call</strong> expires. If exercised (assigned), selling your <strong>${ev.pledgedShares} shares</strong> at the <strong>${optStrike} strike price</strong> releases <strong class="g">+$${ev.assignedCashIfExercised ? ev.assignedCashIfExercised.toLocaleString() : '0'} in cash liquidity</strong> back into your brokerage account!`
                     : (isHistory ? `Recorded transaction activity in your connected brokerage account: <strong>${ev.details}</strong>.` : `This is a recorded <strong>${ev.symbol}</strong> event on your portfolio calendar.`)}
             </p>
         </div>
@@ -1636,103 +1692,115 @@ function openCalEventCard(encodedJson) {
 }
 
 function openDateAccountSummaryModal(dateKey) {
-
     const proj = window.globalCashProjectionsByDate ? window.globalCashProjectionsByDate[dateKey] : null;
-    const eventsOnDate = window.globalEventsByDate ? (window.globalEventsByDate[dateKey] || []) : [];
+    const allEventsOnDate = window.globalEventsByDate ? (window.globalEventsByDate[dateKey] || []) : [];
+    // Only option contracts for the expiring contracts list
+    const eventsOnDate = allEventsOnDate.filter(e => e.category && e.category.startsWith('OPTION_'));
 
     const modal = document.getElementById('calEventModal');
     const title = document.getElementById('calModalTitle');
     const cnt = document.getElementById('calModalCnt');
     if (!modal || !cnt) return;
 
-    title.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">payments</span> Cash Projection Summary for ${dateKey}`;
+    title.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px; vertical-align:middle; margin-right:4px;">event_available</span> Expiration & Cash Availability — ${dateKey}`;
 
-    let optionsListHtml = eventsOnDate.map(e => `
+    let optionsListHtml = eventsOnDate.map(e => {
+        const typeStr = e.optionType || e.type || (e.category && e.category.includes('PUT') ? 'PUT' : (e.title && e.title.includes('PUT') ? 'PUT' : 'CALL'));
+        const isPut = typeStr === 'PUT';
+        const isGreen = e.predictedOutcome && (e.predictedOutcome.includes('Worthless') || e.predictedOutcome.includes('Called Away'));
+        const isBlue = e.predictedOutcome && e.predictedOutcome.includes('Assigned');
+        const badgeColor = isGreen ? 'rgba(34,197,94,0.15); color:var(--green); border-color:rgba(34,197,94,0.35);' : (isBlue ? 'rgba(56,189,248,0.15); color:var(--blue); border-color:rgba(56,189,248,0.35);' : 'rgba(245,158,11,0.15); color:var(--yellow); border-color:rgba(245,158,11,0.35);');
+        const predBadge = e.predictedOutcome ? `<span style="display:inline-flex; align-items:center; font-size:10px; font-weight:700; background:${badgeColor} border:1px solid; border-radius:4px; padding:1px 6px;">${e.predictedOutcome}</span>` : '';
+        const closeInfo = e.closePrice && e.closePrice !== 'N/A' ? `<span style="font-size:11px; color:var(--muted);">Close: $${e.closePrice}</span>` : '';
+        const impactStr = e.predictedCashImpact || (e.assignedCashIfExercised ? `+$${e.assignedCashIfExercised.toLocaleString()}` : '$0.00');
+        return `
         <tr style="border-bottom:1px solid var(--border);">
             <td style="padding:6px 0;">
-                <strong style="color:var(--text);">${e.symbol} ${e.strike} CALL</strong>
-                <div style="font-size:10px; color:var(--muted);">${e.pledgedShares} shares collateral pledged</div>
+                <strong style="color:var(--text); font-size:12.5px;">${e.symbol}</strong>
+                <span class="opt-strategy-pill ${isPut ? 'opt-strat-put' : 'opt-strat-call'}" style="font-size:9.5px; padding:1px 5px; margin-left:3px;">${formatStrikePrice(e.strike)} ${typeStr}</span>
             </td>
-            <td style="padding:6px 0; text-align:right;">${e.contracts} Contract(s)</td>
-            <td style="padding:6px 0; text-align:right;" class="g"><strong>+$${e.assignedCashIfExercised ? e.assignedCashIfExercised.toLocaleString() : '0'}</strong></td>
+            <td style="padding:6px 8px; text-align:center;">${closeInfo}</td>
+            <td style="padding:6px 8px; text-align:center;">${predBadge}</td>
+            <td style="padding:6px 8px; text-align:right; font-weight:600; color:var(--muted);">${e.contracts} Cont.</td>
+            <td style="padding:6px 0; text-align:right;" class="g"><strong>${impactStr}</strong></td>
         </tr>
-    `).join('');
+    `;
+    }).join('');
 
     let accountSummaryHtml = '';
     if (proj && proj.accountSummary) {
         accountSummaryHtml = proj.accountSummary.map(a => `
             <tr style="border-bottom:1px solid var(--border);">
-                <td style="padding:6px 0;">
-                    <strong style="color:var(--text);">${a.nickname}</strong>
+                <td style="padding:5px 0;">
+                    <strong style="color:var(--text); font-size:11.5px;">${a.nickname}</strong>
                     <span style="font-size:10px; color:var(--muted);">(***${a.accountNumber.slice(-4)})</span>
                 </td>
-                <td style="padding:6px 0; text-align:right;">$${a.startingCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                <td style="padding:6px 0; text-align:right;" class="g"><strong>+$${a.freedOnDate.toLocaleString()}</strong></td>
-                <td style="padding:6px 0; text-align:right;" style="color:var(--blue);"><strong>$${a.projectedAccountCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong></td>
+                <td style="padding:5px 8px; text-align:right; font-size:11.5px;">$${a.startingCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                <td style="padding:5px 8px; text-align:right; font-size:11.5px;" class="g"><strong>+$${a.freedOnDate.toLocaleString()}</strong></td>
+                <td style="padding:5px 0; text-align:right; font-size:11.5px;" style="color:var(--blue);"><strong>$${a.projectedAccountCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</strong></td>
             </tr>
         `).join('');
     }
 
     cnt.innerHTML = `
-        <div style="background:rgba(21,128,61,0.15); border:1px solid rgba(63,185,80,0.4); padding:16px; border-radius:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div>
-                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Date Expiration Cash Release</div>
-                <strong class="g" style="font-size:22px; font-family:'Outfit',sans-serif;">+$${proj ? proj.totalAssignedCash.toLocaleString() : '0'} New Cash</strong>
+        <!-- KPI STRIP -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div style="background:rgba(21,128,61,0.12); border:1px solid rgba(63,185,80,0.35); padding:10px 14px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Date Cash Inflow / Freed</span>
+                <strong class="g" style="font-size:18px; font-family:'Outfit',sans-serif;">+$${proj ? proj.totalAssignedCash.toLocaleString() : '0'}</strong>
             </div>
-            <div style="text-align:right;">
-                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Projected Total Portfolio Cash</div>
-                <strong style="font-size:22px; font-family:'Outfit',sans-serif; color:var(--blue);">$${proj ? proj.projectedPortfolioCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '0.00'}</strong>
+            <div style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.35); padding:10px 14px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:700;">Projected Portfolio Cash</span>
+                <strong style="font-size:18px; font-family:'Outfit',sans-serif; color:var(--blue);">$${proj ? proj.projectedPortfolioCash.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) : '0.00'}</strong>
             </div>
         </div>
 
-        <div style="background:var(--bg3); padding:14px; border-radius:10px; border:1px solid var(--border); margin-bottom:16px;">
-            <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase;">
-                <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">assignment</span> Expiring Contracts on ${dateKey} (${eventsOnDate.length} Total)
+        <!-- EXPIRING CONTRACTS TABLE -->
+        <div style="background:var(--bg3); padding:12px 14px; border-radius:10px; border:1px solid var(--border); margin-bottom:12px;">
+            <h5 style="font-size:11.5px; font-weight:700; color:var(--text); margin:0 0 6px 0; text-transform:uppercase; display:flex; align-items:center; gap:5px;">
+                <span class="material-symbols-outlined" style="font-size:15px; color:var(--blue);">assignment</span> Expiring Contracts (${eventsOnDate.length} Total)
             </h5>
-            <div style="overflow-x:auto; width:100%;">
-                <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                    <thead>
-                        <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left;">
-                            <th style="padding:4px 0;">Contract</th>
-                            <th style="padding:4px 0; text-align:right;">Contracts</th>
-                            <th style="padding:4px 0; text-align:right;">Cash Released if Called</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${optionsListHtml}
-                    </tbody>
-                </table>
-            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:11.5px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left; font-size:10.5px;">
+                        <th style="padding:3px 0;">Contract</th>
+                        <th style="padding:3px 8px; text-align:center;">Today's Close</th>
+                        <th style="padding:3px 8px; text-align:center;">Settlement Outcome</th>
+                        <th style="padding:3px 8px; text-align:right;">Size</th>
+                        <th style="padding:3px 0; text-align:right;">Cash Impact</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${optionsListHtml}
+                </tbody>
+            </table>
         </div>
 
-        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:16px;">
-            <h5 style="font-size:12px; font-weight:700; color:var(--text); margin:0 0 8px 0; text-transform:uppercase;">
-                <span class="material-symbols-outlined" style="font-size:16px; vertical-align:middle; margin-right:4px;">account_balance</span> Account Cash Projections for ${dateKey}
+        <!-- ACCOUNT CASH PROJECTIONS TABLE -->
+        <div style="background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+            <h5 style="font-size:11.5px; font-weight:700; color:var(--text); margin:0 0 6px 0; text-transform:uppercase; display:flex; align-items:center; gap:5px;">
+                <span class="material-symbols-outlined" style="font-size:15px; color:var(--purple);">account_balance</span> Account Balances
             </h5>
-            <div style="overflow-x:auto; width:100%;">
-                <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                    <thead>
-                        <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left;">
-                            <th style="padding:4px 0;">Account</th>
-                            <th style="padding:4px 0; text-align:right;">Current Cash</th>
-                            <th style="padding:4px 0; text-align:right;">Freed on ${dateKey}</th>
-                            <th style="padding:4px 0; text-align:right;">Projected Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${accountSummaryHtml}
-                    </tbody>
-                </table>
-            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:11px;">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border); color:var(--muted); text-align:left; font-size:10px;">
+                        <th style="padding:3px 0;">Account</th>
+                        <th style="padding:3px 8px; text-align:right;">Current Cash</th>
+                        <th style="padding:3px 8px; text-align:right;">Freed on Date</th>
+                        <th style="padding:3px 0; text-align:right;">Projected Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${accountSummaryHtml}
+                </tbody>
+            </table>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(88,166,255,0.08); border:1px solid rgba(88,166,255,0.25); padding:12px 16px; border-radius:10px;">
-            <div>
-                <strong style="font-size:13px; color:var(--text); display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size:18px; color:var(--yellow);">bolt</span> Ready to Compound on ${dateKey}?</strong>
-                <span style="font-size:11px; color:var(--muted);">Load this projected <strong class="g">$${proj ? proj.projectedPortfolioCash.toLocaleString(undefined, {maximumFractionDigits:0}) : '0'} cash</strong> into Stock Screener to find high-yield Cash-Secured Puts & Covered Calls.</span>
-            </div>
-            <a href="/screener?projectedCash=${proj ? proj.projectedPortfolioCash : 0}" class="hbtn hbtn-green" style="text-decoration:none; white-space:nowrap; padding:8px 16px;">
-                <span class="material-symbols-outlined" style="font-size:16px;">bolt</span> Stage ${dateKey} Trade Ideas →
+        <!-- ACTION FOOTER -->
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; background:rgba(88,166,255,0.06); border:1px solid rgba(88,166,255,0.2); padding:10px 14px; border-radius:8px;">
+            <span style="font-size:11px; color:var(--muted);">Stage new trades with projected <strong class="g">$${proj ? proj.projectedPortfolioCash.toLocaleString(undefined, {maximumFractionDigits:0}) : '0'}</strong> cash in Screener.</span>
+            <a href="/screener?projectedCash=${proj ? proj.projectedPortfolioCash : 0}" class="hbtn hbtn-green" style="text-decoration:none; white-space:nowrap; padding:6px 14px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px;">
+                <span class="material-symbols-outlined" style="font-size:15px;">bolt</span> Stage Trade Ideas →
             </a>
         </div>
     `;

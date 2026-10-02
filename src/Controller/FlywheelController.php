@@ -358,93 +358,78 @@ class FlywheelController extends AbstractController
             }
         }
 
-        // 3. Process linked option contracts per equity
-        foreach ($equities as $eq) {
-            foreach ($eq['linkedOptions'] ?? [] as $opt) {
-                $expDate          = $opt['expiration'];
-                $contracts        = (int) ($opt['contracts'] ?? 1);
-                $strike           = (float) ($opt['strike'] ?? 0);
-                $type             = strtoupper($opt['type'] ?? 'CALL');
-                $assignedCashValue = $strike * 100 * $contracts;
-                $pledgedShares    = (int) ($opt['pledgedShares'] ?? ($contracts * 100));
-                $isPastOption     = ($expDate < $todayStr);
+        // 3. Process open option positions with realistic market settlement predictions
+        $openOptionPositions = $portfolioData['openOptionPositions'] ?? [];
+        foreach ($openOptionPositions as $opt) {
+            $expDate          = $opt['expiration'] ?? $todayStr;
+            $contracts        = (int) ($opt['contracts'] ?? 1);
+            $strike           = (float) ($opt['strike'] ?? 0);
+            $type             = strtoupper($opt['type'] ?? 'CALL');
+            $symRoot          = $opt['root'] ?? $opt['symbol'] ?? 'OPT';
+            $isPastOption     = ($expDate < $todayStr);
+            $effectiveCashRelease = (float) ($opt['predictedCashImpact'] ?? 0.0);
+            $pledgedShares    = (int) ($opt['pledgedShares'] ?? 0);
+            $predTitle        = $opt['predictedOutcomeTitle'] ?? 'Active';
+            $predDetail       = $opt['predictedSettlementDetail'] ?? '';
+            $closePriceStr    = $opt['closePriceStr'] ?? 'N/A';
 
-                $accountBreakdown = [];
-                $optAccs = $opt['accounts'] ?? [];
-                if (!empty($optAccs)) {
-                    foreach ($optAccs as $oAcc) {
-                        $accNum = $oAcc['accountNumber'];
-                        $oQty = abs($oAcc['quantity']);
-                        $assignedCash = $strike * 100 * $oQty;
-                        $nickname = $oAcc['nickname'] ?? "Account {$accNum}";
+            $accountBreakdown = [];
+            $optAccs = $opt['accounts'] ?? [];
+            if (!empty($optAccs)) {
+                foreach ($optAccs as $oAcc) {
+                    $accNum = $oAcc['accountNumber'];
+                    $oQty = abs($oAcc['quantity']);
+                    $accRatio = $contracts > 0 ? ($oQty / $contracts) : 1.0;
+                    $accAssignedCash = round($effectiveCashRelease * $accRatio, 2);
+                    $nickname = $oAcc['nickname'] ?? "Account {$accNum}";
 
-                        $accountBreakdown[] = [
-                            'accountNumber'           => $accNum,
-                            'nickname'                => $nickname,
-                            'contracts'               => $oQty,
-                            'assignedCashIfExercised' => $assignedCash,
-                        ];
-
-                        if (isset($accountCashMap[$accNum]) && !$isPastOption) {
-                            $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] ??= 0.0;
-                            $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] += $assignedCash;
-                        }
-                    }
-                } else {
-                    // Fallback to stock breakdown if option accounts are not populated
-                    foreach ($eq['accountBreakdown'] ?? [] as $accB) {
-                        $accNum     = $accB['accountNumber'];
-                        $accPledged = (float) ($accB['pledgedShares'] ?? 0);
-                        $accountAssignedCash = ($contracts > 0 && $pledgedShares > 0)
-                            ? round($assignedCashValue * (min($pledgedShares, $accPledged) / $pledgedShares), 2)
-                            : $assignedCashValue;
-
-                        if ($accPledged > 0 || count($eq['accountBreakdown']) === 1) {
-                            $accountBreakdown[] = [
-                                'accountNumber'           => $accNum,
-                                'nickname'                => $accB['nickname'] ?? "Account {$accNum}",
-                                'cashAvailable'           => (float) ($accB['cashAvailable'] ?? 0.0),
-                                'sharesHeld'              => (float) ($accB['quantity'] ?? 0),
-                                'availableShares'         => $accB['availableShares'] ?? 0,
-                                'assignedCashIfExercised' => $accountAssignedCash > 0 ? $accountAssignedCash : $assignedCashValue,
-                            ];
-
-                            if (isset($accountCashMap[$accNum]) && !$isPastOption) {
-                                $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] ??= 0.0;
-                                $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] += ($accountAssignedCash > 0 ? $accountAssignedCash : $assignedCashValue);
-                            }
-                        }
-                    }
-                }
-
-                $calendarEvents[] = [
-                    'title'                   => ($isPastOption ? '<span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;">check_circle</span> ' : '<span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;">lock</span> ') . $opt['symbol'] . ' Exp ($' . number_format($assignedCashValue, 0) . ' Cap)',
-                    'date'                    => $expDate,
-                    'category'                => $isPastOption ? 'OPTION_PAST' : 'OPTION_' . $type,
-                    'symbol'                  => $eq['symbol'],
-                    'strike'                  => '$' . number_format($strike, 2),
-                    'contracts'               => $contracts,
-                    'isPast'                  => $isPastOption,
-                    'marketValue'             => '$' . number_format($opt['marketValue'], 2),
-                    'pledgedShares'           => $pledgedShares,
-                    'assignedCashIfExercised' => $assignedCashValue,
-                    'accountBreakdown'        => $accountBreakdown,
-                    'details'                 => "Strike: \${$strike} | Pledged: {$pledgedShares} sh | Cash Released if Called: \$" . number_format($assignedCashValue, 2),
-                    'badge'                   => $isPastOption ? 'HISTORICAL OPTION EXPIRATION' : 'EXPIRATION & CASH PROJECTION',
-                ];
-
-                if (!$isPastOption) {
-                    $cashProjectionsByDate[$expDate] ??= [
-                        'date'              => $expDate,
-                        'totalAssignedCash' => 0.0,
-                        'totalDividendCash' => 0.0,
-                        'optionsCount'      => 0,
-                        'dividendsCount'    => 0,
-                        'accountSummary'    => [],
+                    $accountBreakdown[] = [
+                        'accountNumber'           => $accNum,
+                        'nickname'                => $nickname,
+                        'contracts'               => $oQty,
+                        'assignedCashIfExercised' => $accAssignedCash,
                     ];
-                    $cashProjectionsByDate[$expDate]['totalAssignedCash'] += $assignedCashValue;
-                    $cashProjectionsByDate[$expDate]['optionsCount']++;
+
+                    if (isset($accountCashMap[$accNum]) && !$isPastOption) {
+                        $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] ??= 0.0;
+                        $accountCashMap[$accNum]['freedCollateralByDate'][$expDate] += $accAssignedCash;
+                    }
                 }
+            }
+
+            $calendarEvents[] = [
+                'title'                   => ($isPastOption ? '<span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;">check_circle</span> ' : '<span class="material-symbols-outlined" style="font-size:inherit;vertical-align:middle;">lock</span> ') . $symRoot . ' ' . $type . ' $' . number_format($strike, 2) . ' (' . $predTitle . ')',
+                'date'                    => $expDate,
+                'category'                => $isPastOption ? 'OPTION_PAST' : 'OPTION_' . $type,
+                'symbol'                  => $symRoot,
+                'type'                    => $type,
+                'optionType'              => $type,
+                'strike'                  => number_format($strike, 2),
+                'closePrice'              => $closePriceStr,
+                'contracts'               => $contracts,
+                'isPast'                  => $isPastOption,
+                'marketValue'             => $opt['marketValueStr'] ?? '$0.00',
+                'pledgedShares'           => $pledgedShares,
+                'assignedCashIfExercised' => $effectiveCashRelease,
+                'predictedOutcome'       => $predTitle,
+                'predictedCashImpact'     => $opt['predictedCashImpactStr'] ?? '$0.00',
+                'predictedSharesImpact'   => $opt['predictedSharesImpact'] ?? '',
+                'accountBreakdown'        => $accountBreakdown,
+                'details'                 => ($predDetail !== '' ? $predDetail : "Strike: \${$strike} | Close: \${$closePriceStr} | Cash Impact: " . ($opt['predictedCashImpactStr'] ?? '$0.00')),
+                'badge'                   => $isPastOption ? 'HISTORICAL OPTION SETTLEMENT' : 'OPTION SETTLEMENT PREDICTION',
+            ];
+
+            if (!$isPastOption) {
+                $cashProjectionsByDate[$expDate] ??= [
+                    'date'              => $expDate,
+                    'totalAssignedCash' => 0.0,
+                    'totalDividendCash' => 0.0,
+                    'optionsCount'      => 0,
+                    'dividendsCount'    => 0,
+                    'accountSummary'    => [],
+                ];
+                $cashProjectionsByDate[$expDate]['totalAssignedCash'] += $effectiveCashRelease;
+                $cashProjectionsByDate[$expDate]['optionsCount']++;
             }
         }
 
@@ -453,6 +438,14 @@ class FlywheelController extends AbstractController
             $daysBack = max(30, $monthsBack * 30);
             $historyTx = $this->brokerManager->getAggregatedHistory($daysBack);
             foreach ($historyTx as $tx) {
+                $status = strtoupper(trim((string)($tx['status'] ?? 'VALID')));
+                $isCanceled = in_array($status, ['INVALID', 'CANCELED', 'VOID', 'REJECTED'])
+                    || ($tx['is_canceled'] ?? false)
+                    || ($tx['category'] ?? '') === 'CANCELED';
+                if ($isCanceled) {
+                    continue;
+                }
+
                 $rawDate = $tx['date'] ?? date('Y-m-d');
                 $txDate  = substr(trim($rawDate), 0, 10);
                 $amt = (float) ($tx['amount'] ?? 0.0);

@@ -947,6 +947,86 @@ class BrokerManagerService
                         }
                     }
 
+                    // Market Close Price & Expiration Settlement Outcome Predictor
+                    $isExpiredToday = ($dte === 0);
+                    $isPastExpiration = ($dte !== null && $dte < 0);
+                    $isClosedOrExpired = ($isExpiredToday || $isPastExpiration);
+
+                    $predictedOutcomeCode = 'ACTIVE';
+                    $predictedOutcomeTitle = 'Active Contract';
+                    $predictedOutcomeBadge = 'badge-caution';
+                    $predictedOutcomeIcon = 'schedule';
+                    $predictedSettlementDetail = '';
+                    $predictedCashImpact = 0.0;
+                    $predictedCashImpactStr = '$0.00';
+                    $predictedSharesImpact = 'No change';
+
+                    if ($underlyingPrice !== null && $underlyingPrice > 0) {
+                        if ($type === 'Call' && $isShort) {
+                            if (abs($underlyingPrice - $strike) <= 0.01) {
+                                $predictedOutcomeCode = 'PIN_RISK';
+                                $predictedOutcomeTitle = $isClosedOrExpired ? 'ATM Expiration (Pin Risk)' : 'Near Strike (Borderline)';
+                                $predictedOutcomeBadge = 'badge-caution';
+                                $predictedOutcomeIcon = 'change_circle';
+                                $predictedCashImpact = 0.0;
+                                $predictedCashImpactStr = '$0.00';
+                                $predictedSharesImpact = "Hovering near {$sharesRepresented} shs strike";
+                                $predictedSettlementDetail = "Stock closed at \${$underlyingPriceStr} right on the \${$strikeStr} strike. Final assignment will depend on broker OCC cutoff.";
+                            } elseif ($underlyingPrice > $strike) {
+                                // ITM Covered Call -> Shares Called Away
+                                $predictedOutcomeCode = 'CALLED_AWAY';
+                                $predictedOutcomeTitle = $isClosedOrExpired ? 'Called Away @ Strike (ITM)' : 'On Track to be Called Away';
+                                $predictedOutcomeBadge = 'badge-profit';
+                                $predictedOutcomeIcon = 'task_alt';
+                                $predictedCashImpact = round($strike * $sharesRepresented, 2);
+                                $predictedCashImpactStr = "+$" . number_format($predictedCashImpact, 2);
+                                $predictedSharesImpact = "{$sharesRepresented} {$root} Sold @ \${$strikeStr}";
+                                $predictedSettlementDetail = "Stock closed at \${$underlyingPriceStr} (above \${$strikeStr} strike). All {$sharesRepresented} shares will be called away at \${$strikeStr}, generating +$" . number_format($predictedCashImpact, 2) . " cash proceeds + locking in \${$netCommissionStr} net premium ({$totalBottomlineGainStr} bottomline net profit).";
+                            } else {
+                                // OTM Covered Call -> Expires Worthless
+                                $predictedOutcomeCode = 'EXPIRED_WORTHLESS';
+                                $predictedOutcomeTitle = $isClosedOrExpired ? 'Expired Worthless (OTM)' : 'On Track to Expire Worthless';
+                                $predictedOutcomeBadge = 'badge-profit';
+                                $predictedOutcomeIcon = 'verified';
+                                $predictedCashImpact = 0.0;
+                                $predictedCashImpactStr = '$0.00';
+                                $predictedSharesImpact = "Keep {$sharesRepresented} {$root} Shs" . ($hasStockHolding ? " (Basis: \${$stockCostBasisStr})" : "");
+                                $predictedSettlementDetail = "Stock closed at \${$underlyingPriceStr} (below \${$strikeStr} strike). Contract expires worthless. You retain 100% of \${$netCommissionStr} net premium and keep all {$sharesRepresented} shares unencumbered.";
+                            }
+                        } elseif ($type === 'Put' && $isShort) {
+                            if (abs($underlyingPrice - $strike) <= 0.01) {
+                                $predictedOutcomeCode = 'PIN_RISK';
+                                $predictedOutcomeTitle = $isClosedOrExpired ? 'ATM Expiration (Pin Risk)' : 'Near Strike (Borderline)';
+                                $predictedOutcomeBadge = 'badge-caution';
+                                $predictedOutcomeIcon = 'change_circle';
+                                $predictedCashImpact = 0.0;
+                                $predictedCashImpactStr = '$0.00';
+                                $predictedSharesImpact = "Hovering near \${$strikeStr} strike";
+                                $predictedSettlementDetail = "Stock closed at \${$underlyingPriceStr} right on the \${$strikeStr} strike. Final assignment will depend on broker OCC cutoff.";
+                            } elseif ($underlyingPrice < $strike) {
+                                // ITM Cash-Secured Put -> Assigned
+                                $predictedOutcomeCode = 'ASSIGNED';
+                                $predictedOutcomeTitle = $isClosedOrExpired ? 'Assigned @ Strike (ITM)' : 'On Track for Assignment';
+                                $predictedOutcomeBadge = $isAboveBreakeven ? 'badge-profit' : 'badge-risk';
+                                $predictedOutcomeIcon = 'assignment_returned';
+                                $predictedCashImpact = 0.0; // Collateral is converted into stock shares, not returned as cash
+                                $predictedCashImpactStr = '$0.00';
+                                $predictedSharesImpact = "Acquire {$sharesRepresented} {$root} Shs @ \${$strikeStr}";
+                                $predictedSettlementDetail = "Stock closed at \${$underlyingPriceStr} (below \${$strikeStr} strike). You will be assigned {$sharesRepresented} shares at \${$strikeStr}. \${$cashStr} cash collateral is deployed to acquire shares at an effective discounted net cost basis of \${$netBreakevenStr}/share (reflecting \${$netCommissionStr} net premium).";
+                            } else {
+                                // OTM Cash-Secured Put -> Expires Worthless
+                                $predictedOutcomeCode = 'EXPIRED_WORTHLESS';
+                                $predictedOutcomeTitle = $isClosedOrExpired ? 'Expired Worthless (OTM)' : 'On Track to Expire Worthless';
+                                $predictedOutcomeBadge = 'badge-profit';
+                                $predictedOutcomeIcon = 'verified';
+                                $predictedCashImpact = $cashCollateral;
+                                $predictedCashImpactStr = "+$" . number_format($cashCollateral, 2);
+                                $predictedSharesImpact = "0 Shs (Collateral Unlocked)";
+                                $predictedSettlementDetail = "Stock closed at \${$underlyingPriceStr} (above \${$strikeStr} strike). Contract expires worthless. \${$cashStr} cash collateral is released back to unencumbered cash balance + you retain 100% of \${$netCommissionStr} net premium (+{$bottomlineRoiPct}% return).";
+                            }
+                        }
+                    }
+
                     $status = $type === 'Call'
                         ? "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">lock</span> COVERED CALL ACTIVE — {$pledgedShares} Shares Pledged ({$contractCount} Contracts, Strike: \${$strikeStr}, Exp: {$dateStr})"
                         : "<span class=\"material-symbols-outlined\" style=\"font-size:inherit;vertical-align:middle;\">shield</span> CASH-SECURED PUT ACTIVE — \${$cashStr} Cash Collateral ({$contractCount} Contracts, Strike: \${$strikeStr}, Exp: {$dateStr})";
@@ -1017,8 +1097,21 @@ class BrokerManagerService
                         'expiration' => $dateStr,
                         'dte' => $dte,
                         'dteText' => $dteText,
+                        'isExpiredToday' => $isExpiredToday,
+                        'isPastExpiration' => $isPastExpiration,
+                        'isClosedOrExpired' => $isClosedOrExpired,
+                        'closePrice' => $underlyingPrice,
+                        'closePriceStr' => $underlyingPriceStr,
                         'underlyingPrice' => $underlyingPrice,
                         'underlyingPriceStr' => $underlyingPriceStr,
+                        'predictedOutcomeCode' => $predictedOutcomeCode,
+                        'predictedOutcomeTitle' => $predictedOutcomeTitle,
+                        'predictedOutcomeBadge' => $predictedOutcomeBadge,
+                        'predictedOutcomeIcon' => $predictedOutcomeIcon,
+                        'predictedSettlementDetail' => $predictedSettlementDetail,
+                        'predictedCashImpact' => $predictedCashImpact,
+                        'predictedCashImpactStr' => $predictedCashImpactStr,
+                        'predictedSharesImpact' => $predictedSharesImpact,
                         'distance' => $distance,
                         'distanceStr' => $distanceStr,
                         'distancePct' => $distancePct,
@@ -1558,9 +1651,13 @@ class BrokerManagerService
 
         $upperSym  = strtoupper($rawSym);
         $upperDesc = strtoupper($rawDesc);
+        $rawStatus = strtoupper(trim((string)($tx['status'] ?? 'VALID')));
+        $isCanceled = in_array($rawStatus, ['INVALID', 'CANCELED', 'VOID', 'REJECTED']);
 
         // Assign canonical category
-        if ($isOption) {
+        if ($isCanceled) {
+            $category = 'CANCELED';
+        } elseif ($isOption) {
             $category = 'OPTION';
         } elseif ($rawType === 'DIVIDEND' || str_contains($rawType, 'DIV') || str_contains($action, 'DIVIDEND') || str_contains($upperDesc, 'DIVIDEND')) {
             if ($upperSym === 'INT' || str_contains($upperDesc, 'BANK INT') || str_contains($upperDesc, 'SCHWAB1 INT') || str_contains($upperDesc, 'CREDIT INT') || str_contains($upperDesc, 'INTEREST')) {
@@ -1620,6 +1717,10 @@ class BrokerManagerService
             }
         }
 
+        if ($isCanceled) {
+            $detailParts[] = '[CANCELED / UNSETTLED]';
+        }
+
         if (!$mainDesc || $mainDesc === 'USD currency') {
             $mainDesc = $tx['action'] ?? $tx['type'] ?? '—';
         }
@@ -1630,6 +1731,7 @@ class BrokerManagerService
         $accCategory = TaxEngine::isRetirementAccount($accName, $tx['sub_account'] ?? '') ? 'RETIREMENT' : 'TAXABLE';
 
         $tx['category']          = $category;
+        $tx['is_canceled']        = $isCanceled;
         $tx['is_option']         = $isOption;
         $tx['canonical_symbol']  = $canonicalSymbol;
         $tx['display_symbol']    = $displaySymbol;

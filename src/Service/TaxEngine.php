@@ -302,8 +302,12 @@ class TaxEngine
 
             $date = $tx['date'] ?? '';
             $netAmount = (float) ($tx['amount'] ?? 0.0);
-            $type = strtoupper($tx['type'] ?? '');
-            $action = strtoupper($tx['action'] ?? '');
+            $type = strtoupper(trim((string)($tx['type'] ?? '')));
+            $action = strtoupper(trim((string)($tx['action'] ?? '')));
+            $status = strtoupper(trim((string)($tx['status'] ?? 'VALID')));
+            if (in_array($status, ['INVALID', 'CANCELED', 'VOID', 'REJECTED'])) {
+                continue;
+            }
 
             // Non-taxable transfer events guard
             if (

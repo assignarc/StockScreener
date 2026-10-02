@@ -49,6 +49,8 @@ Detailed technical design documents covering all aspects of the system are avail
 - [LLM Strategy Router and Signal Analysis](doc/llm-analysis.md): Multi-provider AI router, prompt engineering, and options chain evaluation.
 - [Database Schema and Persistent Caching](doc/database-caching.md): SQLite relational schema, Doctrine entity mappings, 30-day extended corporate cache TTLs, and multi-tier persistent caching.
 - [Security Architecture, Guardrails, and Legal Disclaimers](doc/security-guardrails.md): Read-only design principles, legal disclaimer workflows, token isolation, credential management, and PII masking.
+- [Release Notes and Changelog](RELEASE_NOTES.md): Complete release history, version milestones, and feature changelogs.
+
 
 ---
 
